@@ -293,7 +293,7 @@ const HomePage = () => {
               className="space-y-8"
             >
               <div className="space-y-4">
-                <div className="inline-flex items-center px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">
                   <Users className="w-4 h-4 mr-2" />
                   Artist Collaboration
                 </div>

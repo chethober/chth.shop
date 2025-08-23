@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description: 'Create and customize your own merchandise with our 3D design platform',
   keywords: 'merchandise, custom, 3d design, t-shirt, hoodie, pants, artist',
   authors: [{ name: 'CHTH | چث' }],
+  icons: {
+    icon: '/logo-white.png',
+  },
 }
 
 export const viewport = {

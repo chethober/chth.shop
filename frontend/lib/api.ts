@@ -5,6 +5,7 @@ import {
   LoginCredentials,
   RegisterCredentials,
   AuthResponse,
+  GoogleAuthResponse,
   Product,
   ProductFormData,
   ProductsResponse,
@@ -113,14 +114,42 @@ class ApiClient {
     return { user, token };
   }
 
+  // Google OAuth methods
+  async initiateGoogleAuth(): Promise<void> {
+    // Redirect to backend Google OAuth endpoint
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+    const googleAuthUrl = `${base}/auth/google`;
+    window.location.href = googleAuthUrl;
+  }
+
+  async handleGoogleCallback(token: string, user: User): Promise<GoogleAuthResponse> {
+    this.setToken(token);
+    return { user, token };
+  }
+
   async getProfile(): Promise<User> {
-    const response = await this.client.get<ApiResponse<{ user: User }>>('/auth/profile');
+    const response = await this.client.get<ApiResponse<{ user: User }>>('/auth/me');
     return response.data.data!.user;
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {
     const response = await this.client.put<ApiResponse<{ user: User }>>('/auth/profile', data);
     return response.data.data!.user;
+  }
+
+  async updateUsername(newUsername: string): Promise<{ user: User; token: string }> {
+    console.log('Frontend: Calling updateUsername with:', newUsername);
+    console.log('Frontend: Request URL:', '/auth/username');
+    console.log('Frontend: Request payload:', { newUsername });
+    
+    try {
+      const response = await this.client.put<ApiResponse<{ user: User; token: string }>>('/auth/username', { newUsername });
+      console.log('Frontend: Response received:', response);
+      return response.data.data!;
+    } catch (error) {
+      console.error('Frontend: Error in updateUsername:', error);
+      throw error;
+    }
   }
 
   logout(): void {
@@ -173,13 +202,18 @@ class ApiClient {
     return response.data.data!.artist;
   }
 
+  async getCurrentArtistProfile(): Promise<Artist> {
+    const response = await this.client.get<ApiResponse<{ artist: Artist }>>('/artists/profile/me');
+    return response.data.data!.artist;
+  }
+
   async createArtistProfile(data: ArtistProfileFormData): Promise<Artist> {
-    const response = await this.client.post<ApiResponse<{ artist: Artist }>>('/artists/profile', data);
+    const response = await this.client.post<ApiResponse<{ artist: Artist }>>('/artists', data);
     return response.data.data!.artist;
   }
 
   async updateArtistProfile(data: Partial<ArtistProfileFormData>): Promise<Artist> {
-    const response = await this.client.put<ApiResponse<{ artist: Artist }>>('/artists/profile', data);
+    const response = await this.client.put<ApiResponse<{ artist: Artist }>>('/artists', data);
     return response.data.data!.artist;
   }
 
@@ -237,8 +271,11 @@ export const api = new ApiClient();
 export const {
   login,
   register,
+  initiateGoogleAuth,
+  handleGoogleCallback,
   getProfile,
   updateProfile,
+  updateUsername,
   logout,
   getProducts,
   getProduct,
@@ -248,6 +285,7 @@ export const {
   getUserProducts,
   getArtists,
   getArtist,
+  getCurrentArtistProfile,
   createArtistProfile,
   updateArtistProfile,
   acceptContract,

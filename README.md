@@ -1,8 +1,8 @@
-# MerchCraft - Dark Mode Merchandise Platform for Artists
+# CHTH | چث - Merchandise for Artists
 
-A full-stack dark-mode merchandise platform that enables artists to create, customize, and sell their designs through an interactive 3D design studio.
+A merchandise platform that enables artists to create, customize, and sell their designs through an interactive 3D design studio.
 
-![MerchCraft Platform](logo-white.png)
+![CHTH.XYZ](./frontend/public/logo-white.png)
 
 ## 🌟 Features
 

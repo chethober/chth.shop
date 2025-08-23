@@ -1,20 +1,22 @@
 // User types
 export interface User {
-  id: string;
+  id: number;
   username: string;
   email: string;
-  isArtist: boolean;
+  isArtist?: boolean;
+  googleId?: string;
+  isGoogleUser?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
 // Artist types
 export interface Artist {
-  id: string;
-  userId: string;
-  bio: string;
-  storeName: string;
-  contractAccepted: boolean;
+  id: number;
+  userId: number;
+  bio: string | null;
+  storeName: string | null;
+  contractAccepted?: boolean;
   contractAcceptedAt?: string;
   user?: User;
   products?: Product[];
@@ -34,15 +36,12 @@ export interface ProductCustomization {
 }
 
 export interface Product {
-  id: string;
+  id: number;
   name: string;
-  type: ProductType;
+  description?: string | null;
   price: number;
-  imageUrl?: string;
-  artistId: string;
-  customization: ProductCustomization;
-  isActive: boolean;
-  artist?: Artist;
+  type: string;
+  imageUrl: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -84,9 +83,24 @@ export interface RegisterCredentials {
   password: string;
 }
 
+export interface GoogleAuthResponse {
+  user: User;
+  token: string;
+}
+
 export interface AuthResponse {
   user: User;
   token: string;
+}
+
+// Google OAuth types
+export interface GoogleUser {
+  id: string;
+  email: string;
+  name: string;
+  picture: string;
+  given_name: string;
+  family_name: string;
 }
 
 // Form types
@@ -142,8 +156,10 @@ export interface AuthStore {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  updateUsername: (newUsername: string) => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 

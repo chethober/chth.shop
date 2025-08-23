@@ -48,6 +48,35 @@ const useAuthStore = create<AuthStore>()(
         }
       },
 
+      loginWithGoogle: async () => {
+        set({ isLoading: true })
+        try {
+          await api.initiateGoogleAuth()
+          // Redirect will happen
+        } catch (error: any) {
+          set({ isLoading: false })
+          toast.error('Google login failed. Please try again.')
+          throw error
+        }
+      },
+
+      completeOAuth: async (user: User, token: string) => {
+        try {
+          await api.handleGoogleCallback(token, user)
+          set({
+            user,
+            token,
+            isAuthenticated: true,
+            isLoading: false,
+          })
+          toast.success(`Welcome, ${user.username}!`)
+        } catch (error: any) {
+          set({ isLoading: false })
+          toast.error('Failed to complete authentication')
+          throw error
+        }
+      },
+
       logout: () => {
         api.logout()
         set({
@@ -58,7 +87,6 @@ const useAuthStore = create<AuthStore>()(
         })
         toast.success('Logged out successfully')
 
-        // Redirect to home page
         if (typeof window !== 'undefined') {
           window.location.href = '/'
         }
@@ -72,10 +100,27 @@ const useAuthStore = create<AuthStore>()(
             user: updatedUser,
             isLoading: false
           })
-          toast.success('Profile updated successfully')
+          toast.success('Profile updated successfully!')
         } catch (error: any) {
           set({ isLoading: false })
           toast.error(error.message || 'Failed to update profile')
+          throw error
+        }
+      },
+
+      updateUsername: async (newUsername: string) => {
+        set({ isLoading: true })
+        try {
+          const result = await api.updateUsername(newUsername)
+          set({
+            user: result.user,
+            token: result.token,
+            isLoading: false
+          })
+          toast.success('Username updated successfully!')
+        } catch (error: any) {
+          set({ isLoading: false })
+          toast.error(error.message || 'Failed to update username')
           throw error
         }
       },
@@ -92,8 +137,7 @@ const useAuthStore = create<AuthStore>()(
             isAuthenticated: true,
             isLoading: false
           })
-        } catch (error: any) {
-          // Token is invalid, clear auth state
+        } catch (error) {
           set({
             user: null,
             token: null,

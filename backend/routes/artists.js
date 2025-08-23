@@ -224,4 +224,42 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get current user's artist profile (authenticated)
+router.get('/profile/me', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const artist = await prisma.artist.findUnique({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            username: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+        message: 'Artist profile not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { artist }
+    });
+
+  } catch (error) {
+    console.error('Get current artist profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 module.exports = router;

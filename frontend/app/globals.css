@@ -224,3 +224,21 @@ canvas {
 .footer-gradient {
   background: linear-gradient(to top, hsl(var(--secondary)), hsl(var(--background)));
 }
+
+/* Google OAuth button styles */
+.hover\:bg-google-50:hover {
+  background-color: #f8f9fa;
+}
+
+.hover\:border-google-200:hover {
+  border-color: #dadce0;
+}
+
+/* Google button specific hover effects */
+.btn-outline:hover .google-icon {
+  transform: scale(1.05);
+}
+
+.google-icon {
+  transition: transform 0.2s ease-in-out;
+}
