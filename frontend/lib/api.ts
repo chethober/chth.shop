@@ -71,6 +71,7 @@ class ApiClient {
   private removeToken(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('token');
+      localStorage.removeItem('auth-storage');
       Cookies.remove('token');
     }
   }
@@ -81,12 +82,9 @@ class ApiClient {
       const { status, data } = error.response;
       const message = (data as any)?.message || 'An error occurred';
 
-      // Handle auth errors
-      if (status === 401) {
+      // Handle auth errors - clear token storage without forcing hard window redirects
+      if (status === 401 || message.toLowerCase().includes('token') || message.toLowerCase().includes('unauthorized')) {
         this.removeToken();
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
       }
 
       return new CustomError(message, status, (data as any)?.code);

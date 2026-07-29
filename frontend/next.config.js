@@ -1,24 +1,37 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   images: {
-    domains: ['localhost'],
+    // Replaces deprecated 'domains'
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+    ],
     unoptimized: true,
   },
-  transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
+  transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
+  
+  // Removed 'swcMinify' (it is invalid in Next 16+)
+  
+  reactStrictMode: true,
+
+  env: {
+    NEXT_PUBLIC_API_URL:
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  },
+
   webpack: (config, { isServer }) => {
     // Handle GLTF and GLB files
     config.module.rules.push({
       test: /\.(gltf|glb)$/,
-      type: 'asset/resource',
+      type: "asset/resource",
     });
 
     // Handle shader files
     config.module.rules.push({
       test: /\.(glsl|vs|fs|vert|frag)$/,
-      type: 'asset/source',
+      type: "asset/source",
     });
 
     // Optimize Three.js for production
@@ -33,11 +46,6 @@ const nextConfig = {
 
     return config;
   },
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
-  },
-  reactStrictMode: true,
-  swcMinify: true,
 };
 
 module.exports = nextConfig;

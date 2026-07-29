@@ -138,7 +138,7 @@ router.post('/', authenticateToken, async (req, res) => {
         type,
         price: parseFloat(price),
         imageUrl,
-        artistId: userId
+        artistId: artist.id
       },
       include: {
         artist: {
@@ -161,6 +161,74 @@ router.post('/', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Create product error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Get current user's products (authenticated)
+router.get('/user/me', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Find artist profile first to get the artist.id
+    const artist = await prisma.artist.findUnique({
+      where: { userId }
+    });
+
+    if (!artist) {
+      // If they are not an artist, return empty products array
+      return res.status(200).json({
+        success: true,
+        data: {
+          products: [],
+          pagination: {
+            total: 0,
+            page: 1,
+            pages: 1,
+            hasNext: false,
+            hasPrev: false
+          }
+        }
+      });
+    }
+
+    const products = await prisma.product.findMany({
+      where: { artistId: artist.id },
+      include: {
+        artist: {
+          include: {
+            user: {
+              select: {
+                username: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        products,
+        pagination: {
+          total: products.length,
+          page: 1,
+          pages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user products error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'

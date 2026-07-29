@@ -68,7 +68,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.push('/login?redirect=/account')
+      router.push('/auth?redirect=/account')
       return
     }
 
@@ -198,6 +198,11 @@ export default function AccountPage() {
           console.log('Artist profile not found (404)')
           setArtistProfile(null)
           setFormData({ storeName: '', bio: '' })
+        } else if (error.status === 401 || error.message?.toLowerCase().includes('token')) {
+          console.log('Invalid or expired auth token')
+          setArtistProfile(null)
+          logout()
+          router.push('/auth?redirect=/account')
         } else {
           // For other errors, show the error but still allow profile creation
           console.error('Error fetching artist profile:', error)
@@ -387,42 +392,49 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
+    <div className="relative min-h-screen bg-background pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
+      
+      {/* Background Ambient Orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute -top-40 left-1/4 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[140px]" />
+        <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[160px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Artist Account</h1>
-          <p className="text-muted-foreground">
-            Manage your profile, store, and designs
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">Artist Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Manage your profile, store, and creative designs
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-8">
+        <div className="grid lg:grid-cols-12 gap-8">
           {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="glass rounded-xl p-6 space-y-6">
+          <div className="lg:col-span-3">
+            <div className="glass-card-rounded p-6 space-y-6">
               {/* User Info */}
               <div className="text-center">
-                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <User className="w-10 h-10 text-primary" />
+                <div className="w-20 h-20 glass-pill flex items-center justify-center mx-auto mb-3 text-primary shadow-md">
+                  <User className="w-10 h-10" />
                 </div>
-                <h3 className="font-semibold text-foreground">{user?.username}</h3>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <h3 className="font-extrabold text-foreground">{user?.username}</h3>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
                 <button
                   onClick={() => {
                     setIsEditingUsername(true)
                     setUsernameFormData({ newUsername: user?.username || '' })
                     setUsernameError('')
                   }}
-                  className="btn-outline text-xs mt-2 px-2 py-1"
+                  className="btn-glass-pill text-[11px] mt-3 px-3 py-1 gap-1"
                 >
-                  <Edit className="w-3 h-3 mr-1" />
+                  <Edit className="w-3 h-3" />
                   Change Username
                 </button>
               </div>
 
               {/* Navigation */}
-              <nav className="space-y-2">
+              <nav className="space-y-1.5">
                 {[
                   { id: 'profile', label: 'Profile', icon: User },
                   { id: 'store', label: 'My Store', icon: Store },
@@ -432,31 +444,31 @@ export default function AccountPage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     className={cn(
-                      "w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+                      "w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-xs font-semibold tracking-wide transition-all duration-200",
                       activeTab === tab.id
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
                     )}
                   >
-                    <tab.icon className="w-5 h-5" />
-                    <span className="font-medium">{tab.label}</span>
+                    <tab.icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
                   </button>
                 ))}
               </nav>
 
               {/* Actions */}
-              <div className="pt-4 border-t border-border space-y-2">
+              <div className="pt-4 border-t border-border/30 space-y-2">
                 <button
                   onClick={() => router.push('/design')}
-                  className="w-full btn-primary flex items-center justify-center"
+                  className="w-full btn-highlight text-xs py-2.5 gap-1.5"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Design
+                  <Plus className="w-4 h-4" />
+                  <span>New Design</span>
                 </button>
                 
                 <button
                   onClick={handleLogout}
-                  className="w-full btn-outline flex items-center justify-center"
+                  className="w-full btn-glass-pill text-xs py-2.5"
                 >
                   Logout
                 </button>
@@ -465,7 +477,7 @@ export default function AccountPage() {
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-9">
             <motion.div
               key={activeTab}
               initial={{ opacity: 0, y: 20 }}
@@ -473,7 +485,7 @@ export default function AccountPage() {
               transition={{ duration: 0.3 }}
             >
               {activeTab === 'profile' && (
-                <div className="glass rounded-xl p-6">
+                <div className="glass-card-rounded p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-foreground">Artist Profile</h2>
                     {artistProfile ? (

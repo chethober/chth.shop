@@ -1,16 +1,42 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Sparkles, Palette, Users, ChevronLeft, ChevronRight, Shirt, Zap, Star } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { 
+  ArrowRight, 
+  Sparkles, 
+  Palette, 
+  Users, 
+  ChevronLeft, 
+  ChevronRight, 
+  Shirt, 
+  Zap, 
+  Star,
+  Layers,
+  Compass,
+  CheckCircle2
+} from 'lucide-react'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { cn, getProductTypeLabel, generatePlaceholderImage } from '@/lib/utils'
 import { ProductType } from '@/types'
 
 const HomePage = () => {
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [activeSection, setActiveSection] = useState('about')
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Scroll animations setup
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ['start start', 'end end']
+  })
+
+  // Background glow parallax transformations
+  const orb1Y = useTransform(scrollYProgress, [0, 1], ['0%', '120%'])
+  const orb2Y = useTransform(scrollYProgress, [0, 1], ['0%', '-80%'])
+  const scaleHero = useTransform(scrollYProgress, [0, 0.3], [1, 0.95])
+  const opacityHero = useTransform(scrollYProgress, [0, 0.25], [1, 0.6])
 
   // Sample product data for preview
   const featuredProducts = [
@@ -40,24 +66,6 @@ const HomePage = () => {
     }
   ]
 
-  const features = [
-    {
-      icon: Palette,
-      title: '3D Design Studio',
-      description: 'Create stunning designs with our interactive 3D editor'
-    },
-    {
-      icon: Users,
-      title: 'Artist Collaboration',
-      description: 'Connect with talented artists and bring ideas to life'
-    },
-    {
-      icon: Sparkles,
-      title: 'Premium Quality',
-      description: 'High-quality materials and professional printing'
-    }
-  ]
-
   const nextProduct = () => {
     setCurrentProductIndex((prev) => (prev + 1) % featuredProducts.length)
   }
@@ -72,11 +80,11 @@ const HomePage = () => {
     return () => clearInterval(interval)
   }, [])
 
-  // Handle scroll and update URL fragments
+  // Handle scroll section detection
   useEffect(() => {
     const handleScroll = () => {
       const sections = ['about', 'collab', 'design']
-      const scrollPosition = window.scrollY + 100
+      const scrollPosition = window.scrollY + window.innerHeight / 3
 
       for (const section of sections) {
         const element = document.getElementById(section)
@@ -84,7 +92,6 @@ const HomePage = () => {
           const { offsetTop, offsetHeight } = element
           if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
             setActiveSection(section)
-            window.history.replaceState(null, '', `#${section}`)
             break
           }
         }
@@ -95,439 +102,382 @@ const HomePage = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Handle initial URL fragment
-  useEffect(() => {
-    const hash = window.location.hash.replace('#', '')
-    if (hash && ['about', 'collab', 'design'].includes(hash)) {
-      setActiveSection(hash)
-      const element = document.getElementById(hash)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' })
-      }
-    }
-  }, [])
-
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' })
       setActiveSection(sectionId)
-      window.history.replaceState(null, '', `#${sectionId}`)
     }
   }
 
   return (
-    <div className="min-h-screen">
+    <div ref={containerRef} className="relative min-h-screen bg-background overflow-hidden font-sans">
+      
 
 
-      {/* About Section */}
-      <section id="about" className="hero-gradient relative overflow-hidden min-h-screen flex items-center">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 py-20 lg:py-32 items-center">
-            {/* Left Side - Hero Content */}
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="space-y-8"
-            >
-              <div className="space-y-4">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Create. Customize. Collaborate.
-                </motion.div>
+      {/* Ambient Animated Greyscale Orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <motion.div 
+          style={{ y: orb1Y }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ repeat: Infinity, duration: 10, ease: 'easeInOut' }}
+          className="absolute -top-40 left-1/4 w-[550px] h-[550px] bg-foreground/5 rounded-full blur-[140px]" 
+        />
+        <motion.div 
+          style={{ y: orb2Y }}
+          animate={{ scale: [1.1, 0.95, 1.1], opacity: [0.25, 0.45, 0.25] }}
+          transition={{ repeat: Infinity, duration: 14, ease: 'easeInOut' }}
+          className="absolute top-1/2 -right-40 w-[600px] h-[600px] bg-foreground/5 rounded-full blur-[160px]" 
+        />
+        <motion.div 
+          animate={{ scale: [0.9, 1.1, 0.9] }}
+          transition={{ repeat: Infinity, duration: 12, ease: 'easeInOut' }}
+          className="absolute bottom-10 left-10 w-[450px] h-[450px] bg-foreground/5 rounded-full blur-[150px]" 
+        />
+      </div>
 
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground leading-tight">
-                  Design Your
-                  <span className="text-gradient block">
-                    Perfect Merch
-                  </span>
-                </h1>
+      {/* Hero Section */}
+      <section id="about" className="relative min-h-screen flex items-center pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto w-full">
+          <motion.div 
+            style={{ scale: scaleHero, opacity: opacityHero }}
+            className="grid lg:grid-cols-12 gap-12 items-center"
+          >
+            {/* Left Content */}
+            <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-pill text-xs font-semibold tracking-wide text-primary shadow-sm"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Next-Gen Merch Studio</span>
+              </motion.div>
 
-                <p className="text-xl text-muted-foreground max-w-lg text-balance">
-                  Bring your creative vision to life with our cutting-edge 3D design platform.
-                  Create custom merchandise that stands out from the crowd.
-                </p>
-              </div>
+              <motion.h1 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.1 }}
+                className="text-5xl sm:text-6xl xl:text-7xl font-extrabold text-foreground tracking-tight leading-[1.08]"
+              >
+                Design without <br />
+                <span className="text-gradient">boundaries.</span>
+              </motion.h1>
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/design" className="btn-primary text-lg px-8 py-3 group">
-                  Start Designing
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              <motion.p 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+                className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed text-balance"
+              >
+                Craft, customize, and monetize premium custom merchandise in real-time 3D. Designed for modern creators and visionary artists.
+              </motion.p>
+
+              {/* Highlighted Glowing Action Buttons */}
+              <motion.div 
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2"
+              >
+                <Link href="/design" className="btn-highlight group w-full sm:w-auto">
+                  <span>Start Designing</span>
+                  <ArrowRight className="ml-2.5 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link href="/collab" className="btn-outline text-lg px-8 py-3">
-                  Join as Artist
+
+                <Link href="/collab" className="btn-glass-pill w-full sm:w-auto">
+                  <span>Join as Artist</span>
                 </Link>
-              </div>
+              </motion.div>
 
-              {/* Features */}
-              <div className="grid sm:grid-cols-3 gap-6 pt-8">
-                {features.map((feature, index) => (
-                  <motion.div
-                    key={feature.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
-                    className="text-center sm:text-left"
-                  >
-                    <feature.icon className="h-8 w-8 text-primary mb-3 mx-auto sm:mx-0" />
-                    <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Right Side - Product Carousel */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="relative"
-            >
-              <div className="glass rounded-2xl p-8 backdrop-blur-sm">
-                <h2 className="text-2xl font-bold text-foreground mb-6 text-center">
-                  Featured Products
-                </h2>
-
-                {/* Product Carousel */}
-                <div className="relative overflow-hidden rounded-xl">
-                  <div className="flex transition-transform duration-500 ease-in-out"
-                       style={{ transform: `translateX(-${currentProductIndex * 100}%)` }}>
-                    {featuredProducts.map((product) => (
-                      <div key={product.id} className="w-full flex-shrink-0">
-                        <div className="product-card bg-card rounded-xl p-6 text-center">
-                          <div className="relative mb-4 mx-auto w-48 h-48 rounded-lg overflow-hidden">
-                            <Image
-                              src={product.imageUrl}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                              unoptimized
-                            />
-                          </div>
-
-                          <h3 className="text-lg font-semibold text-card-foreground mb-2">
-                            {product.name}
-                          </h3>
-
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {getProductTypeLabel(product.type)} by @{product.artist.user.username}
-                          </p>
-
-                          <p className="text-xl font-bold text-primary mb-4">
-                            ${product.price}
-                          </p>
-
-                          <Link
-                            href={`/${product.artist.user.username}`}
-                            className="btn-outline w-full"
-                          >
-                            View Store
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
+              {/* Key Features Badges */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, delay: 0.5 }}
+                className="pt-6 grid grid-cols-3 gap-4 border-t border-border/40 max-w-md mx-auto lg:mx-0"
+              >
+                {[
+                  { icon: Palette, label: '3D Studio' },
+                  { icon: Users, label: 'Artist Hub' },
+                  { icon: Sparkles, label: 'Pro Quality' }
+                ].map((feat, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <feat.icon className="w-4 h-4 text-primary shrink-0" />
+                    <span>{feat.label}</span>
                   </div>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Right Side - Floating Glass Showcase Card */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="lg:col-span-5 relative"
+            >
+              <div className="glass-card-rounded p-6 sm:p-8 relative overflow-hidden group">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
+                    <span className="w-3 h-3 rounded-full bg-yellow-500/80 inline-block" />
+                    <span className="w-3 h-3 rounded-full bg-green-500/80 inline-block" />
+                  </div>
+                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Featured Preview</span>
                 </div>
 
-                {/* Carousel Controls */}
-                <div className="flex justify-between items-center mt-6">
+                {/* Animated Carousel Item */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentProductIndex}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-4 text-center"
+                  >
+                    <div className="relative w-full aspect-square max-w-[260px] mx-auto rounded-2xl overflow-hidden glass p-4 shadow-inner">
+                      <Image
+                        src={featuredProducts[currentProductIndex].imageUrl}
+                        alt={featuredProducts[currentProductIndex].name}
+                        fill
+                        className="object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+                        unoptimized
+                      />
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-bold text-foreground">
+                        {featuredProducts[currentProductIndex].name}
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        By <span className="text-primary font-medium">@{featuredProducts[currentProductIndex].artist.user.username}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-2xl font-black text-foreground">
+                        ${featuredProducts[currentProductIndex].price}
+                      </span>
+                      <Link
+                        href={`/${featuredProducts[currentProductIndex].artist.user.username}`}
+                        className="btn-glass-pill text-xs px-4 py-2"
+                      >
+                        View Store
+                      </Link>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Carousel Navigation */}
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/30">
                   <button
                     onClick={prevProduct}
-                    className="btn-ghost p-2 rounded-full"
+                    className="p-2 rounded-full hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-all"
                     aria-label="Previous product"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
 
-                  <div className="flex space-x-2">
-                    {featuredProducts.map((_, index) => (
+                  <div className="flex space-x-1.5">
+                    {featuredProducts.map((_, idx) => (
                       <button
-                        key={index}
-                        onClick={() => setCurrentProductIndex(index)}
+                        key={idx}
+                        onClick={() => setCurrentProductIndex(idx)}
                         className={cn(
-                          "w-3 h-3 rounded-full transition-colors",
-                          index === currentProductIndex ? "bg-primary" : "bg-muted"
+                          "h-1.5 rounded-full transition-all duration-300",
+                          idx === currentProductIndex ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
                         )}
-                        aria-label={`Go to product ${index + 1}`}
+                        aria-label={`Go to item ${idx + 1}`}
                       />
                     ))}
                   </div>
 
                   <button
                     onClick={nextProduct}
-                    className="btn-ghost p-2 rounded-full"
+                    className="p-2 rounded-full hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-all"
                     aria-label="Next product"
                   >
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
             </motion.div>
-          </div>
-        </div>
-
-        {/* Background Decoration */}
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-accent/5 rounded-full blur-3xl"></div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Collab Section */}
-      <section id="collab" className="py-20 min-h-screen flex items-center">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="space-y-8"
-            >
-              <div className="space-y-4">
-                <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary font-medium">
-                  <Users className="w-4 h-4 mr-2" />
-                  Artist Collaboration
-                </div>
-
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
-                  Join Our
-                  <span className="text-gradient block">
-                    Artist Network
-                  </span>
-                </h2>
-
-                <p className="text-xl text-muted-foreground max-w-lg text-balance">
-                  Connect with a community of talented artists and creators. 
-                  Share your designs, collaborate on projects, and build your brand.
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Star className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Premium Artist Program</h3>
-                    <p className="text-muted-foreground">Get exclusive access to advanced design tools and priority support.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                    <Zap className="w-6 h-6 text-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Revenue Sharing</h3>
-                    <p className="text-muted-foreground">Earn competitive commissions on every product sold through your designs.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Shirt className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Quality Control</h3>
-                    <p className="text-muted-foreground">We handle production, shipping, and customer service so you can focus on creating.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/account" className="btn-primary text-lg px-8 py-3">
-                  Setup Artist Account
-                </Link>
-                <Link href="/register" className="btn-outline text-lg px-8 py-3">
-                  Learn More
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Right Side - Visual */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="glass rounded-2xl p-8 backdrop-blur-sm">
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-foreground mb-4">Artist Benefits</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 rounded-lg bg-card">
-                        <div className="text-3xl font-bold text-primary mb-2">25%</div>
-                        <div className="text-sm text-muted-foreground">Commission Rate</div>
-                      </div>
-                      <div className="text-center p-4 rounded-lg bg-card">
-                        <div className="text-3xl font-bold text-primary mb-2">24/7</div>
-                        <div className="text-sm text-muted-foreground">Support</div>
-                      </div>
-                      <div className="text-center p-4 rounded-lg bg-card">
-                        <div className="text-3xl font-bold text-primary mb-2">∞</div>
-                        <div className="text-sm text-muted-foreground">Designs</div>
-                      </div>
-                      <div className="text-center p-4 rounded-lg bg-card">
-                        <div className="text-3xl font-bold text-primary mb-2">100%</div>
-                        <div className="text-sm text-muted-foreground">Quality</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Design Section */}
-      <section id="design" className="py-20 min-h-screen flex items-center">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="space-y-8"
-            >
-              <div className="space-y-4">
-                <div className="inline-flex items-center px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                  <Palette className="w-4 h-4 mr-2" />
-                  3D Design Studio
-                </div>
-
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
-                  Create with
-                  <span className="text-gradient block">
-                    Precision
-                  </span>
-                </h2>
-
-                <p className="text-xl text-muted-foreground max-w-lg text-balance">
-                  Our advanced 3D design tool lets you visualize your creations in real-time.
-                  Switch between products, customize colors, and preview your designs instantly.
-                </p>
-              </div>
-
-              <div className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Shirt className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Multiple Products</h3>
-                    <p className="text-muted-foreground">Design for T-shirts, Hoodies, and Pants with seamless switching.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                    <Palette className="w-6 h-6 text-accent" />
-                  </div>
-                  <div className="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Zap className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">Instant Preview</h3>
-                    <p className="text-muted-foreground">See your designs come to life with our real-time 3D rendering.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/design" className="btn-primary text-lg px-8 py-3 group">
-                  Launch Design Studio
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-                <Link href="/account" className="btn-outline text-lg px-8 py-3">
-                  View My Designs
-                </Link>
-              </div>
-            </motion.div>
-
-            {/* Right Side - 3D Preview */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="glass rounded-2xl p-8 backdrop-blur-sm">
-                <div className="space-y-6">
-                  <div className="text-center">
-                    <h3 className="text-2xl font-bold text-foreground mb-6">3D Design Preview</h3>
-                    <div className="relative w-64 h-64 mx-auto rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <Palette className="w-16 h-16 text-primary/50 mx-auto mb-4" />
-                          <p className="text-muted-foreground">Interactive 3D Model</p>
-                          <p className="text-sm text-muted-foreground">Click to explore</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-6 grid grid-cols-3 gap-4">
-                      <div className="text-center p-3 rounded-lg bg-card">
-                        <Shirt className="w-6 h-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm text-muted-foreground">T-shirts</div>
-                      </div>
-                      <div className="text-center p-3 rounded-lg bg-card">
-                        <Shirt className="w-6 h-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm text-muted-foreground">Hoodies</div>
-                      </div>
-                      <div className="text-center p-3 rounded-lg bg-card">
-                        <Shirt className="w-6 h-6 text-primary mx-auto mb-2" />
-                        <div className="text-sm text-muted-foreground">Pants</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
+      {/* Artist Network Section */}
+      <section id="collab" className="relative py-28 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center space-y-6"
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.8 }}
+            className="grid lg:grid-cols-12 gap-12 items-center"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
-              Ready to Create Something Amazing?
-            </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Join thousands of creators who are already designing and selling custom merchandise
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register" className="btn-primary text-lg px-8 py-3">
-                Get Started Free
+            {/* Left Content */}
+            <div className="lg:col-span-6 space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-pill text-xs font-semibold tracking-wide text-primary">
+                <Users className="w-3.5 h-3.5" />
+                <span>Artist Network</span>
+              </div>
+
+              <h2 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tight leading-tight">
+                Turn your art into <br />
+                <span className="text-gradient">thriving merchandise.</span>
+              </h2>
+
+              <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+                Join our curated artist collective. Publish your creative work, set your royalty terms, and let us handle production and fulfillment worldwide.
+              </p>
+
+              <div className="space-y-4">
+                {[
+                  { title: '25% Royalty Rate', desc: 'Highest payout structure for independent creators.' },
+                  { title: 'Automated Fulfillment', desc: 'Zero inventory management or shipping headaches.' },
+                  { title: 'Global Reach', desc: 'Deliver custom merch to fans across the globe.' }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-3.5 p-3 rounded-2xl glass hover:bg-foreground/5 transition-all">
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">{item.title}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <Link href="/account" className="btn-highlight inline-flex">
+                  Become a Partner
+                </Link>
+              </div>
+            </div>
+
+            {/* Right Side - Glass Stats Grid */}
+            <div className="lg:col-span-6 grid grid-cols-2 gap-4">
+              {[
+                { number: '25%', label: 'Commission Rate', icon: Star },
+                { number: '24/7', label: 'Support & Analytics', icon: Zap },
+                { number: '100%', label: 'Quality Guarantee', icon: Shirt },
+                { number: '∞', label: 'Design Uploads', icon: Layers }
+              ].map((stat, idx) => (
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  className="glass-card-rounded p-6 text-center hover:scale-[1.03] transition-transform duration-300"
+                >
+                  <stat.icon className="w-6 h-6 text-primary mx-auto mb-3 opacity-80" />
+                  <div className="text-3xl sm:text-4xl font-black text-foreground tracking-tight mb-1">
+                    {stat.number}
+                  </div>
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {stat.label}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* 3D Design Studio Showcase */}
+      <section id="design" className="relative py-28 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.8 }}
+            className="grid lg:grid-cols-12 gap-12 items-center"
+          >
+            {/* Left Interactive Glass Preview Box */}
+            <div className="lg:col-span-6 order-2 lg:order-1">
+              <div className="glass-card-rounded p-8 relative">
+                <div className="relative w-full aspect-video rounded-2xl overflow-hidden glass flex flex-col items-center justify-center border border-white/20">
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-4 animate-pulse">
+                    <Compass className="w-10 h-10 text-primary" />
+                  </div>
+                  <span className="text-base font-semibold text-foreground">Interactive 3D Editor</span>
+                  <span className="text-xs text-muted-foreground mt-1">Real-Time Texture & Shader Rendering</span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mt-6">
+                  {['T-Shirts', 'Hoodies', 'Pants'].map((type, idx) => (
+                    <div key={idx} className="glass p-3 rounded-2xl text-center">
+                      <Shirt className="w-5 h-5 text-primary mx-auto mb-1" />
+                      <span className="text-xs font-medium text-foreground">{type}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Content */}
+            <div className="lg:col-span-6 order-1 lg:order-2 space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-pill text-xs font-semibold tracking-wide text-primary">
+                <Palette className="w-3.5 h-3.5" />
+                <span>3D Design Studio</span>
+              </div>
+
+              <h2 className="text-4xl sm:text-5xl font-extrabold text-foreground tracking-tight leading-tight">
+                Intuitive 3D canvas for <br />
+                <span className="text-gradient">seamless creation.</span>
+              </h2>
+
+              <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">
+                Visualize your artwork live on high-resolution 3D garments. Switch styles, rotate angles, adjust placement, and test colors instantly.
+              </p>
+
+              <div className="pt-2">
+                <Link href="/design" className="btn-highlight inline-flex group">
+                  <span>Launch Design Studio</span>
+                  <ArrowRight className="ml-2.5 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Minimal CTA Banner */}
+      <section className="relative py-24 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.96 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.7 }}
+            className="glass-card-rounded p-10 sm:p-16 text-center space-y-8 relative overflow-hidden"
+          >
+            <div className="max-w-2xl mx-auto space-y-4">
+              <h2 className="text-3xl sm:text-5xl font-extrabold text-foreground tracking-tight">
+                Ready to bring your ideas to life?
+              </h2>
+              <p className="text-base sm:text-lg text-muted-foreground">
+                Join thousands of creators shaping the future of custom apparel.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+              <Link href="/register" className="btn-highlight w-full sm:w-auto">
+                Create Free Account
               </Link>
-              <Link href="/design" className="btn-outline text-lg px-8 py-3">
+              <Link href="/design" className="btn-glass-pill w-full sm:w-auto">
                 Try Design Studio
               </Link>
             </div>
           </motion.div>
         </div>
       </section>
+
     </div>
   )
 }

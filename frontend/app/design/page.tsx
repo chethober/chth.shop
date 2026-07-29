@@ -1,1168 +1,1132 @@
 'use client'
 
-import { useState, useRef, Suspense, useEffect, useCallback } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Environment, Text } from '@react-three/drei'
-import { motion } from 'framer-motion'
-import { Shirt, Palette, Download, Plus, RotateCcw, Type, ImageIcon, X, Move, Maximize2, Trash2, MousePointer2 } from 'lucide-react'
+import { useState, useRef, Suspense, useEffect, useMemo, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Canvas, useThree } from '@react-three/fiber'
+import { OrbitControls, Environment, useGLTF, Decal, useTexture, Text, PivotControls } from '@react-three/drei'
+import { Shirt, Palette, Plus, RotateCcw, Type, ImageIcon, X, Move, MousePointer2, Trash2, Scissors, Sparkles, Tag } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import * as THREE from 'three'
-import { useGLTF } from '@react-three/drei'
+import modelsData from '@/public/models/models.json'
 
-// Product types
-const PRODUCT_TYPES = [
-  { id: 'tshirt', name: 'T-shirt', icon: Shirt, modelPath: '/models/tshirt.glb' },
-  { id: 'hoodie', name: 'Hoodie', icon: Shirt, modelPath: '/models/hoodie.glb' },
-  { id: 'pants', name: 'Pants', icon: Shirt, modelPath: '/models/pants.glb' }
-]
+// --- Constants ---
+const ICON_MAP = {
+  tshirt: Shirt,
+  hoodie: Shirt,
+  pants: Scissors
+}
 
-// Preload all models
-PRODUCT_TYPES.forEach(product => {
-  useGLTF.preload(product.modelPath)
-})
+const PRODUCT_TYPES = Object.entries(modelsData.models).map(([id, model]) => ({
+  id,
+  name: model.name,
+  icon: ICON_MAP[id as keyof typeof ICON_MAP] || Shirt,
+  modelPath: model.path
+}))
 
-// Color options
 const COLORS = [
-  { name: 'White', value: '#ffffff' },
-  { name: 'Black', value: '#000000' },
-  { name: 'Navy', value: '#1e3a8a' },
-  { name: 'Gray', value: '#6b7280' },
-  { name: 'Red', value: '#dc2626' },
-  { name: 'Blue', value: '#2563eb' },
-  { name: 'Green', value: '#16a34a' },
-  { name: 'Yellow', value: '#ca8a04' },
-  { name: 'Purple', value: '#7c3aed' },
-  { name: 'Pink', value: '#ec4899' }
+  { name: 'White', value: '#FFFFFF' },
+  { name: 'Black', value: '#121212' },
+  { name: 'Pink', value: '#FFB6C1' },
+  { name: 'Blue', value: '#3B82F6' }
 ]
 
-// Texture element interface
+const FABRICS = [
+  { id: 'cotton', name: 'Organic Cotton', desc: '100% Breathable Soft Cotton' },
+  { id: 'fleece', name: 'Heavyweight Fleece', desc: '400GSM Cozy & Thick' },
+  { id: 'linen', name: 'French Linen', desc: 'Lightweight Natural Weave' },
+  { id: 'satin', name: 'Silk Satin', desc: 'Lustrous Smooth Finish' }
+]
+
+// --- Types ---
 interface TextureElement {
   id: string
   type: 'image' | 'text'
-  content: string
-  position: [number, number, number]
-  scale: [number, number, number]
-  rotation: [number, number, number]
-  color?: string
-  fontSize?: number
+  content: string // Text content or empty for image
   imageUrl?: string
-  uvPosition: [number, number] // UV coordinates for texture mapping
-  uvScale: [number, number] // UV scale for texture mapping
+  position: [number, number, number]
+  baseRotation: [number, number, number]
+  rotationAngle: number
+  scale: [number, number, number]
+  color?: string // For text
+  fontSize?: number // For text logic
+  opacity?: number // For controlling transparency
+  meshName?: string // Associated mesh in GLTF model
 }
 
-// Loading component for 3D canvas
-function CanvasLoader() {
-  return (
-    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/20 to-muted/10">
-      <div className="text-center space-y-4">
-        <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
-        <p className="text-sm text-muted-foreground">Loading 3D Studio...</p>
-      </div>
-    </div>
-  )
+// --- Helpers ---
+
+// 1. Generate a texture from text string
+function useTextTexture(text: string, color: string, fontSize: number = 100) {
+  return useMemo(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1024
+    canvas.height = 1024
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.clearRect(0, 0, 1024, 1024)
+      ctx.fillStyle = color
+      const maxCharCount = Math.max(text.length, 6)
+      const targetFontSize = Math.min(fontSize * 120, (1024 / maxCharCount) * 1.5)
+      ctx.font = `bold ${targetFontSize}px sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(text, 512, 512)
+    }
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.needsUpdate = true
+    return texture
+  }, [text, color, fontSize])
 }
 
-// Interactive Texture Element Component
-function InteractiveTextureElement({ 
+// 2. Component to render a single Decal (Image or Text)
+function DecalItem({ 
   element, 
-  onUpdate, 
-  onSelect, 
-  isSelected,
-  isEditing,
-  onStartEdit,
-  onStopEdit,
-  invisible = false
+  isSelected, 
+  onSelect,
+  scaleMultiplier = [1, 1, 1]
 }: { 
   element: TextureElement
-  onUpdate: (id: string, updates: Partial<TextureElement>) => void
-  onSelect: (id: string) => void
   isSelected: boolean
-  isEditing: boolean
-  onStartEdit: (id: string) => void
-  onStopEdit: () => void
-  invisible?: boolean
+  onSelect: (id: string) => void
+  scaleMultiplier?: [number, number, number]
 }) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState<[number, number]>([0, 0])
-  const [isResizing, setIsResizing] = useState(false)
-  const [resizeStart, setResizeStart] = useState<[number, number]>([0, 0])
+  // Handle image texture with error handling
+  const imageTexture = useMemo(() => {
+    if (element.type === 'image' && element.imageUrl) {
+      try {
+        return useTexture(element.imageUrl, (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+        });
+      } catch (error) {
+        console.error('Failed to load texture:', error);
+        return null;
+      }
+    }
+    return null;
+  }, [element.type, element.imageUrl]);
   
-  // Handle mouse events for dragging and resizing
-  const handlePointerDown = useCallback((e: any) => {
-    e.stopPropagation()
-    onSelect(element.id)
-    
-    if (e.button === 0) { // Left click
-      if (e.altKey) { // Alt + click for resizing
-        setIsResizing(true)
-        setResizeStart([e.clientX, e.clientY])
-      } else if (isEditing) { // Only allow dragging in edit mode
-        setIsDragging(true)
-        setDragStart([e.clientX, e.clientY])
-      }
-    }
-  }, [element.id, onSelect, isEditing])
+  // Generate text texture
+  const textTexture = useTextTexture(
+    element.content || ' ', // Ensure at least a space for empty text
+    element.color || '#000000',
+    element.fontSize
+  );
+  
+  // Choose texture based on type (Image vs Generated Text)
+  const texture = element.type === 'text' ? textTexture : imageTexture || textTexture;
 
-  // Prevent orbit controls when interacting with elements
-  const handlePointerOver = useCallback((e: any) => {
-    e.stopPropagation()
-    if (!isDragging && !isResizing) {
-      document.body.style.cursor = isEditing ? 'move' : 'pointer'
-    }
-  }, [isDragging, isResizing, isEditing])
+  const multiplier = scaleMultiplier || [1, 1, 1];
+  const elemScale = element.scale || [0.3, 0.4, 0.1];
 
-  const handlePointerOut = useCallback((e: any) => {
-    e.stopPropagation()
-    if (!isDragging && !isResizing) {
-      document.body.style.cursor = 'default'
-    }
-  }, [isDragging, isResizing])
+  // Keep X and Y scale from state, but force Z scale to be deep (e.g. 1.0) to prevent clipping on curved surfaces
+  const decalScale: [number, number, number] = [
+    (elemScale[0] ?? 0.3) * (multiplier[0] ?? 1),
+    (elemScale[1] ?? 0.4) * (multiplier[1] ?? 1),
+    Math.max((elemScale[2] ?? 0.1) * (multiplier[2] ?? 1), 0.8 * (multiplier[2] ?? 1))
+  ];
 
-  const handlePointerMove = useCallback((e: any) => {
-    if (isDragging && meshRef.current) {
-      const deltaX = (e.clientX - dragStart[0]) * 0.01
-      const deltaY = (e.clientY - dragStart[1]) * 0.01
-      
-      const newPosition: [number, number, number] = [
-        element.position[0] + deltaX,
-        element.position[1] - deltaY,
-        element.position[2]
-      ]
-      
-      onUpdate(element.id, { position: newPosition })
-      setDragStart([e.clientX, e.clientY])
-    }
-    
-    if (isResizing && meshRef.current) {
-      const deltaX = (e.clientX - resizeStart[0]) * 0.01
-      const deltaY = (e.clientY - resizeStart[1]) * 0.01
-      
-      // Calculate new scale based on mouse movement
-      const scaleFactor = 1 + (deltaX + deltaY) * 0.5
-      const newScale: [number, number, number] = [
-        Math.max(0.1, element.scale[0] * scaleFactor),
-        Math.max(0.1, element.scale[1] * scaleFactor),
-        element.scale[2]
-      ]
-      
-      onUpdate(element.id, { scale: newScale })
-      setResizeStart([e.clientX, e.clientY])
-    }
-  }, [isDragging, isResizing, dragStart, resizeStart, element, onUpdate])
+  const baseRot = element.baseRotation || [0, 0, 0];
+  const combinedRotation: [number, number, number] = [
+    baseRot[0] || 0,
+    baseRot[1] || 0,
+    (baseRot[2] || 0) + (element.rotationAngle || 0)
+  ];
 
-  const handlePointerUp = useCallback(() => {
-    setIsDragging(false)
-    setIsResizing(false)
-  }, [])
-
-  useEffect(() => {
-    if (meshRef.current) {
-      meshRef.current.position.set(...element.position)
-      meshRef.current.scale.set(...element.scale)
-      meshRef.current.rotation.set(...element.rotation)
-    }
-  }, [element])
-
-  // Add global event listeners for mouse movement
-  useEffect(() => {
-    if (isDragging || isResizing) {
-      const handleGlobalMouseMove = (e: MouseEvent) => {
-        if (isDragging) {
-          const deltaX = (e.clientX - dragStart[0]) * 0.01
-          const deltaY = (e.clientY - dragStart[1]) * 0.01
-          
-          const newPosition: [number, number, number] = [
-            element.position[0] + deltaX,
-            element.position[1] - deltaY,
-            element.position[2]
-          ]
-          
-          onUpdate(element.id, { position: newPosition })
-          setDragStart([e.clientX, e.clientY])
-        }
-        
-        if (isResizing) {
-          const deltaX = (e.clientX - resizeStart[0]) * 0.01
-          const deltaY = (e.clientY - resizeStart[1]) * 0.01
-          
-          const newScale: [number, number, number] = [
-            Math.max(0.1, element.scale[0] + deltaX),
-            Math.max(0.1, element.scale[1] + deltaY),
-            element.scale[2]
-          ]
-          
-          onUpdate(element.id, { scale: newScale })
-          setResizeStart([e.clientX, e.clientY])
-        }
-      }
-
-      const handleGlobalMouseUp = () => {
-        setIsDragging(false)
-        setIsResizing(false)
-      }
-
-      document.addEventListener('mousemove', handleGlobalMouseMove)
-      document.addEventListener('mouseup', handleGlobalMouseUp)
-
-      return () => {
-        document.removeEventListener('mousemove', handleGlobalMouseMove)
-        document.removeEventListener('mouseup', handleGlobalMouseUp)
-      }
-    }
-  }, [isDragging, isResizing, dragStart, resizeStart, element, onUpdate])
-
-    return (
-    <group>
-      {!invisible && (
-        <>
-          {element.type === 'text' ? (
-            <Text
-              ref={meshRef}
-              position={element.position}
-              scale={element.scale}
-              rotation={element.rotation}
-              fontSize={element.fontSize || 0.5}
-              color={element.color || '#000000'}
-              anchorX="center"
-              anchorY="middle"
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerOver={handlePointerOver}
-              onPointerOut={handlePointerOut}
-            >
-              {element.content}
-            </Text>
-          ) : (
-            <mesh
-              ref={meshRef}
-              position={element.position}
-              scale={element.scale}
-              rotation={element.rotation}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerOver={handlePointerOver}
-              onPointerOut={handlePointerOut}
-            >
-              <planeGeometry args={[1, 1]} />
-              <meshBasicMaterial
-                map={new THREE.TextureLoader().load(element.imageUrl || '')}
-                transparent
-                alphaTest={0.1}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-          )}
-        </>
-      )}
-      
-      {/* Invisible interaction mesh for editing when element is invisible */}
-      {invisible && (
-        <mesh
-          ref={meshRef}
-          position={element.position}
-          scale={element.scale}
-          rotation={element.rotation}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
-        >
-          <planeGeometry args={[1, 1]} />
-          <meshBasicMaterial transparent opacity={0} />
-        </mesh>
-      )}
-      
-      {/* Selection indicator */}
-      {isSelected && (
-        <mesh position={element.position}>
-          <boxGeometry args={[element.scale[0] * 2, element.scale[1] * 2, 0.1]} />
-          <meshBasicMaterial 
-            color={isEditing ? "#ff8800" : "#00ff00"} 
-            transparent 
-            opacity={0.3} 
-            wireframe 
-          />
-        </mesh>
-      )}
-      
-      {/* Edit mode indicator */}
-      {isEditing && (
-        <group position={element.position}>
-          {/* Resize handles - corners */}
-          <mesh 
-            position={[element.scale[0], element.scale[1], 0]}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-              setIsResizing(true)
-              setResizeStart([e.clientX, e.clientY])
-            }}
-            onPointerOver={() => document.body.style.cursor = 'nw-resize'}
-            onPointerOut={() => document.body.style.cursor = 'default'}
-          >
-            <boxGeometry args={[0.2, 0.2, 0.1]} />
-            <meshBasicMaterial color="#ff0000" />
-          </mesh>
-          
-          <mesh 
-            position={[-element.scale[0], element.scale[1], 0]}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-              setIsResizing(true)
-              setResizeStart([e.clientX, e.clientY])
-            }}
-            onPointerOver={() => document.body.style.cursor = 'ne-resize'}
-            onPointerOut={() => document.body.style.cursor = 'default'}
-          >
-            <boxGeometry args={[0.2, 0.2, 0.1]} />
-            <meshBasicMaterial color="#ff0000" />
-          </mesh>
-          
-          <mesh 
-            position={[element.scale[0], -element.scale[1], 0]}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-              setIsResizing(true)
-              setResizeStart([e.clientX, e.clientY])
-            }}
-            onPointerOver={() => document.body.style.cursor = 'sw-resize'}
-            onPointerOut={() => document.body.style.cursor = 'default'}
-          >
-            <boxGeometry args={[0.2, 0.2, 0.1]} />
-            <meshBasicMaterial color="#ff0000" />
-          </mesh>
-          
-          <mesh 
-            position={[-element.scale[0], -element.scale[1], 0]}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-              setIsResizing(true)
-              setResizeStart([e.clientX, e.clientY])
-            }}
-            onPointerOver={() => document.body.style.cursor = 'se-resize'}
-            onPointerOut={() => document.body.style.cursor = 'default'}
-          >
-            <boxGeometry args={[0.2, 0.2, 0.1]} />
-            <meshBasicMaterial color="#ff0000" />
-          </mesh>
-          
-          {/* Rotation handle */}
-          <mesh 
-            position={[0, element.scale[1] + 0.3, 0]}
-            onPointerDown={(e) => {
-              e.stopPropagation()
-              // Start rotation mode
-              const startAngle = Math.atan2(e.clientY - window.innerHeight / 2, e.clientX - window.innerWidth / 2)
-              const startRotation = element.rotation[2]
-              
-              const handleMouseMove = (moveEvent: MouseEvent) => {
-                const currentAngle = Math.atan2(moveEvent.clientY - window.innerHeight / 2, moveEvent.clientX - window.innerWidth / 2)
-                const deltaAngle = currentAngle - startAngle
-                const newRotation = startRotation + deltaAngle
-                
-                onUpdate(element.id, { 
-                  rotation: [element.rotation[0], element.rotation[1], newRotation] 
-                })
-              }
-              
-              const handleMouseUp = () => {
-                document.removeEventListener('mousemove', handleMouseMove)
-                document.removeEventListener('mouseup', handleMouseUp)
-              }
-              
-              document.addEventListener('mousemove', handleMouseMove)
-              document.addEventListener('mouseup', handleMouseUp)
-            }}
-            onPointerOver={() => document.body.style.cursor = 'grab'}
-            onPointerOut={() => document.body.style.cursor = 'default'}
-          >
-            <torusGeometry args={[0.15, 0.05, 8, 16]} />
-            <meshBasicMaterial color="#0000ff" />
-          </mesh>
-        </group>
-      )}
-    </group>
+  return (
+    <Decal
+      position={element.position}
+      rotation={combinedRotation}
+      scale={decalScale}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        onSelect(element.id)
+      }}
+    >
+      <meshStandardMaterial 
+        map={texture} 
+        transparent 
+        opacity={element.opacity ?? 1}
+        side={THREE.FrontSide} // Only show on the outside
+        polygonOffset 
+        polygonOffsetFactor={-1}
+        polygonOffsetUnits={1}
+        roughness={0.8}
+        metalness={0.2}
+      />
+    </Decal>
   )
 }
 
-// 3D Model Component with Surface Textures
-function GLBModel({ 
+// Helper to compute world scale of a node in raw GLTF hierarchy
+const getMeshWorldScale = (node: any): [number, number, number] => {
+  const scale = new THREE.Vector3(1, 1, 1);
+  let current = node;
+  while (current) {
+    if (current.scale) {
+      const sx = typeof current.scale.x === 'number' ? current.scale.x : (current.scale[0] ?? 1);
+      const sy = typeof current.scale.y === 'number' ? current.scale.y : (current.scale[1] ?? 1);
+      const sz = typeof current.scale.z === 'number' ? current.scale.z : (current.scale[2] ?? 1);
+      scale.x *= sx;
+      scale.y *= sy;
+      scale.z *= sz;
+    }
+    current = current.parent;
+  }
+  return [scale.x, scale.y, scale.z];
+};
+
+// Recursive component to render GLTF nodes and attach Decals to meshes
+function GLTFNode({ 
+  node, 
+  color, 
+  textureElements, 
+  selectedElementId, 
+  onElementSelect,
+  onElementUpdate
+}: {
+  node: any
+  color: string
+  textureElements: TextureElement[]
+  selectedElementId: string | null
+  onSelect?: any // Keep signature compatible
+  onElementSelect: (id: string) => void
+  onElementUpdate: (id: string, updates: Partial<TextureElement>) => void
+}) {
+  if (!node) return null
+
+  if (node.isMesh) {
+    const meshScale = getMeshWorldScale(node);
+    const scaleMultiplier: [number, number, number] = [
+      1 / (meshScale[0] || 1),
+      1 / (meshScale[1] || 1),
+      1 / (meshScale[2] || 1)
+    ];
+
+    return (
+      <mesh
+        key={node.uuid}
+        name={node.name}
+        geometry={node.geometry}
+        position={node.position}
+        quaternion={node.quaternion}
+        scale={node.scale}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial
+          color={color}
+          roughness={0.8}
+          metalness={0.2}
+          envMapIntensity={0.8}
+        />
+        {/* Render decals directly as children of the mesh to satisfy Drei's parent-mesh constraint */}
+        {textureElements
+          .filter((el) => !el.meshName || el.meshName === node.name)
+          .map((el) => (
+            <DecalItem
+              key={el.id}
+              element={el}
+              isSelected={selectedElementId === el.id}
+              onSelect={onElementSelect}
+              scaleMultiplier={scaleMultiplier}
+            />
+          ))}
+        {/* Render PivotControls directly as children of the mesh (no wrapping group) to preserve tree structures */}
+        {textureElements
+          .filter((el) => selectedElementId === el.id && (!el.meshName || el.meshName === node.name))
+          .map((el) => {
+            const baseRot = el.baseRotation || [0, 0, 0];
+            const combinedRotation: [number, number, number] = [
+              baseRot[0],
+              baseRot[1],
+              baseRot[2] + (el.rotationAngle || 0)
+            ];
+            return (
+              <PivotControls
+                key={`pivot-${el.id}`}
+                depthTest={false}
+                scale={0.15}
+                lineWidth={3}
+                disableAxes={true}
+                disableSliders={true}
+                activeAxes={[false, false, true]}
+                matrix={new THREE.Matrix4().compose(
+                  new THREE.Vector3(...el.position),
+                  new THREE.Quaternion().setFromEuler(new THREE.Euler(...combinedRotation)),
+                  new THREE.Vector3(...scaleMultiplier)
+                )}
+                autoTransform={false}
+                onDrag={(matrix) => {
+                  const position = new THREE.Vector3();
+                  const rotation = new THREE.Quaternion();
+                  const scale = new THREE.Vector3();
+                  matrix.decompose(position, rotation, scale);
+                  const euler = new THREE.Euler().setFromQuaternion(rotation);
+                  const baseZ = el.baseRotation ? el.baseRotation[2] : 0;
+                  onElementUpdate(el.id, {
+                    rotationAngle: euler.z - baseZ
+                  });
+                }}
+              />
+            )
+          })}
+      </mesh>
+    )
+  }
+
+  if (node.isGroup || node.type === 'Object3D') {
+    return (
+      <group
+        key={node.uuid}
+        position={node.position}
+        quaternion={node.quaternion}
+        scale={node.scale}
+      >
+        {node.children.map((child: any, idx: number) => (
+          <GLTFNode
+            key={child.uuid || idx}
+            node={child}
+            color={color}
+            textureElements={textureElements}
+            selectedElementId={selectedElementId}
+            onElementSelect={onElementSelect}
+            onElementUpdate={onElementUpdate}
+          />
+        ))}
+      </group>
+    )
+  }
+
+  return null
+}
+
+// 3D Model loading the GLB files dynamically
+function ProductModel({ 
   type, 
   color, 
-  textureElements,
-  onElementUpdate,
-  onElementSelect,
+  textureElements, 
   selectedElementId,
-  isEditing,
-  onStartEdit,
-  onStopEdit
+  onElementSelect,
+  onElementUpdate,
+  onLoad
 }: { 
   type: string
   color: string
   textureElements: TextureElement[]
-  onElementUpdate: (id: string, updates: Partial<TextureElement>) => void
-  onElementSelect: (id: string) => void
   selectedElementId: string | null
-  isEditing: boolean
-  onStartEdit: (id: string) => void
-  onStopEdit: () => void
+  onElementSelect: (id: string) => void
+  onElementUpdate: (id: string, updates: Partial<TextureElement>) => void
+  onLoad?: (scene: THREE.Group) => void
 }) {
-  const modelPath = PRODUCT_TYPES.find(p => p.id === type)?.modelPath || '/models/tshirt.glb'
-  const { scene } = useGLTF(modelPath)
+  const modelRef = useRef<THREE.Group>(null);
+  const { camera, raycaster, pointer } = useThree();
   
-  // Create a combined texture from all elements
-  const createCombinedTexture = useCallback(() => {
-    if (textureElements.length === 0) return null
+  // Load model dynamically based on selected product type
+  const modelConfig = (modelsData.models as any)[type];
+  const modelPath = modelConfig?.path || `/models/tshirt.glb`;
+  const { scene } = useGLTF(modelPath) as any;
+
+  const baseScale = modelConfig?.scale ?? 1.0;
+  const basePosition = (modelConfig?.position as [number, number, number]) ?? [0, 0, 0];
+  const baseRotation = (modelConfig?.rotation as [number, number, number]) ?? [0, 0, 0];
+
+  // Trigger onLoad callback
+  useEffect(() => {
+    if (scene && onLoad) {
+      onLoad(scene);
+    }
+  }, [scene, onLoad]);
+
+  // Raycasting for decal placement & local coordinates calculation
+  const handlePointerMove = useCallback((e: any) => {
+    if (!selectedElementId || !modelRef.current) return;
+    if (e.buttons !== 1) return;
     
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return null
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObject(modelRef.current, true);
     
-    // Set canvas size for texture resolution
-    canvas.width = 1024
-    canvas.height = 1024
-    
-    // Fill with transparent background
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    
-    // Render each element as a texture
-    textureElements.forEach((element) => {
-      if (element.type === 'text') {
-        // Render text
-        const fontSize = Math.max(20, (element.fontSize || 0.5) * 100)
-        ctx.font = `${fontSize}px Arial, sans-serif`
-        ctx.fillStyle = element.color || '#000000'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
+    if (intersects.length > 0) {
+      const hitMesh = intersects[0].object as THREE.Mesh;
+      if (hitMesh && hitMesh.isMesh) {
+        const worldPoint = intersects[0].point;
+        const worldNormal = intersects[0].normal;
         
-        // Convert 3D position to texture coordinates (UV mapping)
-        // Map from 3D space (-2 to 2) to texture space (0 to canvas size)
-        const texX = ((element.position[0] + 2) / 4) * canvas.width
-        const texY = ((element.position[1] + 2) / 4) * canvas.height
-        
-        // Apply rotation
-        ctx.save()
-        ctx.translate(texX, texY)
-        ctx.rotate(element.rotation[2])
-        
-        // Apply scale
-        const textScale = element.scale[0] * 2
-        ctx.scale(textScale, textScale)
-        
-        // Draw text
-        ctx.fillText(element.content, 0, 0)
-        ctx.restore()
-        
-      } else if (element.type === 'image' && element.imageUrl) {
-        // Render image
-        const img = new Image()
-        img.onload = () => {
-          const scale = element.scale[0] * 200 // Scale factor for texture
-          const texX = ((element.position[0] + 2) / 4) * canvas.width
-          const texY = ((element.position[1] + 2) / 4) * canvas.height
+        if (worldPoint && worldNormal) {
+          const dummy = new THREE.Object3D();
+          dummy.position.copy(worldPoint);
+          dummy.lookAt(worldPoint.clone().add(worldNormal));
+          dummy.updateMatrixWorld(true);
           
-          ctx.save()
-          ctx.translate(texX, texY)
-          ctx.rotate(element.rotation[2])
-          ctx.drawImage(
-            img, 
-            -scale/2, -scale/2, 
-            scale, scale
-          )
-          ctx.restore()
+          hitMesh.updateMatrixWorld();
+          const localMatrix = hitMesh.matrixWorld.clone().invert().multiply(dummy.matrixWorld);
+          
+          const localPos = new THREE.Vector3();
+          const localQuad = new THREE.Quaternion();
+          const localScale = new THREE.Vector3();
+          localMatrix.decompose(localPos, localQuad, localScale);
+          
+          const localRot = new THREE.Euler().setFromQuaternion(localQuad);
+          
+          onElementUpdate(selectedElementId, {
+            position: [localPos.x, localPos.y, localPos.z],
+            baseRotation: [localRot.x, localRot.y, localRot.z],
+            meshName: hitMesh.name
+          });
         }
-        img.src = element.imageUrl
       }
-    })
-    
-    return canvas
-  }, [textureElements])
-  
-  // Function to update texture on existing materials
-  const updateTexture = useCallback(() => {
-    if (scene) {
-      const combinedTexture = createCombinedTexture()
-      
-      scene.traverse((child: any) => {
-        if (child.isMesh && child.material && child.userData.texture) {
-          if (combinedTexture) {
-            // Update existing texture
-            child.userData.texture.image = combinedTexture
-            child.userData.texture.needsUpdate = true
-          } else {
-            // Remove texture
-            child.material.map = null
-            child.userData.texture.dispose()
-            delete child.userData.texture
-          }
-        }
-      })
     }
-  }, [scene, createCombinedTexture])
-
-  // Apply base color and texture to the model
-  useEffect(() => {
-    if (scene) {
-      const combinedTexture = createCombinedTexture()
-      
-      scene.traverse((child: any) => {
-        if (child.isMesh && child.material) {
-          const material = child.material.clone()
-          material.color.setStyle(color)
-          
-          // Apply the combined texture if we have elements
-          if (combinedTexture) {
-            const texture = new THREE.CanvasTexture(combinedTexture)
-            texture.needsUpdate = true
-            texture.wrapS = THREE.RepeatWrapping
-            texture.wrapT = THREE.RepeatWrapping
-            texture.repeat.set(1, 1)
-            material.map = texture
-            material.transparent = true
-            material.alphaTest = 0.1
-            material.side = THREE.DoubleSide
-            
-            // Store texture reference for updates
-            child.userData.texture = texture
-          } else {
-            // Remove texture if no elements
-            material.map = null
-            if (child.userData.texture) {
-              child.userData.texture.dispose()
-              delete child.userData.texture
-            }
-          }
-          
-          material.needsUpdate = true
-          child.material = material
-        }
-      })
-    }
-  }, [scene, color, createCombinedTexture])
-
-  // Update texture when elements change
-  useEffect(() => {
-    updateTexture()
-  }, [updateTexture])
+  }, [selectedElementId, camera, pointer, raycaster, onElementUpdate]);
 
   return (
-    <group>
-      <primitive object={scene} />
-      
-      {/* Render interactive handles for editing (invisible but functional) */}
-      {textureElements.map((element) => (
-        <InteractiveTextureElement
-          key={element.id}
-          element={element}
-          onUpdate={onElementUpdate}
-          onSelect={onElementSelect}
-          isSelected={selectedElementId === element.id}
-          isEditing={isEditing}
-          onStartEdit={onStartEdit}
-          onStopEdit={onStopEdit}
-          invisible={true} // Make the element itself invisible since it's now a texture
-        />
-      ))}
+    <group 
+      ref={modelRef} 
+      onPointerMove={handlePointerMove} 
+      scale={[baseScale, baseScale, baseScale]}
+      position={basePosition}
+      rotation={baseRotation}
+    >
+      <GLTFNode
+        node={scene}
+        color={color}
+        textureElements={textureElements}
+        selectedElementId={selectedElementId}
+        onElementSelect={onElementSelect}
+        onElementUpdate={onElementUpdate}
+      />
     </group>
-  )
+  );
 }
 
+// Preload the GLTF models
+Object.values(modelsData.models).forEach((model: any) => {
+  useGLTF.preload(model.path)
+})
+
+// Helper to calculate exact surface coordinates using programmatical raycasting
+const getSurfacePosition = (
+  scene: THREE.Group,
+  productType: string,
+  designAreaKey: string
+) => {
+  const modelConfig = (modelsData.models as any)[productType];
+  if (!modelConfig) return null;
+  
+  const area = modelConfig.designAreas[designAreaKey];
+  if (!area) return null;
+  
+  const [defaultX, defaultY, defaultZ] = area.position;
+  const isFront = defaultZ >= 0;
+  
+  const raycaster = new THREE.Raycaster();
+  // Set origin way out in front or back of the shape
+  const origin = new THREE.Vector3(defaultX, defaultY, isFront ? 5 : -5);
+  const direction = new THREE.Vector3(0, 0, isFront ? -1 : 1);
+  
+  raycaster.set(origin, direction);
+  
+  // Update world matrices of the scene graph
+  scene.updateMatrixWorld(true);
+  const intersects = raycaster.intersectObject(scene, true);
+  
+  if (intersects.length > 0) {
+    const hit = intersects[0];
+    const hitMesh = hit.object as THREE.Mesh;
+    const worldPoint = hit.point;
+    const worldNormal = hit.normal;
+    
+    if (worldPoint && worldNormal) {
+      const dummy = new THREE.Object3D();
+      dummy.position.copy(worldPoint);
+      dummy.lookAt(worldPoint.clone().add(worldNormal));
+      dummy.updateMatrixWorld(true);
+      
+      hitMesh.updateMatrixWorld(true);
+      const localMatrix = hitMesh.matrixWorld.clone().invert().multiply(dummy.matrixWorld);
+      
+      const localPos = new THREE.Vector3();
+      const localQuad = new THREE.Quaternion();
+      const localScale = new THREE.Vector3();
+      localMatrix.decompose(localPos, localQuad, localScale);
+      
+      const localRot = new THREE.Euler().setFromQuaternion(localQuad);
+      
+      console.log("getSurfacePosition HIT:", hitMesh.name, "pos:", [localPos.x, localPos.y, localPos.z]);
+      return {
+        position: [localPos.x, localPos.y, localPos.z] as [number, number, number],
+        baseRotation: [localRot.x, localRot.y, localRot.z] as [number, number, number],
+        scale: area.scale as [number, number, number],
+        meshName: hitMesh.name
+      };
+    }
+  }
+  
+  // Find a fallback mesh name from the scene if raycast misses
+  let fallbackMeshName: string | undefined = undefined;
+  scene.traverse((child) => {
+    if (!fallbackMeshName && child.type === 'Mesh') {
+      fallbackMeshName = child.name;
+    }
+  });
+  
+  console.log("getSurfacePosition MISS. Fallback:", fallbackMeshName);
+  // Fallback if no intersection
+  return {
+    position: area.position as [number, number, number],
+    baseRotation: area.rotation as [number, number, number],
+    scale: area.scale as [number, number, number],
+    meshName: fallbackMeshName
+  };
+}
+
+// Helper to retrieve the default design area parameters
+const getDefaultDesignArea = (productType: string, designAreaKey: string) => {
+  const modelConfig = (modelsData.models as any)[productType];
+  if (!modelConfig) {
+    return { 
+      position: [0, 0.2, 0.1] as [number, number, number], 
+      scale: [0.3, 0.4, 0.1] as [number, number, number], 
+      rotation: [0, 0, 0] as [number, number, number] 
+    };
+  }
+  
+  const areaKey = designAreaKey in modelConfig.designAreas ? designAreaKey : Object.keys(modelConfig.designAreas)[0];
+  const area = modelConfig.designAreas[areaKey];
+  return {
+    position: area.position as [number, number, number],
+    scale: area.scale as [number, number, number],
+    rotation: area.rotation as [number, number, number]
+  };
+}
+
+// --- Main Page Component ---
 export default function DesignPage() {
   const [selectedType, setSelectedType] = useState('tshirt')
-  const [selectedColor, setSelectedColor] = useState('#ffffff')
-  const [designName, setDesignName] = useState('')
+  const selectedProductType = PRODUCT_TYPES.find(p => p.id === selectedType)
+  const SelectedGarmentIcon = selectedProductType?.icon || Shirt
+  const [selectedColor, setSelectedColor] = useState(COLORS[0]?.value || '#ffffff')
   const [textureElements, setTextureElements] = useState<TextureElement[]>([])
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
-  const [isAddingElement, setIsAddingElement] = useState(false)
-  const [newElementType, setNewElementType] = useState<'text' | 'image'>('text')
-  const [newElementContent, setNewElementContent] = useState('')
-  const [newElementColor, setNewElementColor] = useState('#000000')
-  const [newElementFontSize, setNewElementFontSize] = useState(0.5)
-  const [newElementImage, setNewElementImage] = useState<string | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  
+  // Model reference for raycasting
+  const modelSceneRef = useRef<THREE.Group | null>(null)
 
-  // Add new texture element
-  const handleAddElement = () => {
-    if (newElementType === 'text' && !newElementContent.trim()) {
-      alert('Please enter text content')
-      return
+  // Placement area state
+  const [selectedArea, setSelectedArea] = useState('')
+  
+  const currentModelConfig = (modelsData.models as any)[selectedType]
+  const availableDesignAreas = useMemo(() => {
+    return currentModelConfig ? Object.keys(currentModelConfig.designAreas) : []
+  }, [currentModelConfig])
+
+  useEffect(() => {
+    if (availableDesignAreas.length > 0) {
+      setSelectedArea(availableDesignAreas[0])
+    }
+  }, [availableDesignAreas])
+
+  // Form State
+  const [selectedFabric, setSelectedFabric] = useState('cotton')
+  const [activeLeftPanel, setActiveLeftPanel] = useState<'garment' | 'decoration' | null>('garment')
+  const [isAdding, setIsAdding] = useState(false)
+  const [newType, setNewType] = useState<'text'|'image'>('text')
+  const [newContent, setNewContent] = useState('')
+  const [newImage, setNewImage] = useState<string | null>(null)
+  const [newColor, setNewColor] = useState('#000000')
+
+  // Details & Publishing State
+  const [designName, setDesignName] = useState('Custom Merch')
+  const [designPrice, setDesignPrice] = useState(39.99)
+  const [designDescription, setDesignDescription] = useState('Exclusive custom 3D merchandise design.')
+  const [isPublishing, setIsPublishing] = useState(false)
+
+  const handlePublish = async () => {
+    setIsPublishing(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800))
+      toast.success('Design published to your store!')
+    } catch (err: any) {
+      toast.error('Failed to publish design.')
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  // --- Handlers ---
+  const handleAddText = () => {
+    if (!newContent.trim()) return;
+    let designParams;
+    if (modelSceneRef.current) {
+      designParams = getSurfacePosition(modelSceneRef.current, selectedType, selectedArea || 'front');
     }
     
-    if (newElementType === 'image' && !newElementImage) {
-      alert('Please upload an image')
-      return
+    if (!designParams) {
+      const defaultDesign = getDefaultDesignArea(selectedType, selectedArea || 'front');
+      designParams = {
+        position: defaultDesign.position,
+        baseRotation: defaultDesign.rotation,
+        scale: defaultDesign.scale,
+        meshName: undefined
+      };
     }
 
     const newElement: TextureElement = {
       id: Date.now().toString(),
-      type: newElementType,
-      content: newElementType === 'text' ? newElementContent : '',
-      position: [0, 0, 0.1],
-      scale: [1, 1, 1],
-      rotation: [0, 0, 0],
-      color: newElementColor,
-      fontSize: newElementFontSize,
-      imageUrl: newElementType === 'image' ? newElementImage || undefined : undefined,
-      uvPosition: [0.5, 0.5], // Center of texture
-      uvScale: [1, 1] // Full texture size
+      type: 'text',
+      content: newContent.trim(),
+      position: designParams.position, 
+      baseRotation: (designParams as any).baseRotation || [0, 0, 0],
+      rotationAngle: 0,
+      scale: designParams.scale,
+      color: newColor,
+      fontSize: 1,
+      opacity: 1,
+      meshName: designParams.meshName
     }
-
     setTextureElements(prev => [...prev, newElement])
     setSelectedElementId(newElement.id)
-    
-    // Reset form
-    setNewElementContent('')
-    setNewElementImage(null)
-    setIsAddingElement(false)
+    setNewContent('')
+    toast.success('Text added to garment')
   }
 
-  // Remove selected element
-  const handleRemoveElement = () => {
-    if (selectedElementId) {
-      setTextureElements(prev => prev.filter(el => el.id !== selectedElementId))
-      setSelectedElementId(null)
-    }
-  }
-
-  // Update element properties
-  const handleElementUpdate = (id: string, updates: Partial<TextureElement>) => {
-    setTextureElements(prev =>
-      prev.map(element =>
-        element.id === id ? { ...element, ...updates } : element
-      )
-    )
-  }
-
-  const handleStartEdit = (id: string) => {
-    setIsEditing(true)
-    setSelectedElementId(id)
-  }
-
-  const handleStopEdit = () => {
-    setIsEditing(false)
-  }
-
-  const handleAddToStore = () => {
-    if (!designName.trim()) {
-      alert('Please enter a design name')
-      return
-    }
-    
-    console.log('Adding design to store:', {
-      name: designName,
-      type: selectedType,
-      color: selectedColor,
-      elements: textureElements
-    })
-    
-    alert('Design added to store successfully!')
-  }
-
-  const handleReset = () => {
-    setSelectedColor('#ffffff')
-    setDesignName('')
-    setTextureElements([])
-    setSelectedElementId(null)
-    setNewElementContent('')
-    setNewElementColor('#000000')
-    setNewElementFontSize(0.5)
-    setNewElementImage(null)
-    setIsAddingElement(false)
-    setIsEditing(false)
-  }
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        setNewElementImage(e.target?.result as string)
+      reader.onload = (ev) => {
+        const imageUrl = ev.target?.result as string;
+        if (!imageUrl) return;
+
+        let designParams;
+        if (modelSceneRef.current) {
+          designParams = getSurfacePosition(modelSceneRef.current, selectedType, selectedArea || 'front');
+        }
+        
+        if (!designParams) {
+          const defaultDesign = getDefaultDesignArea(selectedType, selectedArea || 'front');
+          designParams = {
+            position: defaultDesign.position,
+            baseRotation: defaultDesign.rotation,
+            scale: defaultDesign.scale,
+            meshName: undefined
+          };
+        }
+
+        const newElement: TextureElement = {
+          id: Date.now().toString(),
+          type: 'image',
+          content: 'Uploaded Graphic',
+          imageUrl: imageUrl,
+          position: designParams.position, 
+          baseRotation: (designParams as any).baseRotation || [0, 0, 0],
+          rotationAngle: 0,
+          scale: designParams.scale,
+          opacity: 1,
+          meshName: designParams.meshName
+        }
+        setTextureElements(prev => [...prev, newElement])
+        setSelectedElementId(newElement.id)
+        toast.success('Image artwork uploaded')
       }
       reader.readAsDataURL(file)
     }
   }
 
+  const handleUpdateElement = (id: string, updates: Partial<TextureElement>) => {
+    setTextureElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el))
+  }
+  
+  // Specific handler for 3D dragging
+  const handlePositionUpdate = (id: string, updates: Partial<TextureElement>) => {
+    setTextureElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el))
+  }
+
   const selectedElement = textureElements.find(el => el.id === selectedElementId)
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">3D Design Studio</h1>
-          <p className="text-muted-foreground">
-            Create and customize your merchandise designs with interactive 3D elements
-          </p>
-        </div>
+    <div className="relative min-h-screen bg-background text-foreground pt-24 pb-12 px-4 sm:px-6 lg:px-8 font-sans">
+      
+      {/* Ambient Background Orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[140px]" />
+        <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[160px]" />
+      </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Panel - Controls */}
-          <div className="space-y-6">
-            {/* Product Type Selection */}
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                <Shirt className="w-5 h-5 mr-2" />
-                Product Type
-              </h3>
-              <div className="grid grid-cols-1 gap-3">
-                {PRODUCT_TYPES.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => setSelectedType(product.id)}
-                    className={cn(
-                      "flex items-center p-3 rounded-lg border transition-all",
-                      selectedType === product.id
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <product.icon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">{product.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Color Selection */}
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                <Palette className="w-5 h-5 mr-2" />
-                Base Color
-              </h3>
-              <div className="grid grid-cols-5 gap-3">
-                {COLORS.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => setSelectedColor(color.value)}
-                    className={cn(
-                      "w-12 h-12 rounded-lg border-2 transition-all",
-                      selectedColor === color.value
-                        ? "border-primary scale-110"
-                        : "border-border hover:border-primary/50"
-                    )}
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Add New Element */}
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                <Plus className="w-5 h-5 mr-2" />
-                Add Element
-              </h3>
-              
-              {!isAddingElement ? (
-                <div className="space-y-3">
-                  <button
-                    onClick={() => {
-                      setIsAddingElement(true)
-                      setNewElementType('text')
-                    }}
-                    className="w-full btn-outline flex items-center justify-center"
-                  >
-                    <Type className="w-4 h-4 mr-2" />
-                    Add Text
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsAddingElement(true)
-                      setNewElementType('image')
-                    }}
-                    className="w-full btn-outline flex items-center justify-center"
-                  >
-                    <ImageIcon className="w-4 h-4 mr-2" />
-                    Add Image
-                  </button>
+      <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-6 items-start">
+        
+        {/* LEFT & CENTER 2/3 COLUMN: 3D Model Viewport Canvas with Superimposed Floating Toolbar */}
+        <div className="lg:col-span-8 h-[calc(100vh-130px)] min-h-[550px] glass-card-rounded overflow-hidden relative shadow-2xl border border-white/20">
+          
+          {/* Floating Vertical Customization Toolbar Superimposed on Top Left of 3D Canvas */}
+          <div className="absolute top-4 left-4 z-20 flex gap-3 items-start pointer-events-auto">
+            
+            {/* Minimal Vertical Icon Toolbar */}
+            <div className="flex flex-col gap-2 p-1.5 glass-pill shadow-2xl backdrop-blur-xl border border-white/20 items-center">
+              <button
+                onClick={() => setActiveLeftPanel(activeLeftPanel === 'garment' ? null : 'garment')}
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 relative group",
+                  activeLeftPanel === 'garment'
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                )}
+                title={`${selectedProductType?.name || 'Garment'} & Fabric Settings`}
+              >
+                <div className="relative flex items-center justify-center">
+                  <SelectedGarmentIcon className="w-4 h-4" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white/80 shadow-sm" style={{ backgroundColor: selectedColor }} />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Element Type Selection */}
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setNewElementType('text')}
-                      className={cn(
-                        "flex-1 px-3 py-2 text-sm rounded border transition-all",
-                        newElementType === 'text'
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      Text
-                    </button>
-                    <button
-                      onClick={() => setNewElementType('image')}
-                      className={cn(
-                        "flex-1 px-3 py-2 text-sm rounded border transition-all",
-                        newElementType === 'image'
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      Image
-                    </button>
-                  </div>
+              </button>
 
-                  {/* Text Input */}
-                  {newElementType === 'text' && (
-                    <>
-                      <input
-                        type="text"
-                        value={newElementContent}
-                        onChange={(e) => setNewElementContent(e.target.value)}
-                        placeholder="Enter text content..."
-                        className="w-full p-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Text Color
-                        </label>
-                        <div className="grid grid-cols-6 gap-2">
-                          {COLORS.map((color) => (
+              <button
+                onClick={() => setActiveLeftPanel(activeLeftPanel === 'decoration' ? null : 'decoration')}
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 relative group",
+                  activeLeftPanel === 'decoration'
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                )}
+                title="Add Artwork / Text"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Expandable Sub-Panels (Floats to the right of the vertical toolbar) */}
+            <AnimatePresence mode="wait">
+              {activeLeftPanel && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="w-72 sm:w-80 max-w-[calc(100vw-5rem)] bg-background/95 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-3.5 max-h-[calc(100vh-180px)] overflow-x-hidden overflow-y-auto space-y-3.5 box-border"
+                >
+                  {activeLeftPanel === 'garment' && (
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between pb-1 border-b border-border/30">
+                        <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">Garment & Fabric</span>
+                        <button onClick={() => setActiveLeftPanel(null)} className="text-muted-foreground hover:text-foreground">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Garment Style Icons */}
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Garment Style</label>
+                          <span className="text-[10px] font-medium text-foreground">{selectedProductType?.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {PRODUCT_TYPES.map(p => (
                             <button
-                              key={color.value}
-                              onClick={() => setNewElementColor(color.value)}
+                              key={p.id}
+                              onClick={() => {
+                                setSelectedType(p.id)
+                                setDesignName('Custom ' + p.name)
+                              }}
                               className={cn(
-                                "w-8 h-8 rounded-lg border-2 transition-all",
-                                newElementColor === color.value
-                                  ? "border-primary scale-110"
-                                  : "border-border hover:border-primary/50"
+                                "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 glass-pill relative group",
+                                selectedType === p.id 
+                                  ? "bg-primary text-primary-foreground shadow-md scale-105" 
+                                  : "hover:bg-foreground/10 text-muted-foreground"
                               )}
-                              style={{ backgroundColor: color.value }}
-                              title={color.name}
-                            />
+                              title={p.name}
+                            >
+                              <p.icon className="w-4 h-4" />
+                            </button>
                           ))}
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Font Size: {newElementFontSize}
-                        </label>
-                        <input
-                          type="range"
-                          min="0.1"
-                          max="2"
-                          step="0.1"
-                          value={newElementFontSize}
-                          onChange={(e) => setNewElementFontSize(parseFloat(e.target.value))}
-                          className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                        />
+
+                      {/* Fabric Material Selector */}
+                      <div className="space-y-1.5 pt-1 border-t border-border/20">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Fabric Material</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {FABRICS.map(f => (
+                            <button
+                              key={f.id}
+                              onClick={() => setSelectedFabric(f.id)}
+                              className={cn(
+                                "p-2 rounded-2xl text-left transition-all duration-200 glass text-xs",
+                                selectedFabric === f.id
+                                  ? "bg-primary/20 border-primary font-bold shadow-sm"
+                                  : "hover:bg-foreground/10 text-muted-foreground border-transparent"
+                              )}
+                            >
+                              <div className="text-[11px] font-bold text-foreground truncate">{f.name}</div>
+                              <div className="text-[9px] text-muted-foreground truncate">{f.desc}</div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </>
+
+                      {/* Fabric Color Swatches */}
+                      <div className="space-y-1.5 pt-1 border-t border-border/20">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Fabric Color</label>
+                          <span className="text-[10px] font-medium text-foreground">{COLORS.find(c => c.value === selectedColor)?.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          {COLORS.map(c => (
+                            <button
+                              key={c.value}
+                              onClick={() => setSelectedColor(c.value)}
+                              className={cn(
+                                "w-7 h-7 rounded-full border border-white/40 transition-transform duration-200 hover:scale-110 shadow-sm flex items-center justify-center",
+                                selectedColor === c.value && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                              )}
+                              style={{ backgroundColor: c.value }}
+                              title={c.name}
+                            >
+                              {selectedColor === c.value && (
+                                <div className={cn("w-1.5 h-1.5 rounded-full", c.value === '#FFFFFF' ? "bg-black" : "bg-white")} />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )}
 
-                  {/* Image Upload */}
-                  {newElementType === 'image' && (
-                    <>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="w-full p-3 rounded-lg border border-border bg-background text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                      />
-                      {newElementImage && (
-                        <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
-                          <img
-                            src={newElementImage}
-                            alt="Preview"
-                            className="w-full h-full object-contain"
-                          />
-                          <button
-                            onClick={() => setNewElementImage(null)}
-                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                  {activeLeftPanel === 'decoration' && (
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between pb-1 border-b border-border/30">
+                        <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">Artwork & Layers</span>
+                        <button onClick={() => setActiveLeftPanel(null)} className="text-muted-foreground hover:text-foreground">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Unified Form: Text Input + RGB Color Selector AND Image Upload Dropzone */}
+                      <div className="space-y-3 glass p-3 rounded-2xl border border-white/20 box-border">
+                        
+                        {/* 1. Add Text Section */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Add Text Artwork</label>
+                          <div className="flex items-center gap-1.5 w-full">
+                            <input 
+                              className="flex-1 min-w-0 px-3 py-1.5 rounded-full glass border border-white/20 bg-background/50 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" 
+                              placeholder="Type text artwork..." 
+                              value={newContent} 
+                              onChange={e => setNewContent(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddText();
+                                }
+                              }}
+                            />
+                            <button 
+                              onClick={handleAddText} 
+                              disabled={!newContent.trim()} 
+                              className="btn-highlight px-3 py-1.5 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                            >
+                              Add
+                            </button>
+                          </div>
+
+                          {/* RGB Text Color Selector */}
+                          <div className="space-y-1.5 pt-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-semibold text-muted-foreground">Text Color (RGB/Hex):</span>
+                              <span className="text-[9px] font-mono font-medium text-foreground uppercase">{newColor}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 w-full">
+                              {/* Native RGB Color Picker Button */}
+                              <div className="relative w-7 h-7 rounded-full border border-white/40 shadow-sm shrink-0 cursor-pointer overflow-hidden flex items-center justify-center group">
+                                <input 
+                                  type="color" 
+                                  value={newColor} 
+                                  onChange={e => setNewColor(e.target.value)}
+                                  className="absolute -inset-2 w-12 h-12 cursor-pointer opacity-0 z-10"
+                                  title="Open Full RGB Color Picker"
+                                />
+                                <div className="w-full h-full rounded-full transition-transform group-hover:scale-110" style={{ backgroundColor: newColor }} />
+                              </div>
+
+                              {/* Custom Hex Code Input */}
+                              <input 
+                                type="text" 
+                                value={newColor} 
+                                onChange={e => setNewColor(e.target.value)}
+                                className="flex-1 min-w-0 px-3 py-1 rounded-full text-xs font-mono glass border border-white/20 uppercase text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="#FFFFFF"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="flex items-center gap-2 my-1">
+                          <div className="flex-1 h-[1px] bg-border/30" />
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase">OR</span>
+                          <div className="flex-1 h-[1px] bg-border/30" />
+                        </div>
+
+                        {/* 2. Image Upload Dropzone */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Upload Image / Graphic</label>
+                          <label className="border border-dashed border-white/30 rounded-2xl p-2.5 flex flex-col items-center justify-center cursor-pointer glass hover:bg-foreground/10 transition-all text-center gap-1 group">
+                            <ImageIcon className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                            <span className="text-[11px] font-semibold text-foreground">Click to Upload Graphic</span>
+                            <span className="text-[9px] text-muted-foreground">PNG, JPG, SVG supported</span>
+                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Active Layers Stack */}
+                      {textureElements.length > 0 && (
+                        <div className="space-y-1">
+                          <h3 className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">Layers ({textureElements.length})</h3>
+                          <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
+                            {textureElements.map((el) => (
+                              <div 
+                                key={el.id}
+                                onClick={() => setSelectedElementId(el.id)}
+                                className={cn(
+                                  "p-1.5 rounded-xl glass flex items-center justify-between cursor-pointer text-xs transition-all",
+                                  selectedElementId === el.id ? "border-primary bg-primary/10 font-bold" : ""
+                                )}
+                              >
+                                <div className="flex items-center gap-1.5 truncate">
+                                  {el.type === 'text' ? <Type className="w-3 h-3 text-primary shrink-0" /> : <ImageIcon className="w-3 h-3 text-primary shrink-0" />}
+                                  <span className="truncate text-[11px]">{el.type === 'text' ? el.content : 'Uploaded Artwork'}</span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTextureElements(prev => prev.filter(item => item.id !== el.id));
+                                    if (selectedElementId === el.id) setSelectedElementId(null);
+                                  }}
+                                  className="p-0.5 hover:text-destructive text-muted-foreground rounded-full"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                    </>
-                  )}
 
-                  {/* Action Buttons */}
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={handleAddElement}
-                      className="flex-1 btn-primary"
-                      disabled={
-                        (newElementType === 'text' && !newElementContent.trim()) ||
-                        (newElementType === 'image' && !newElementImage)
-                      }
-                    >
-                      Add
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsAddingElement(false)
-                        setNewElementContent('')
-                        setNewElementImage(null)
-                      }}
-                      className="flex-1 btn-outline"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+                      {/* Selected Element Controls */}
+                      {selectedElement && (
+                        <div className="pt-2 border-t border-border/30 space-y-1.5">
+                          <h3 className="font-bold text-[11px] text-foreground flex items-center gap-1">
+                            <Move className="w-3 h-3 text-primary" /> Transform Layer
+                          </h3>
+                          
+                          <div className="space-y-2 text-xs glass p-2.5 rounded-2xl">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-semibold text-muted-foreground">Pos</label>
+                                {['X', 'Y'].map((axis, i) => (
+                                  <div key={axis} className="flex items-center gap-1">
+                                    <span className="w-2.5 text-[9px] font-mono text-muted-foreground">{axis}</span>
+                                    <input
+                                      type="range"
+                                      min="-1"
+                                      max="1"
+                                      step="0.01"
+                                      value={selectedElement.position[i]}
+                                      onChange={(e) => {
+                                        const newPos = [...selectedElement.position] as [number, number, number];
+                                        newPos[i] = parseFloat(e.target.value);
+                                        handleUpdateElement(selectedElement.id, { position: newPos });
+                                      }}
+                                      className="flex-1 accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[9px] font-semibold text-muted-foreground">Scale</label>
+                                {['X', 'Y'].map((axis, i) => (
+                                  <div key={axis} className="flex items-center gap-1">
+                                    <span className="w-2.5 text-[9px] font-mono text-muted-foreground">{axis === 'X' ? 'W' : 'H'}</span>
+                                    <input
+                                      type="range"
+                                      min="0.1"
+                                      max="2"
+                                      step="0.05"
+                                      value={selectedElement.scale[i]}
+                                      onChange={(e) => {
+                                        const newScale = [...selectedElement.scale] as [number, number, number];
+                                        newScale[i] = parseFloat(e.target.value);
+                                        handleUpdateElement(selectedElement.id, { scale: newScale });
+                                      }}
+                                      className="flex-1 accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-0.5">
+                              <div className="flex justify-between items-center text-[9px]">
+                                <label className="font-semibold text-muted-foreground">Rotate</label>
+                                <span className="font-mono">{Math.round(((selectedElement.rotationAngle || 0) * 180) / Math.PI)}°</span>
+                              </div>
+                              <input
+                                type="range"
+                                min="0"
+                                max={Math.PI * 2}
+                                step="0.05"
+                                value={selectedElement.rotationAngle || 0}
+                                onChange={(e) => {
+                                  handleUpdateElement(selectedElement.id, { rotationAngle: parseFloat(e.target.value) });
+                                }}
+                                className="w-full accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
+                              />
+                            </div>
+
+                            <button 
+                              onClick={() => {
+                                setTextureElements(prev => prev.filter(el => el.id !== selectedElement.id))
+                                setSelectedElementId(null)
+                              }}
+                              className="w-full py-0.5 text-[10px] text-destructive glass hover:bg-destructive/10 rounded-full flex items-center justify-center gap-1 transition-colors"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" /> Remove
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
+          </div>
 
-            {/* Element Properties */}
-            {selectedElement && (
-              <div className="glass rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
-                  <Move className="w-5 h-5 mr-2" />
-                  Element Properties
-                </h3>
-                
-                <div className="space-y-4">
-                  {/* Edit Mode Toggle */}
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        if (isEditing) {
-                          handleStopEdit()
-                        } else {
-                          handleStartEdit(selectedElement.id)
-                        }
-                      }}
-                      className={cn(
-                        "flex-1 px-3 py-2 text-sm rounded border transition-all flex items-center justify-center",
-                        isEditing
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      <MousePointer2 className="w-4 h-4 mr-2" />
-                      {isEditing ? 'Exit Edit Mode' : 'Enter Edit Mode'}
-                    </button>
-                  </div>
+          {/* 3D Canvas Component */}
+          <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
+            <ambientLight intensity={0.8} />
+            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
+            <Environment preset="city" />
+            
+            <Suspense fallback={null}>
+              <ProductModel 
+                type={selectedType}
+                color={selectedColor}
+                textureElements={textureElements}
+                selectedElementId={selectedElementId}
+                onElementSelect={setSelectedElementId}
+                onElementUpdate={handlePositionUpdate}
+                onLoad={(scene) => {
+                  modelSceneRef.current = scene;
+                }}
+              />
+            </Suspense>
+            
+            <OrbitControls 
+              makeDefault 
+              minDistance={1.8} 
+              maxDistance={4.5} 
+              enableZoom={true}
+              zoomSpeed={0.5}
+            />
+          </Canvas>
+          
+          <div className="absolute bottom-4 left-4 right-4 text-center text-xs text-muted-foreground glass-pill py-2 px-4 pointer-events-none shadow-md z-10">
+            Interactive 3D Preview • Drag or zoom model to inspect design from any angle
+          </div>
+        </div>
 
-                  {/* Position Controls */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Position
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['X', 'Y', 'Z'].map((axis, index) => (
-                        <div key={axis}>
-                          <label className="block text-xs text-muted-foreground mb-1">
-                            {axis}: {selectedElement.position[index].toFixed(2)}
-                          </label>
-                          <input
-                            type="range"
-                            min="-2"
-                            max="2"
-                            step="0.1"
-                            value={selectedElement.position[index]}
-                            onChange={(e) => {
-                              const newPosition = [...selectedElement.position] as [number, number, number]
-                              newPosition[index] = parseFloat(e.target.value)
-                              handleElementUpdate(selectedElement.id, { position: newPosition })
-                            }}
-                            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+        {/* RIGHT 1/3 COLUMN: Floating Details & Publishing Controls */}
+        <div className="lg:col-span-4 glass-card-rounded p-6 shadow-xl space-y-6 max-h-[calc(100vh-130px)] overflow-y-auto">
+          <div className="flex items-center justify-between border-b border-border/30 pb-3">
+            <h2 className="text-base font-extrabold tracking-tight text-foreground flex items-center gap-2">
+              <Tag className="w-4 h-4 text-primary" />
+              <span>Details & Publish</span>
+            </h2>
+          </div>
 
-                  {/* Scale Controls */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Scale
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['X', 'Y', 'Z'].map((axis, index) => (
-                        <div key={axis}>
-                          <label className="block text-xs text-muted-foreground mb-1">
-                            {axis}: {selectedElement.scale[index].toFixed(2)}
-                          </label>
-                          <input
-                            type="range"
-                            min="0.1"
-                            max="3"
-                            step="0.1"
-                            value={selectedElement.scale[index]}
-                            onChange={(e) => {
-                              const newScale = [...selectedElement.scale] as [number, number, number]
-                              newScale[index] = parseFloat(e.target.value)
-                              handleElementUpdate(selectedElement.id, { scale: newScale })
-                            }}
-                            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Rotation Controls */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Rotation (degrees)
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['X', 'Y', 'Z'].map((axis, index) => (
-                        <div key={axis}>
-                          <label className="block text-xs text-muted-foreground mb-1">
-                            {axis}: {(selectedElement.rotation[index] * 180 / Math.PI).toFixed(0)}°
-                          </label>
-                          <input
-                            type="range"
-                            min="0"
-                            max="360"
-                            step="15"
-                            value={(selectedElement.rotation[index] * 180 / Math.PI)}
-                            onChange={(e) => {
-                              const newRotation = [...selectedElement.rotation] as [number, number, number]
-                              newRotation[index] = (parseFloat(e.target.value) * Math.PI / 180)
-                              handleElementUpdate(selectedElement.id, { rotation: newRotation })
-                            }}
-                            className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Remove Button */}
-                  <button
-                    onClick={handleRemoveElement}
-                    className="w-full btn-outline text-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remove Element
-                  </button>
-                </div>
-              </div>
-            )}
-
+          <div className="space-y-4">
             {/* Design Name */}
-            <div className="glass rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Design Name</h3>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Design Title</label>
               <input
                 type="text"
                 value={designName}
                 onChange={(e) => setDesignName(e.target.value)}
-                placeholder="Enter design name..."
-                className="w-full p-3 rounded-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full px-3 py-2 rounded-full glass border border-white/20 bg-background/50 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g. Galaxy Dreams Tee"
               />
             </div>
 
-            {/* Actions */}
-            <div className="glass rounded-xl p-6 space-y-4">
-              <button
-                onClick={handleAddToStore}
-                className="w-full btn-primary flex items-center justify-center"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Add to Store
-              </button>
-              
-              <button
-                onClick={handleReset}
-                className="w-full btn-outline flex items-center justify-center"
-              >
-                <RotateCcw className="w-5 h-5 mr-2" />
-                Reset Design
-              </button>
+            {/* Price Input */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Retail Price ($USD)</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={designPrice}
+                  onChange={(e) => setDesignPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full pl-8 pr-4 py-2 rounded-full glass border border-white/20 bg-background/50 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Center - 3D Canvas */}
-          <div className="lg:col-span-2">
-            <div className="glass rounded-xl p-6">
-              <div className="aspect-square w-full rounded-lg overflow-hidden bg-gradient-to-br from-muted/20 to-muted/10">
-                <Suspense fallback={<CanvasLoader />}>
-                  <Canvas
-                    ref={canvasRef}
-                    camera={{ position: [0, 0, 5], fov: 50 }}
-                    className="w-full h-full"
-                  >
-                    <ambientLight intensity={0.5} />
-                    <directionalLight position={[10, 10, 5]} intensity={1} />
-                    <pointLight position={[-10, -10, -5]} intensity={0.5} />
-                    
-                    <GLBModel 
-                      type={selectedType} 
-                      color={selectedColor}
-                      textureElements={textureElements}
-                      onElementUpdate={handleElementUpdate}
-                      onElementSelect={setSelectedElementId}
-                      selectedElementId={selectedElementId}
-                      isEditing={isEditing}
-                      onStartEdit={handleStartEdit}
-                      onStopEdit={handleStopEdit}
-                    />
-                    
-                    <OrbitControls 
-                      enablePan={true}
-                      enableZoom={true}
-                      enableRotate={true}
-                      minDistance={2}
-                      maxDistance={10}
-                    />
-                    
-                    <Environment preset="studio" />
-                  </Canvas>
-                </Suspense>
+            {/* Description */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Description</label>
+              <textarea
+                rows={3}
+                value={designDescription}
+                onChange={(e) => setDesignDescription(e.target.value)}
+                className="w-full p-3 rounded-2xl glass border border-white/20 bg-background/50 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Describe your design artwork..."
+              />
+            </div>
+
+            {/* Estimated Royalty Card */}
+            <div className="glass p-4 rounded-2xl space-y-1.5 border border-white/20 text-center">
+              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Estimated Royalty</span>
+              <div className="text-2xl font-black text-primary">
+                ${(designPrice * 0.25).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ sale</span>
               </div>
-              
-              {/* Canvas Controls */}
-              <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                <div>
-                  <p>
-                    {isEditing 
-                      ? 'Edit Mode: Drag elements to move, use corner handles to resize, blue ring to rotate'
-                      : 'Click elements to select, scroll to zoom, right-click and drag to rotate model'
-                    }
-                  </p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <span>Type: {PRODUCT_TYPES.find(p => p.id === selectedType)?.name}</span>
-                  <span>Color: {COLORS.find(c => c.value === selectedColor)?.name}</span>
-                  <span>Elements: {textureElements.length}</span>
-                  {isEditing && <span className="text-primary">Editing</span>}
-                </div>
-              </div>
+              <p className="text-[10px] text-muted-foreground">25% artist revenue split calculated automatically.</p>
+            </div>
+
+            {/* Publish / Action Buttons */}
+            <div className="space-y-2.5 pt-2">
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing}
+                className="btn-highlight w-full py-3 text-xs gap-2"
+              >
+                {isPublishing ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Publish Design to Store</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to reset all decorations?')) {
+                    setTextureElements([])
+                    setSelectedElementId(null)
+                  }
+                }}
+                className="btn-glass-pill w-full py-2.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Reset Canvas
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="mt-8 glass rounded-xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">How to Use</h3>
-          <div className="grid md:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <h4 className="font-medium text-foreground">1. Choose Product</h4>
-              <p className="text-sm text-muted-foreground">
-                Select from T-shirts, Hoodies, or Pants to start your design
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium text-foreground">2. Add Elements</h4>
-              <p className="text-sm text-muted-foreground">
-                Add text or images that will be rendered as textures on the 3D model surface
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium text-foreground">3. Texture Mapping</h4>
-              <p className="text-sm text-muted-foreground">
-                Elements are now applied as actual textures that wrap around the model surface
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-medium text-foreground">4. Interactive Editing</h4>
-              <p className="text-sm text-muted-foreground">
-                Use edit mode to position, scale, and rotate texture elements on the model
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

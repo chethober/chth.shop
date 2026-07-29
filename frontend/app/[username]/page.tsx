@@ -62,12 +62,11 @@ const ArtistProfilePage = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-                  title: `${artist?.storeName} - CHTH | چث`,
-        text: `Check out ${artist?.user?.username}'s store on CHTH | چث`,
+          title: `${artist?.storeName} - CHTH | چث`,
+          text: `Check out ${artist?.user?.username}'s store on CHTH | چث`,
           url: window.location.href,
         })
       } catch (error) {
-        // Fallback to clipboard
         navigator.clipboard.writeText(window.location.href)
         toast.success('Link copied to clipboard!')
       }
@@ -95,22 +94,10 @@ const ArtistProfilePage = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          {/* Loading skeleton */}
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="card p-4">
-                  <div className="h-48 bg-muted rounded-lg mb-4"></div>
-                  <div className="h-4 bg-muted rounded mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-              ))}
-            </div>
-          </div>
+      <div className="relative min-h-screen bg-background flex items-center justify-center pt-24">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Loading Artist Store...</p>
         </div>
       </div>
     )
@@ -118,14 +105,14 @@ const ArtistProfilePage = () => {
 
   if (error || !artist) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="relative min-h-screen bg-background flex items-center justify-center pt-24 px-4">
+        <div className="glass-card-rounded p-12 text-center max-w-md w-full space-y-4">
           <User className="w-16 h-16 text-muted-foreground mx-auto" />
-          <h1 className="text-2xl font-bold text-foreground">Artist Not Found</h1>
-          <p className="text-muted-foreground max-w-md">
+          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">Artist Not Found</h1>
+          <p className="text-xs text-muted-foreground">
             The artist profile you're looking for doesn't exist or may have been removed.
           </p>
-          <Link href="/" className="btn-primary">
+          <Link href="/" className="btn-highlight w-full mt-4">
             Go Home
           </Link>
         </div>
@@ -135,97 +122,104 @@ const ArtistProfilePage = () => {
 
   const stats = {
     totalProducts: products.length,
-    avgRating: 4.8, // Sample data
-    totalReviews: 127, // Sample data
+    avgRating: 4.8,
+    totalReviews: 127,
     memberSince: artist.createdAt || new Date().toISOString()
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Artist Header */}
+    <div className="relative min-h-screen bg-background pt-24 pb-16 px-4 sm:px-6 lg:px-8 font-sans">
+      
+      {/* Background Ambient Orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute -top-40 left-1/4 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[140px]" />
+        <div className="absolute top-1/2 -right-40 w-[600px] h-[600px] bg-foreground/5 rounded-full blur-[160px]" />
+      </div>
+
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Artist Header Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="card p-8 mb-8"
+          className="glass-card-rounded p-8 sm:p-12 relative overflow-hidden"
         >
-          <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-start gap-8">
             {/* Avatar and Basic Info */}
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 lg:flex-col lg:items-center lg:w-64">
-              <div className="w-32 h-32 bg-primary/10 rounded-full flex items-center justify-center">
-                <User className="w-16 h-16 text-primary" />
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 lg:flex-col lg:items-center lg:w-64 shrink-0">
+              <div className="w-28 h-28 glass-pill flex items-center justify-center text-primary shadow-lg">
+                <User className="w-14 h-14" />
               </div>
 
               <div className="text-center sm:text-left lg:text-center space-y-2">
-                <h1 className="text-3xl font-bold text-card-foreground">
+                <h1 className="text-3xl font-extrabold text-foreground tracking-tight">
                   {artist.storeName}
                 </h1>
-                <p className="text-lg text-muted-foreground">
+                <p className="text-sm font-semibold text-primary">
                   @{artist.user?.username}
                 </p>
 
-                {/* Stats */}
-                <div className="flex justify-center sm:justify-start lg:justify-center space-x-6 pt-2">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-card-foreground">{stats.totalProducts}</div>
-                    <div className="text-xs text-muted-foreground">Products</div>
+                {/* Stats Badges */}
+                <div className="flex justify-center gap-4 pt-2">
+                  <div className="glass-pill px-3 py-1 text-center">
+                    <div className="text-base font-extrabold text-foreground">{stats.totalProducts}</div>
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold">Products</div>
                   </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center space-x-1">
-                      <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      <span className="text-xl font-bold text-card-foreground">{stats.avgRating}</span>
+                  <div className="glass-pill px-3 py-1 text-center">
+                    <div className="flex items-center justify-center gap-1 text-base font-extrabold text-foreground">
+                      <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                      <span>{stats.avgRating}</span>
                     </div>
-                    <div className="text-xs text-muted-foreground">{stats.totalReviews} reviews</div>
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold">{stats.totalReviews} reviews</div>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex justify-center sm:justify-start lg:justify-center space-x-3 pt-4">
+                {/* Actions */}
+                <div className="flex justify-center gap-2 pt-4">
                   <button
                     onClick={handleShare}
-                    className="btn-outline flex items-center space-x-2"
+                    className="btn-glass-pill text-xs py-2 px-4 gap-1.5"
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-3.5 h-3.5" />
                     <span>Share</span>
                   </button>
-                  <button className="btn-ghost flex items-center space-x-2">
-                    <Heart className="w-4 h-4" />
+                  <button className="btn-highlight text-xs py-2 px-4 gap-1.5">
+                    <Heart className="w-3.5 h-3.5" />
                     <span>Follow</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Bio and Details */}
-            <div className="flex-1 space-y-4">
+            {/* Bio & Details */}
+            <div className="flex-1 space-y-6">
               <div>
-                <h2 className="text-xl font-semibold text-card-foreground mb-3">About</h2>
-                <p className="text-muted-foreground leading-relaxed">
+                <h2 className="text-lg font-bold text-foreground mb-2">About Artist</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {artist.bio || 'This artist hasn\'t added a bio yet.'}
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-4 pt-4 border-t border-border">
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-border/30">
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground glass-pill px-3 py-1">
+                  <Calendar className="w-3.5 h-3.5 text-primary" />
                   <span>Joined {formatDate(stats.memberSince)}</span>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Package className="w-4 h-4" />
-                  <span>{stats.totalProducts} products</span>
+                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground glass-pill px-3 py-1">
+                  <Package className="w-3.5 h-3.5 text-primary" />
+                  <span>{stats.totalProducts} products created</span>
                 </div>
               </div>
 
-              {/* Featured/Recent Work */}
+              {/* Featured Work */}
               {products.length > 0 && (
-                <div className="pt-4">
-                  <h3 className="text-lg font-semibold text-card-foreground mb-3">Featured Work</h3>
+                <div className="pt-2">
+                  <h3 className="text-sm font-bold text-foreground mb-3">Featured Work</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {products.slice(0, 3).map((product) => (
                       <div
                         key={product.id}
-                        className="relative aspect-square rounded-lg overflow-hidden bg-muted group cursor-pointer"
+                        className="relative aspect-square rounded-2xl overflow-hidden glass group cursor-pointer"
                       >
                         <Image
                           src={product.imageUrl || generatePlaceholderImage(200, 200, product.name)}
@@ -234,12 +228,12 @@ const ArtistProfilePage = () => {
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                           unoptimized
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors" />
                         <div className="absolute bottom-2 left-2 right-2">
-                          <div className="text-white text-sm font-medium truncate drop-shadow-sm">
+                          <div className="text-white text-xs font-bold truncate">
                             {product.name}
                           </div>
-                          <div className="text-white/80 text-xs">
+                          <div className="text-white/80 text-[10px]">
                             {formatPrice(product.price)}
                           </div>
                         </div>
@@ -252,25 +246,20 @@ const ArtistProfilePage = () => {
           </div>
         </motion.div>
 
-        {/* Products Section */}
+        {/* Products Grid */}
         <div className="space-y-6">
-          {/* Filters and Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-foreground mb-1">
-                Products ({filteredAndSortedProducts.length})
+              <h2 className="text-2xl font-extrabold text-foreground tracking-tight">
+                All Products ({filteredAndSortedProducts.length})
               </h2>
-              <p className="text-muted-foreground">
-                Discover {artist.user?.username}'s creative merchandise
-              </p>
             </div>
 
-            <div className="flex items-center space-x-3">
-              {/* Filter by Type */}
+            <div className="flex items-center gap-3">
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value as ProductType | 'all')}
-                className="input text-sm py-2 pr-8"
+                className="glass-pill px-4 py-2 text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
               >
                 <option value="all">All Types</option>
                 <option value="tshirt">T-Shirts</option>
@@ -278,71 +267,36 @@ const ArtistProfilePage = () => {
                 <option value="pants">Pants</option>
               </select>
 
-              {/* Sort */}
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="input text-sm py-2 pr-8"
+                className="glass-pill px-4 py-2 text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
               >
                 <option value="newest">Newest First</option>
                 <option value="price_low">Price: Low to High</option>
                 <option value="price_high">Price: High to Low</option>
                 <option value="name">Name: A to Z</option>
               </select>
-
-              {/* View Mode */}
-              <div className="flex border border-border rounded-md">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn(
-                    'p-2 rounded-l-md transition-colors',
-                    viewMode === 'grid'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent'
-                  )}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn(
-                    'p-2 rounded-r-md transition-colors',
-                    viewMode === 'list'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent'
-                  )}
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* Products Grid/List */}
           {filteredAndSortedProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-foreground mb-2">
-                No products found
-              </h3>
-              <p className="text-muted-foreground">
-                {filterType === 'all'
-                  ? "This artist hasn't created any products yet."
-                  : `No ${getProductTypeLabel(filterType as ProductType).toLowerCase()} products found.`
-                }
-              </p>
+            <div className="glass-card-rounded p-12 text-center">
+              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-bold text-foreground">No products found</h3>
+              <p className="text-xs text-muted-foreground mt-1">This artist hasn't published any products matching your filter.</p>
             </div>
-          ) : viewMode === 'grid' ? (
+          ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredAndSortedProducts.map((product, index) => (
                 <motion.div
                   key={product.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="product-card card p-4 group cursor-pointer"
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  className="glass-card-rounded p-5 group cursor-pointer hover:scale-[1.02] transition-all"
                 >
-                  <div className="relative aspect-square mb-4 rounded-lg overflow-hidden bg-muted">
+                  <div className="relative aspect-square mb-4 rounded-2xl overflow-hidden glass">
                     <Image
                       src={product.imageUrl || generatePlaceholderImage(300, 300, product.name)}
                       alt={product.name}
@@ -353,71 +307,20 @@ const ArtistProfilePage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors">
+                    <h3 className="font-bold text-foreground text-sm group-hover:text-primary transition-colors truncate">
                       {product.name}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       {getProductTypeLabel(product.type)}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-primary">
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-base font-extrabold text-foreground">
                         {formatPrice(product.price)}
                       </span>
-                      <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                        <Star className="w-3 h-3 text-yellow-500 fill-current" />
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
                         <span>4.8</span>
                       </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredAndSortedProducts.map((product, index) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className="card p-6 hover:shadow-lg transition-shadow cursor-pointer"
-                >
-                  <div className="flex items-center space-x-6">
-                    <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                      <Image
-                        src={product.imageUrl || generatePlaceholderImage(96, 96, product.name)}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-card-foreground mb-1">
-                        {product.name}
-                      </h3>
-                      <p className="text-muted-foreground text-sm mb-2">
-                        {getProductTypeLabel(product.type)}
-                      </p>
-                      <div className="flex items-center space-x-4">
-                        <span className="text-xl font-bold text-primary">
-                          {formatPrice(product.price)}
-                        </span>
-                        <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span>4.8 (12 reviews)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <button className="btn-outline">
-                        View Details
-                      </button>
-                      <button className="btn-primary">
-                        Add to Cart
-                      </button>
                     </div>
                   </div>
                 </motion.div>
