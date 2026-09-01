@@ -2,15 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { Menu, X, User, ShoppingBag, Palette, Users, Home, Sun, Moon } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { User, ShoppingBag, Palette, Users, Home, Sun, Moon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
 
   useEffect(() => {
     // Check initial theme from document class
@@ -52,7 +50,6 @@ const Header = () => {
         }
       }
     }
-    setIsMenuOpen(false)
   }
 
   return (
@@ -86,8 +83,8 @@ const Header = () => {
           ))}
         </nav>
 
-        {/* Right Icons (Desktop) */}
-        <div className="hidden md:flex items-center space-x-1.5">
+        {/* Action Icons (Theme, Cart, Profile) */}
+        <div className="flex items-center space-x-1.5">
           <button
             onClick={toggleTheme}
             className="p-2 text-muted-foreground hover:text-foreground transition-all duration-200 rounded-full hover:bg-foreground/10"
@@ -110,68 +107,7 @@ const Header = () => {
             <User className="h-4 w-4" />
           </Link>
         </div>
-
-          {/* Mobile menu button and quick icons */}
-          <div className="flex md:hidden items-center space-x-2">
-            <button
-              onClick={toggleTheme}
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-accent"
-              aria-label="Toggle theme"
-            >
-              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
-            <Link 
-              href="/cart" 
-              className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-accent"
-            >
-              <ShoppingBag className="h-5 w-5" />
-            </Link>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              aria-label="Toggle menu"
-            >
-              {isMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-      {/* Mobile Navigation Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background">
-          <div className="px-4 py-2 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={(e) => handleNavClick(e, item.href)}
-                className={cn(
-                  'nav-link flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors w-full',
-                  isActive(item.href) && 'nav-link active bg-accent text-accent-foreground'
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.name}</span>
-              </Link>
-            ))}
-            
-            <div className="pt-4 mt-4 border-t border-border">
-              <Link
-                href="/account"
-                onClick={() => setIsMenuOpen(false)}
-                className="nav-link flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors w-full"
-              >
-                <User className="h-5 w-5" />
-                <span>Profile</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </header>
   )
 }

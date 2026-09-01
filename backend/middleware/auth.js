@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const prisma = require('../lib/prisma');
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -13,10 +13,13 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
 
     // Verify user still exists
-    const user = await User.findByPk(decoded.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -55,8 +58,10 @@ const optionalAuth = async (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-      const user = await User.findByPk(decoded.userId);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId }
+      });
 
       if (user) {
         req.userId = decoded.userId;
@@ -67,7 +72,7 @@ const optionalAuth = async (req, res, next) => {
     next();
 
   } catch (error) {
-    // For optional auth, we don't return errors, just continue without auth
+    // For optional auth, continue without failing
     next();
   }
 };

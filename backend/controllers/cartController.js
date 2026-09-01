@@ -1,7 +1,52 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
-// Get user's cart
+// Helper to format cart response
+const formatCartResponse = (cart) => {
+  if (!cart) {
+    return {
+      id: null,
+      items: [],
+      totalItems: 0,
+      totalPrice: 0
+    };
+  }
+
+  const items = (cart.items || []).map(item => ({
+    id: item.id,
+    cartId: item.cartId,
+    productId: item.productId,
+    quantity: item.quantity,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    product: item.product ? {
+      id: item.product.id,
+      name: item.product.name,
+      type: item.product.type,
+      price: item.product.price,
+      imageUrl: item.product.imageUrl,
+      artist: item.product.artist ? {
+        id: item.product.artist.id,
+        storeName: item.product.artist.storeName,
+        username: item.product.artist.user ? item.product.artist.user.username : ''
+      } : null
+    } : null
+  }));
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => {
+    const price = item.product ? item.product.price : 0;
+    return sum + (price * item.quantity);
+  }, 0);
+
+  return {
+    id: cart.id,
+    items,
+    totalItems,
+    totalPrice: parseFloat(totalPrice.toFixed(2))
+  };
+};
+
+// GET /api/cart - Get user's cart
 const getUserCart = async (req, res) => {
   try {
     const userId = req.userId;
@@ -24,6 +69,9 @@ const getUserCart = async (req, res) => {
                 }
               }
             }
+          },
+          orderBy: {
+            createdAt: 'asc'
           }
         }
       }
@@ -55,30 +103,12 @@ const getUserCart = async (req, res) => {
       });
     }
 
-    res.json({
+    const formattedCart = formatCartResponse(cart);
+
+    res.status(200).json({
       success: true,
-      cart: {
-        id: cart.id,
-        items: cart.items.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          quantity: item.quantity,
-          product: {
-            id: item.product.id,
-            name: item.product.name,
-            type: item.product.type,
-            price: item.product.price,
-            imageUrl: item.product.imageUrl,
-            artist: {
-              id: item.product.artist.id,
-              storeName: item.product.artist.storeName,
-              username: item.product.artist.user.username
-            }
-          }
-        })),
-        totalItems: cart.items.reduce((sum, item) => sum + item.quantity, 0),
-        totalPrice: cart.items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0)
-      }
+      cart: formattedCart,
+      data: { cart: formattedCart }
     });
   } catch (error) {
     console.error('Error getting user cart:', error);
@@ -90,7 +120,7 @@ const getUserCart = async (req, res) => {
   }
 };
 
-// Add item to cart
+// POST /api/cart or POST /api/cart/add - Add item to cart
 const addToCart = async (req, res) => {
   try {
     const userId = req.userId;
@@ -103,11 +133,25 @@ const addToCart = async (req, res) => {
       });
     }
 
+    const qty = parseInt(quantity, 10);
+    if (isNaN(qty) || qty <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity must be a positive integer'
+      });
+    }
+
     // Verify product exists
     const product = await prisma.product.findUnique({
-      where: { id: parseInt(productId) },
+      where: { id: String(productId) },
       include: {
-        artist: true
+        artist: {
+          include: {
+            user: {
+              select: { username: true }
+            }
+          }
+        }
       }
     });
 
@@ -134,27 +178,22 @@ const addToCart = async (req, res) => {
       where: {
         cartId_productId: {
           cartId: cart.id,
-          productId: parseInt(productId)
+          productId: String(productId)
         }
       }
     });
 
     let cartItem;
     if (existingItem) {
-      // Update quantity
       cartItem = await prisma.cartItem.update({
         where: { id: existingItem.id },
-        data: { quantity: existingItem.quantity + quantity },
+        data: { quantity: existingItem.quantity + qty },
         include: {
           product: {
             include: {
               artist: {
                 include: {
-                  user: {
-                    select: {
-                      username: true
-                    }
-                  }
+                  user: { select: { username: true } }
                 }
               }
             }
@@ -162,23 +201,18 @@ const addToCart = async (req, res) => {
         }
       });
     } else {
-      // Add new item
       cartItem = await prisma.cartItem.create({
         data: {
           cartId: cart.id,
-          productId: parseInt(productId),
-          quantity
+          productId: String(productId),
+          quantity: qty
         },
         include: {
           product: {
             include: {
               artist: {
                 include: {
-                  user: {
-                    select: {
-                      username: true
-                    }
-                  }
+                  user: { select: { username: true } }
                 }
               }
             }
@@ -187,7 +221,7 @@ const addToCart = async (req, res) => {
       });
     }
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Item added to cart successfully',
       cartItem: {
@@ -200,13 +234,14 @@ const addToCart = async (req, res) => {
           type: cartItem.product.type,
           price: cartItem.product.price,
           imageUrl: cartItem.product.imageUrl,
-          artist: {
+          artist: cartItem.product.artist ? {
             id: cartItem.product.artist.id,
             storeName: cartItem.product.artist.storeName,
-            username: cartItem.product.artist.user.username
-          }
+            username: cartItem.product.artist.user?.username
+          } : null
         }
-      }
+      },
+      data: { cartItem }
     });
   } catch (error) {
     console.error('Error adding item to cart:', error);
@@ -218,24 +253,25 @@ const addToCart = async (req, res) => {
   }
 };
 
-// Update cart item quantity
+// PUT /api/cart/items/:itemId - Update cart item quantity
 const updateCartItem = async (req, res) => {
   try {
     const userId = req.userId;
     const { itemId } = req.params;
     const { quantity } = req.body;
 
-    if (!quantity || quantity < 1) {
+    const qty = parseInt(quantity, 10);
+    if (isNaN(qty) || qty < 1) {
       return res.status(400).json({
         success: false,
-        message: 'Valid quantity is required'
+        message: 'Valid quantity is required (minimum 1)'
       });
     }
 
     // Verify cart item belongs to user
     const cartItem = await prisma.cartItem.findFirst({
       where: {
-        id: parseInt(itemId),
+        id: String(itemId),
         cart: {
           userId
         }
@@ -251,17 +287,15 @@ const updateCartItem = async (req, res) => {
 
     // Update quantity
     const updatedItem = await prisma.cartItem.update({
-      where: { id: parseInt(itemId) },
-      data: { quantity },
+      where: { id: String(itemId) },
+      data: { quantity: qty },
       include: {
         product: {
           include: {
             artist: {
               include: {
                 user: {
-                  select: {
-                    username: true
-                  }
+                  select: { username: true }
                 }
               }
             }
@@ -270,7 +304,7 @@ const updateCartItem = async (req, res) => {
       }
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Cart item updated successfully',
       cartItem: {
@@ -283,13 +317,14 @@ const updateCartItem = async (req, res) => {
           type: updatedItem.product.type,
           price: updatedItem.product.price,
           imageUrl: updatedItem.product.imageUrl,
-          artist: {
+          artist: updatedItem.product.artist ? {
             id: updatedItem.product.artist.id,
             storeName: updatedItem.product.artist.storeName,
-            username: updatedItem.product.artist.user.username
-          }
+            username: updatedItem.product.artist.user?.username
+          } : null
         }
-      }
+      },
+      data: { cartItem: updatedItem }
     });
   } catch (error) {
     console.error('Error updating cart item:', error);
@@ -301,7 +336,7 @@ const updateCartItem = async (req, res) => {
   }
 };
 
-// Remove item from cart
+// DELETE /api/cart/items/:itemId - Remove item from cart
 const removeFromCart = async (req, res) => {
   try {
     const userId = req.userId;
@@ -310,7 +345,7 @@ const removeFromCart = async (req, res) => {
     // Verify cart item belongs to user
     const cartItem = await prisma.cartItem.findFirst({
       where: {
-        id: parseInt(itemId),
+        id: String(itemId),
         cart: {
           userId
         }
@@ -326,10 +361,10 @@ const removeFromCart = async (req, res) => {
 
     // Remove item
     await prisma.cartItem.delete({
-      where: { id: parseInt(itemId) }
+      where: { id: String(itemId) }
     });
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Item removed from cart successfully'
     });
@@ -343,29 +378,22 @@ const removeFromCart = async (req, res) => {
   }
 };
 
-// Clear cart
+// DELETE /api/cart or DELETE /api/cart/clear - Clear all cart items
 const clearCart = async (req, res) => {
   try {
     const userId = req.userId;
 
-    // Get user's cart
     const cart = await prisma.cart.findUnique({
       where: { userId }
     });
 
-    if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cart not found'
+    if (cart) {
+      await prisma.cartItem.deleteMany({
+        where: { cartId: cart.id }
       });
     }
 
-    // Remove all items
-    await prisma.cartItem.deleteMany({
-      where: { cartId: cart.id }
-    });
-
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Cart cleared successfully'
     });
@@ -385,4 +413,4 @@ module.exports = {
   updateCartItem,
   removeFromCart,
   clearCart
-}; 
+};

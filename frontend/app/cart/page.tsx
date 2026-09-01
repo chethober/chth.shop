@@ -2,17 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, CreditCard, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ShoppingBag, Trash2, Plus, Minus, ArrowLeft, CreditCard, Sparkles, CheckCircle2, X, MapPin, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import useCartStore from '@/store/cartStore'
 import useAuthStore from '@/store/authStore'
+import api from '@/lib/api'
 import { cn } from '@/lib/utils'
+import toast from 'react-hot-toast'
+import { Order } from '@/types'
 
 export default function CartPage() {
   const router = useRouter()
   const { cart, isLoading, error, fetchCart, updateCartItem, removeFromCart, clearCart } = useCartStore()
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [shippingAddress, setShippingAddress] = useState('')
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
+  const [completedOrder, setCompletedOrder] = useState<Order | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -24,21 +32,59 @@ export default function CartPage() {
 
   const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return
-    await updateCartItem(itemId, newQuantity)
+    try {
+      await updateCartItem(itemId, newQuantity)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update quantity')
+    }
   }
 
   const handleRemoveItem = async (itemId: string) => {
-    await removeFromCart(itemId)
+    try {
+      await removeFromCart(itemId)
+      toast.success('Item removed from cart')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove item')
+    }
   }
 
   const handleClearCart = async () => {
     if (confirm('Are you sure you want to clear your cart?')) {
-      await clearCart()
+      try {
+        await clearCart()
+        toast.success('Cart cleared')
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to clear cart')
+      }
     }
   }
 
-  const handleCheckout = () => {
-    router.push('/checkout')
+  const handleProceedToCheckout = () => {
+    if (!cart || cart.items.length === 0) {
+      toast.error('Your cart is empty')
+      return
+    }
+    setIsCheckoutOpen(true)
+  }
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!shippingAddress.trim()) {
+      toast.error('Please enter a valid shipping address')
+      return
+    }
+
+    try {
+      setIsPlacingOrder(true)
+      const order = await api.createOrder({ shippingAddress: shippingAddress.trim() })
+      setCompletedOrder(order)
+      await fetchCart()
+      toast.success('Order placed successfully!')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to place order')
+    } finally {
+      setIsPlacingOrder(false)
+    }
   }
 
   if (!isAuthenticated) {
@@ -68,7 +114,7 @@ export default function CartPage() {
     )
   }
 
-  if (isLoading) {
+  if (isLoading && !cart) {
     return (
       <div className="relative min-h-screen bg-background flex items-center justify-center pt-20">
         <div className="text-center space-y-4">
@@ -161,7 +207,7 @@ export default function CartPage() {
                     >
                       {/* Product Image */}
                       <div className="w-20 h-20 rounded-xl overflow-hidden glass shrink-0 relative">
-                        {item.product.imageUrl ? (
+                        {item.product?.imageUrl ? (
                           <img
                             src={item.product.imageUrl}
                             alt={item.product.name}
@@ -177,13 +223,13 @@ export default function CartPage() {
                       {/* Product Details */}
                       <div className="flex-1 text-center sm:text-left min-w-0">
                         <h3 className="font-bold text-foreground text-sm truncate">
-                          {item.product.name}
+                          {item.product?.name}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          by @{item.product.artist.username} • {item.product.type}
+                          {item.product?.type}
                         </p>
                         <p className="font-extrabold text-primary text-sm mt-1">
-                          ${item.product.price.toFixed(2)}
+                          ${(item.product?.price || 0).toFixed(2)}
                         </p>
                       </div>
 
@@ -210,7 +256,7 @@ export default function CartPage() {
                       {/* Item Total */}
                       <div className="text-right">
                         <p className="font-extrabold text-foreground text-sm">
-                          ${(item.product.price * item.quantity).toFixed(2)}
+                          ${((item.product?.price || 0) * item.quantity).toFixed(2)}
                         </p>
                       </div>
 
@@ -252,7 +298,7 @@ export default function CartPage() {
                 </div>
 
                 <button
-                  onClick={handleCheckout}
+                  onClick={handleProceedToCheckout}
                   className="btn-highlight w-full gap-2 py-3"
                 >
                   <CreditCard className="h-4 w-4" />
@@ -263,6 +309,130 @@ export default function CartPage() {
           </div>
         )}
       </div>
+
+      {/* Checkout Modal */}
+      <AnimatePresence>
+        {isCheckoutOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-card-rounded max-w-lg w-full p-8 shadow-2xl relative"
+            >
+              {!completedOrder ? (
+                <form onSubmit={handlePlaceOrder} className="space-y-6">
+                  <div className="flex items-center justify-between border-b border-border/30 pb-4">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <h2 className="text-xl font-bold text-foreground">Complete Checkout</h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsCheckoutOpen(false)}
+                      className="p-1 rounded-full text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-primary" />
+                        <span>Shipping Address</span>
+                      </label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="Street address, apartment, city, state, postal code..."
+                        className="w-full p-3 rounded-2xl glass border border-white/20 bg-background/50 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div className="glass p-4 rounded-2xl space-y-2 text-xs">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Items ({cart?.totalItems})</span>
+                        <span className="font-semibold text-foreground">${(cart?.totalPrice || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Delivery</span>
+                        <span className="font-semibold text-emerald-500">Free Express</span>
+                      </div>
+                      <div className="border-t border-border/30 pt-2 flex justify-between font-extrabold text-sm text-foreground">
+                        <span>Total to Pay</span>
+                        <span className="text-primary">${(cart?.totalPrice || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsCheckoutOpen(false)}
+                      className="btn-glass-pill text-xs py-2 px-4"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isPlacingOrder}
+                      className="btn-highlight text-xs py-2 px-6 gap-2"
+                    >
+                      {isPlacingOrder ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Placing Order...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Confirm & Place Order</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="text-center py-6 space-y-6">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-10 h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-extrabold text-foreground">Order Confirmed!</h2>
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                      Thank you for your purchase! Your order ID is <span className="font-mono text-foreground font-semibold">{completedOrder.id}</span>.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                    <Link
+                      href="/account"
+                      className="btn-highlight text-xs py-2.5 px-5"
+                      onClick={() => {
+                        setIsCheckoutOpen(false)
+                        setCompletedOrder(null)
+                      }}
+                    >
+                      View in Account
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setIsCheckoutOpen(false)
+                        setCompletedOrder(null)
+                      }}
+                      className="btn-glass-pill text-xs py-2.5 px-5"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

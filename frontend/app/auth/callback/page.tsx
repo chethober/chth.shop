@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
@@ -9,7 +9,7 @@ import { api } from '@/lib/api'
 import useAuthStore from '@/store/authStore'
 import type { User } from '@/types'
 
-export default function AuthCallbackPage() {
+function CallbackHandler() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { completeOAuth } = useAuthStore()
@@ -129,5 +129,20 @@ export default function AuthCallbackPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div>
+          <p className="text-muted-foreground text-xs">Authenticating...</p>
+        </div>
+      </div>
+    }>
+      <CallbackHandler />
+    </Suspense>
   )
 } 

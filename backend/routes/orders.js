@@ -5,22 +5,32 @@ const {
   createOrder,
   getUserOrders,
   getOrder,
-  cancelOrder
+  cancelOrder,
+  updateOrderStatus,
+  deleteOrder
 } = require('../controllers/orderController');
 
 // All order routes require authentication
 router.use(authenticateToken);
 
-// Create order from cart (checkout)
+// POST /api/orders & POST /api/orders/checkout - Create order from cart
+router.post('/', createOrder);
 router.post('/checkout', createOrder);
 
-// Get user's orders
+// GET /api/orders - Get current user's orders
 router.get('/', getUserOrders);
 
-// Get specific order
+// GET /api/orders/:orderId - Get single order details
 router.get('/:orderId', getOrder);
 
-// Cancel order
+// PUT /api/orders/:orderId/cancel - Cancel order
 router.put('/:orderId/cancel', cancelOrder);
 
-module.exports = router; 
+// PUT /api/orders/:orderId - Update order
+router.put('/:orderId', updateOrderStatus);
+router.put('/:orderId/status', updateOrderStatus);
+
+// DELETE /api/orders/:orderId - Delete order
+router.delete('/:orderId', deleteOrder);
+
+module.exports = router;

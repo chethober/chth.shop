@@ -1,6 +1,6 @@
 // User types
 export interface User {
-  id: number;
+  id: string | number;
   username: string;
   email: string;
   isArtist?: boolean;
@@ -10,12 +10,63 @@ export interface User {
   updatedAt?: string;
 }
 
+// Cart types
+export interface CartItem {
+  id: string;
+  cartId?: string;
+  productId: string;
+  quantity: number;
+  createdAt?: string;
+  updatedAt?: string;
+  product: Product;
+}
+
+export interface Cart {
+  id: string | number;
+  items: CartItem[];
+  totalItems: number;
+  totalPrice: number;
+}
+
+// Order types
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+
+export interface OrderItem {
+  id: string;
+  orderId?: string;
+  productId: string;
+  quantity: number;
+  price: number;
+  createdAt?: string;
+  updatedAt?: string;
+  product?: Product | null;
+}
+
+export interface Order {
+  id: string;
+  userId?: string;
+  status: OrderStatus;
+  total: number;
+  shippingAddress?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  items: OrderItem[];
+}
+
 // Artist types
 export interface Artist {
-  id: number;
-  userId: number;
+  id: string | number;
+  userId: string | number;
   bio: string | null;
   storeName: string | null;
+  instagram?: string | null;
+  twitter?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
+  spotify?: string | null;
+  telegram?: string | null;
+  discord?: string | null;
+  website?: string | null;
   contractAccepted?: boolean;
   contractAcceptedAt?: string;
   user?: User;
@@ -36,7 +87,7 @@ export interface ProductCustomization {
 }
 
 export interface Product {
-  id: number;
+  id: string | number;
   name: string;
   description?: string | null;
   price: number;
@@ -115,6 +166,14 @@ export interface ProductFormData {
 export interface ArtistProfileFormData {
   bio: string;
   storeName: string;
+  instagram?: string | null;
+  twitter?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
+  spotify?: string | null;
+  telegram?: string | null;
+  discord?: string | null;
+  website?: string | null;
 }
 
 // 3D Design types
@@ -157,6 +216,7 @@ export interface AuthStore {
   login: (credentials: LoginCredentials) => Promise<void>;
   register: (credentials: RegisterCredentials) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  completeOAuth: (user: User, token: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
   updateUsername: (newUsername: string) => Promise<void>;

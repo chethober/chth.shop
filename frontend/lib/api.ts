@@ -13,6 +13,11 @@ import {
   ArtistsResponse,
   ArtistProfileFormData,
   User,
+  Cart,
+  CartItem,
+  Order,
+  OrderItem,
+  OrderStatus,
   CustomError
 } from '@/types';
 
@@ -189,6 +194,12 @@ class ApiClient {
     return response.data.data!;
   }
 
+  // User account methods
+  async deleteAccount(): Promise<void> {
+    await this.client.delete('/users/me');
+    this.removeToken();
+  }
+
   // Artist endpoints
   async getArtists(params?: { page?: number; limit?: number }): Promise<ArtistsResponse> {
     const response = await this.client.get<ApiResponse<ArtistsResponse>>('/artists', { params });
@@ -215,9 +226,67 @@ class ApiClient {
     return response.data.data!.artist;
   }
 
+  async deleteArtistProfile(): Promise<void> {
+    await this.client.delete('/artists');
+  }
+
   async acceptContract(): Promise<Artist> {
     const response = await this.client.post<ApiResponse<{ artist: Artist }>>('/artists/contract/accept');
     return response.data.data!.artist;
+  }
+
+  // Cart endpoints
+  async getCart(): Promise<Cart> {
+    const response = await this.client.get<ApiResponse<{ cart: Cart }>>('/cart');
+    return (response.data.data?.cart || (response.data as any).cart) as Cart;
+  }
+
+  async addToCart(productId: string, quantity: number = 1): Promise<CartItem> {
+    const response = await this.client.post<ApiResponse<{ cartItem: CartItem }>>('/cart', { productId, quantity });
+    return (response.data.data?.cartItem || (response.data as any).cartItem) as CartItem;
+  }
+
+  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
+    const response = await this.client.put<ApiResponse<{ cartItem: CartItem }>>(`/cart/items/${itemId}`, { quantity });
+    return (response.data.data?.cartItem || (response.data as any).cartItem) as CartItem;
+  }
+
+  async removeFromCart(itemId: string): Promise<void> {
+    await this.client.delete(`/cart/items/${itemId}`);
+  }
+
+  async clearCart(): Promise<void> {
+    await this.client.delete('/cart');
+  }
+
+  // Order endpoints
+  async getOrders(): Promise<Order[]> {
+    const response = await this.client.get<ApiResponse<{ orders: Order[] }>>('/orders');
+    return (response.data.data?.orders || (response.data as any).orders) as Order[];
+  }
+
+  async getOrder(orderId: string): Promise<Order> {
+    const response = await this.client.get<ApiResponse<{ order: Order }>>(`/orders/${orderId}`);
+    return (response.data.data?.order || (response.data as any).order) as Order;
+  }
+
+  async createOrder(data: { shippingAddress: string; items?: { productId: string; quantity: number }[] }): Promise<Order> {
+    const response = await this.client.post<ApiResponse<{ order: Order }>>('/orders', data);
+    return (response.data.data?.order || (response.data as any).order) as Order;
+  }
+
+  async cancelOrder(orderId: string): Promise<Order> {
+    const response = await this.client.put<ApiResponse<{ order: Order }>>(`/orders/${orderId}/cancel`);
+    return (response.data.data?.order || (response.data as any).order) as Order;
+  }
+
+  async updateOrderStatus(orderId: string, data: { status?: OrderStatus; shippingAddress?: string }): Promise<Order> {
+    const response = await this.client.put<ApiResponse<{ order: Order }>>(`/orders/${orderId}`, data);
+    return (response.data.data?.order || (response.data as any).order) as Order;
+  }
+
+  async deleteOrder(orderId: string): Promise<void> {
+    await this.client.delete(`/orders/${orderId}`);
   }
 
   // Health check
@@ -274,6 +343,7 @@ export const {
   getProfile,
   updateProfile,
   updateUsername,
+  deleteAccount,
   logout,
   getProducts,
   getProduct,
@@ -286,7 +356,19 @@ export const {
   getCurrentArtistProfile,
   createArtistProfile,
   updateArtistProfile,
+  deleteArtistProfile,
   acceptContract,
+  getCart,
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+  getOrders,
+  getOrder,
+  createOrder,
+  cancelOrder,
+  updateOrderStatus,
+  deleteOrder,
   healthCheck,
   uploadFile,
 } = api;

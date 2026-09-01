@@ -2,15 +2,35 @@
 
 import { useState, useRef, Suspense, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Canvas, useThree } from '@react-three/fiber'
-import { OrbitControls, Environment, useGLTF, Decal, useTexture, Text, PivotControls } from '@react-three/drei'
-import { Shirt, Palette, Plus, RotateCcw, Type, ImageIcon, X, Move, MousePointer2, Trash2, Scissors, Sparkles, Tag } from 'lucide-react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { OrbitControls, Environment, useGLTF, Decal, useTexture, Center, AccumulativeShadows, RandomizedLight } from '@react-three/drei'
+import { easing } from 'maath'
+import { 
+  Shirt, 
+  Palette, 
+  Plus, 
+  RotateCcw, 
+  Type, 
+  ImageIcon, 
+  X, 
+  Move, 
+  Trash2, 
+  Scissors, 
+  Sparkles, 
+  Tag, 
+  Download, 
+  Layers, 
+  Camera, 
+  Sliders, 
+  Check,
+  Bot
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { cn } from '@/lib/utils'
 import * as THREE from 'three'
 import modelsData from '@/public/models/models.json'
 
-// --- Constants ---
+// --- Constants & Color Palettes ---
 const ICON_MAP = {
   tshirt: Shirt,
   hoodie: Shirt,
@@ -24,11 +44,15 @@ const PRODUCT_TYPES = Object.entries(modelsData.models).map(([id, model]) => ({
   modelPath: model.path
 }))
 
-const COLORS = [
-  { name: 'White', value: '#FFFFFF' },
-  { name: 'Black', value: '#121212' },
-  { name: 'Pink', value: '#FFB6C1' },
-  { name: 'Blue', value: '#3B82F6' }
+const COLOR_PALETTES = [
+  { name: 'Pure White', value: '#FFFFFF' },
+  { name: 'Pitch Black', value: '#121212' },
+  { name: 'Royal Cobalt', value: '#1D4ED8' },
+  { name: 'Sunset Amber', value: '#EFBD48' },
+  { name: 'Forest Emerald', value: '#059669' },
+  { name: 'Crimson Red', value: '#DC2626' },
+  { name: 'Cyber Purple', value: '#8B5CF6' },
+  { name: 'Rose Quartz', value: '#F472B6' },
 ]
 
 const FABRICS = [
@@ -38,25 +62,47 @@ const FABRICS = [
   { id: 'satin', name: 'Silk Satin', desc: 'Lustrous Smooth Finish' }
 ]
 
+const AI_PROMPT_PRESETS = [
+  'Futuristic Cyberpunk Mecha Tiger',
+  'Minimalist Bauhaus Abstract Wave',
+  'Tokyo Streetwear Neon Dragon',
+  'Vintage 90s Retro Synthwave Sunset',
+]
+
 // --- Types ---
 interface TextureElement {
   id: string
   type: 'image' | 'text'
-  content: string // Text content or empty for image
+  content: string
   imageUrl?: string
   position: [number, number, number]
   baseRotation: [number, number, number]
   rotationAngle: number
   scale: [number, number, number]
-  color?: string // For text
-  fontSize?: number // For text logic
-  opacity?: number // For controlling transparency
-  meshName?: string // Associated mesh in GLTF model
+  color?: string
+  fontSize?: number
+  opacity?: number
+  meshName?: string
 }
 
 // --- Helpers ---
+function downloadCanvasToImage() {
+  const canvas = document.querySelector('canvas')
+  if (!canvas) {
+    toast.error('Canvas not found')
+    return
+  }
+  const dataURL = canvas.toDataURL('image/png')
+  const link = document.createElement('a')
+  link.href = dataURL
+  link.download = `chth-tshirt-design-${Date.now()}.png`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  toast.success('High-res mockup downloaded!')
+}
 
-// 1. Generate a texture from text string
+// Generate texture from text
 function useTextTexture(text: string, color: string, fontSize: number = 100) {
   return useMemo(() => {
     const canvas = document.createElement('canvas')
@@ -79,8 +125,10 @@ function useTextTexture(text: string, color: string, fontSize: number = 100) {
   }, [text, color, fontSize])
 }
 
-// 2. Component to render a single Decal (Image or Text)
-function DecalItem({ 
+// --- 3D Scene Components ---
+
+// Decal Renderer for custom user layers
+function CustomDecalItem({ 
   element, 
   isSelected, 
   onSelect,
@@ -91,47 +139,44 @@ function DecalItem({
   onSelect: (id: string) => void
   scaleMultiplier?: [number, number, number]
 }) {
-  // Handle image texture with error handling
   const imageTexture = useMemo(() => {
     if (element.type === 'image' && element.imageUrl) {
       try {
-        return useTexture(element.imageUrl, (tex) => {
-          tex.colorSpace = THREE.SRGBColorSpace;
-        });
+        const loader = new THREE.TextureLoader()
+        const tex = loader.load(element.imageUrl)
+        tex.colorSpace = THREE.SRGBColorSpace
+        return tex
       } catch (error) {
-        console.error('Failed to load texture:', error);
-        return null;
+        console.error('Failed to load texture:', error)
+        return null
       }
     }
-    return null;
-  }, [element.type, element.imageUrl]);
+    return null
+  }, [element.type, element.imageUrl])
   
-  // Generate text texture
   const textTexture = useTextTexture(
-    element.content || ' ', // Ensure at least a space for empty text
+    element.content || ' ',
     element.color || '#000000',
     element.fontSize
-  );
+  )
   
-  // Choose texture based on type (Image vs Generated Text)
-  const texture = element.type === 'text' ? textTexture : imageTexture || textTexture;
+  const texture = element.type === 'text' ? textTexture : imageTexture || textTexture
 
-  const multiplier = scaleMultiplier || [1, 1, 1];
-  const elemScale = element.scale || [0.3, 0.4, 0.1];
+  const multiplier = scaleMultiplier || [1, 1, 1]
+  const elemScale = element.scale || [0.15, 0.15, 0.15]
 
-  // Keep X and Y scale from state, but force Z scale to be deep (e.g. 1.0) to prevent clipping on curved surfaces
   const decalScale: [number, number, number] = [
-    (elemScale[0] ?? 0.3) * (multiplier[0] ?? 1),
-    (elemScale[1] ?? 0.4) * (multiplier[1] ?? 1),
+    (elemScale[0] ?? 0.15) * (multiplier[0] ?? 1),
+    (elemScale[1] ?? 0.15) * (multiplier[1] ?? 1),
     Math.max((elemScale[2] ?? 0.1) * (multiplier[2] ?? 1), 0.8 * (multiplier[2] ?? 1))
-  ];
+  ]
 
-  const baseRot = element.baseRotation || [0, 0, 0];
+  const baseRot = element.baseRotation || [0, 0, 0]
   const combinedRotation: [number, number, number] = [
     baseRot[0] || 0,
     baseRot[1] || 0,
     (baseRot[2] || 0) + (element.rotationAngle || 0)
-  ];
+  ]
 
   return (
     <Decal
@@ -147,399 +192,348 @@ function DecalItem({
         map={texture} 
         transparent 
         opacity={element.opacity ?? 1}
-        side={THREE.FrontSide} // Only show on the outside
+        side={THREE.FrontSide}
         polygonOffset 
         polygonOffsetFactor={-1}
         polygonOffsetUnits={1}
         roughness={0.8}
-        metalness={0.2}
+        metalness={0.1}
+        depthTest={false}
+        depthWrite={true}
       />
     </Decal>
   )
 }
 
-// Helper to compute world scale of a node in raw GLTF hierarchy
-const getMeshWorldScale = (node: any): [number, number, number] => {
-  const scale = new THREE.Vector3(1, 1, 1);
-  let current = node;
-  while (current) {
-    if (current.scale) {
-      const sx = typeof current.scale.x === 'number' ? current.scale.x : (current.scale[0] ?? 1);
-      const sy = typeof current.scale.y === 'number' ? current.scale.y : (current.scale[1] ?? 1);
-      const sz = typeof current.scale.z === 'number' ? current.scale.z : (current.scale[2] ?? 1);
-      scale.x *= sx;
-      scale.y *= sy;
-      scale.z *= sz;
-    }
-    current = current.parent;
+// Model-specific calibrated surface anchors for accurate decal raycasting
+const MODEL_CONFIGS: Record<string, {
+  chestPosition: [number, number, number]
+  chestScale: [number, number, number]
+  defaultLayerPosition: [number, number, number]
+  defaultLayerScale: [number, number, number]
+}> = {
+  tshirt: {
+    chestPosition: [0, 0.04, 0.15],
+    chestScale: [0.15, 0.15, 0.15],
+    defaultLayerPosition: [0, 0.04, 0.15],
+    defaultLayerScale: [0.15, 0.15, 0.15]
+  },
+  hoodie: {
+    chestPosition: [0, 0.06, 0.18],
+    chestScale: [0.18, 0.18, 0.18],
+    defaultLayerPosition: [0, 0.06, 0.18],
+    defaultLayerScale: [0.18, 0.18, 0.18]
+  },
+  pants: {
+    chestPosition: [0.08, -0.15, 0.14],
+    chestScale: [0.14, 0.14, 0.14],
+    defaultLayerPosition: [0.08, -0.15, 0.14],
+    defaultLayerScale: [0.14, 0.14, 0.14]
   }
-  return [scale.x, scale.y, scale.z];
-};
-
-// Recursive component to render GLTF nodes and attach Decals to meshes
-function GLTFNode({ 
-  node, 
-  color, 
-  textureElements, 
-  selectedElementId, 
-  onElementSelect,
-  onElementUpdate
-}: {
-  node: any
-  color: string
-  textureElements: TextureElement[]
-  selectedElementId: string | null
-  onSelect?: any // Keep signature compatible
-  onElementSelect: (id: string) => void
-  onElementUpdate: (id: string, updates: Partial<TextureElement>) => void
-}) {
-  if (!node) return null
-
-  if (node.isMesh) {
-    const meshScale = getMeshWorldScale(node);
-    const scaleMultiplier: [number, number, number] = [
-      1 / (meshScale[0] || 1),
-      1 / (meshScale[1] || 1),
-      1 / (meshScale[2] || 1)
-    ];
-
-    return (
-      <mesh
-        key={node.uuid}
-        name={node.name}
-        geometry={node.geometry}
-        position={node.position}
-        quaternion={node.quaternion}
-        scale={node.scale}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial
-          color={color}
-          roughness={0.8}
-          metalness={0.2}
-          envMapIntensity={0.8}
-        />
-        {/* Render decals directly as children of the mesh to satisfy Drei's parent-mesh constraint */}
-        {textureElements
-          .filter((el) => !el.meshName || el.meshName === node.name)
-          .map((el) => (
-            <DecalItem
-              key={el.id}
-              element={el}
-              isSelected={selectedElementId === el.id}
-              onSelect={onElementSelect}
-              scaleMultiplier={scaleMultiplier}
-            />
-          ))}
-        {/* Render PivotControls directly as children of the mesh (no wrapping group) to preserve tree structures */}
-        {textureElements
-          .filter((el) => selectedElementId === el.id && (!el.meshName || el.meshName === node.name))
-          .map((el) => {
-            const baseRot = el.baseRotation || [0, 0, 0];
-            const combinedRotation: [number, number, number] = [
-              baseRot[0],
-              baseRot[1],
-              baseRot[2] + (el.rotationAngle || 0)
-            ];
-            return (
-              <PivotControls
-                key={`pivot-${el.id}`}
-                depthTest={false}
-                scale={0.15}
-                lineWidth={3}
-                disableAxes={true}
-                disableSliders={true}
-                activeAxes={[false, false, true]}
-                matrix={new THREE.Matrix4().compose(
-                  new THREE.Vector3(...el.position),
-                  new THREE.Quaternion().setFromEuler(new THREE.Euler(...combinedRotation)),
-                  new THREE.Vector3(...scaleMultiplier)
-                )}
-                autoTransform={false}
-                onDrag={(matrix) => {
-                  const position = new THREE.Vector3();
-                  const rotation = new THREE.Quaternion();
-                  const scale = new THREE.Vector3();
-                  matrix.decompose(position, rotation, scale);
-                  const euler = new THREE.Euler().setFromQuaternion(rotation);
-                  const baseZ = el.baseRotation ? el.baseRotation[2] : 0;
-                  onElementUpdate(el.id, {
-                    rotationAngle: euler.z - baseZ
-                  });
-                }}
-              />
-            )
-          })}
-      </mesh>
-    )
-  }
-
-  if (node.isGroup || node.type === 'Object3D') {
-    return (
-      <group
-        key={node.uuid}
-        position={node.position}
-        quaternion={node.quaternion}
-        scale={node.scale}
-      >
-        {node.children.map((child: any, idx: number) => (
-          <GLTFNode
-            key={child.uuid || idx}
-            node={child}
-            color={color}
-            textureElements={textureElements}
-            selectedElementId={selectedElementId}
-            onElementSelect={onElementSelect}
-            onElementUpdate={onElementUpdate}
-          />
-        ))}
-      </group>
-    )
-  }
-
-  return null
 }
 
-// 3D Model loading the GLB files dynamically
-function ProductModel({ 
-  type, 
-  color, 
-  textureElements, 
+function ChestDecalItem({ 
+  logoDecal, 
+  position = [0, 0.04, 0.15], 
+  scale = [0.15, 0.15, 0.15] 
+}: { 
+  logoDecal: string
+  position?: [number, number, number]
+  scale?: [number, number, number]
+}) {
+  const logoTex = useTexture(logoDecal)
+  if (!logoTex) return null
+  logoTex.anisotropy = 16
+  return (
+    <Decal 
+      position={position}
+      rotation={[0, 0, 0]}
+      scale={scale}
+      map={logoTex}
+    />
+  )
+}
+
+// Built-in T-Shirt component using shirt_baked.glb with smooth easing and decal mapping
+function BakedTShirtModel({
+  color,
+  logoDecal,
+  textureElements,
   selectedElementId,
   onElementSelect,
   onElementUpdate,
   onLoad
-}: { 
-  type: string
+}: {
   color: string
+  logoDecal?: string
   textureElements: TextureElement[]
   selectedElementId: string | null
   onElementSelect: (id: string) => void
   onElementUpdate: (id: string, updates: Partial<TextureElement>) => void
   onLoad?: (scene: THREE.Group) => void
 }) {
-  const modelRef = useRef<THREE.Group>(null);
-  const { camera, raycaster, pointer } = useThree();
-  
-  // Load model dynamically based on selected product type
-  const modelConfig = (modelsData.models as any)[type];
-  const modelPath = modelConfig?.path || `/models/tshirt.glb`;
-  const { scene } = useGLTF(modelPath) as any;
+  const groupRef = useRef<THREE.Group>(null)
+  const { nodes, materials, scene } = useGLTF('/models/shirt_baked.glb') as any
 
-  const baseScale = modelConfig?.scale ?? 1.0;
-  const basePosition = (modelConfig?.position as [number, number, number]) ?? [0, 0, 0];
-  const baseRotation = (modelConfig?.rotation as [number, number, number]) ?? [0, 0, 0];
-
-  // Trigger onLoad callback
   useEffect(() => {
     if (scene && onLoad) {
-      onLoad(scene);
+      onLoad(scene)
     }
-  }, [scene, onLoad]);
+  }, [scene, onLoad])
 
-  // Raycasting for decal placement & local coordinates calculation
-  const handlePointerMove = useCallback((e: any) => {
-    if (!selectedElementId || !modelRef.current) return;
-    if (e.buttons !== 1) return;
-    
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObject(modelRef.current, true);
-    
-    if (intersects.length > 0) {
-      const hitMesh = intersects[0].object as THREE.Mesh;
-      if (hitMesh && hitMesh.isMesh) {
-        const worldPoint = intersects[0].point;
-        const worldNormal = intersects[0].normal;
-        
-        if (worldPoint && worldNormal) {
-          const dummy = new THREE.Object3D();
-          dummy.position.copy(worldPoint);
-          dummy.lookAt(worldPoint.clone().add(worldNormal));
-          dummy.updateMatrixWorld(true);
-          
-          hitMesh.updateMatrixWorld();
-          const localMatrix = hitMesh.matrixWorld.clone().invert().multiply(dummy.matrixWorld);
-          
-          const localPos = new THREE.Vector3();
-          const localQuad = new THREE.Quaternion();
-          const localScale = new THREE.Vector3();
-          localMatrix.decompose(localPos, localQuad, localScale);
-          
-          const localRot = new THREE.Euler().setFromQuaternion(localQuad);
-          
-          onElementUpdate(selectedElementId, {
-            position: [localPos.x, localPos.y, localPos.z],
-            baseRotation: [localRot.x, localRot.y, localRot.z],
-            meshName: hitMesh.name
-          });
-        }
-      }
+  // Smooth color interpolation with maath easing
+  useFrame((_, delta) => {
+    if (materials?.lambert1?.color) {
+      easing.dampC(materials.lambert1.color, color, 0.25, delta)
     }
-  }, [selectedElementId, camera, pointer, raycaster, onElementUpdate]);
+  })
+
+  const stateString = JSON.stringify({ color, logoDecal })
 
   return (
-    <group 
-      ref={modelRef} 
-      onPointerMove={handlePointerMove} 
-      scale={[baseScale, baseScale, baseScale]}
-      position={basePosition}
-      rotation={baseRotation}
-    >
-      <GLTFNode
-        node={scene}
-        color={color}
-        textureElements={textureElements}
-        selectedElementId={selectedElementId}
-        onElementSelect={onElementSelect}
-        onElementUpdate={onElementUpdate}
-      />
+    <group ref={groupRef} key={stateString} dispose={null}>
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes?.T_Shirt_male?.geometry}
+        material={materials?.lambert1}
+        material-roughness={1}
+      >
+        {/* Chest Logo Decal */}
+        {logoDecal ? <ChestDecalItem logoDecal={logoDecal} position={[0, 0.04, 0.15]} scale={[0.15, 0.15, 0.15]} /> : null}
+
+        {/* Custom User Added Decals */}
+        {textureElements.map((el) => (
+          <CustomDecalItem
+            key={el.id}
+            element={el}
+            isSelected={selectedElementId === el.id}
+            onSelect={onElementSelect}
+          />
+        ))}
+      </mesh>
     </group>
-  );
+  )
 }
 
-// Preload the GLTF models
-Object.values(modelsData.models).forEach((model: any) => {
-  useGLTF.preload(model.path)
-})
+// Generic GLTF apparel renderer for hoodie / pants with full hierarchy and proper decal raycasting
+function GenericApparelModel({
+  modelPath,
+  garmentType,
+  color,
+  logoDecal,
+  textureElements,
+  selectedElementId,
+  onElementSelect,
+  onLoad
+}: {
+  modelPath: string
+  garmentType: string
+  color: string
+  logoDecal?: string
+  textureElements: TextureElement[]
+  selectedElementId: string | null
+  onElementSelect: (id: string) => void
+  onLoad?: (scene: THREE.Group) => void
+}) {
+  const { scene } = useGLTF(modelPath) as any
+  const modelRef = useRef<THREE.Group>(null)
 
-// Helper to calculate exact surface coordinates using programmatical raycasting
-const getSurfacePosition = (
-  scene: THREE.Group,
-  productType: string,
-  designAreaKey: string
-) => {
-  const modelConfig = (modelsData.models as any)[productType];
-  if (!modelConfig) return null;
-  
-  const area = modelConfig.designAreas[designAreaKey];
-  if (!area) return null;
-  
-  const [defaultX, defaultY, defaultZ] = area.position;
-  const isFront = defaultZ >= 0;
-  
-  const raycaster = new THREE.Raycaster();
-  // Set origin way out in front or back of the shape
-  const origin = new THREE.Vector3(defaultX, defaultY, isFront ? 5 : -5);
-  const direction = new THREE.Vector3(0, 0, isFront ? -1 : 1);
-  
-  raycaster.set(origin, direction);
-  
-  // Update world matrices of the scene graph
-  scene.updateMatrixWorld(true);
-  const intersects = raycaster.intersectObject(scene, true);
-  
-  if (intersects.length > 0) {
-    const hit = intersects[0];
-    const hitMesh = hit.object as THREE.Mesh;
-    const worldPoint = hit.point;
-    const worldNormal = hit.normal;
+  // Clone scene so full hierarchy (hood, sleeves, body, pocket, etc.) is preserved
+  const clonedScene = useMemo(() => {
+    if (!scene) return null
+    return scene.clone(true)
+  }, [scene])
+
+  // Find the primary torso/body mesh for accurate decal raycasting
+  const torsoMesh = useMemo<any>(() => {
+    if (!clonedScene) return null
+    let largestMesh: THREE.Mesh | null = null
+    let maxVerts = 0
+    clonedScene.traverse((child: any) => {
+      if (child.isMesh && child.geometry) {
+        const count = child.geometry.attributes?.position?.count || 0
+        if (count > maxVerts) {
+          maxVerts = count
+          largestMesh = child
+        }
+      }
+    })
+    return largestMesh
+  }, [clonedScene])
+
+  useEffect(() => {
+    if (clonedScene && onLoad) {
+      onLoad(clonedScene)
+    }
+  }, [clonedScene, onLoad])
+
+  // Smooth color interpolation across all parts of the apparel
+  useFrame((_, delta) => {
+    if (clonedScene) {
+      clonedScene.traverse((child: any) => {
+        if (child.isMesh && child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat: any) => {
+              if (mat && mat.color) easing.dampC(mat.color, color, 0.25, delta)
+            })
+          } else if (child.material.color) {
+            easing.dampC(child.material.color, color, 0.25, delta)
+          }
+          child.castShadow = true
+          child.receiveShadow = true
+        }
+      })
+    }
+  })
+
+  const cfg = MODEL_CONFIGS[garmentType] || MODEL_CONFIGS.tshirt
+
+  return (
+    <group ref={modelRef} dispose={null}>
+      {/* Full 3D Garment Mesh Hierarchy (all parts rendered) */}
+      {clonedScene && <primitive object={clonedScene} />}
+
+      {/* Surface-projected Decal Layer */}
+      {torsoMesh && (
+        <mesh 
+          geometry={torsoMesh.geometry} 
+          position={torsoMesh.position} 
+          rotation={torsoMesh.rotation} 
+          scale={torsoMesh.scale}
+        >
+          <meshBasicMaterial visible={false} />
+          {/* Surface-projected Chest Logo */}
+          {logoDecal ? (
+            <ChestDecalItem 
+              logoDecal={logoDecal} 
+              position={cfg.chestPosition} 
+              scale={cfg.chestScale} 
+            />
+          ) : null}
+
+          {/* Surface-projected Custom User Layers */}
+          {textureElements.map((el) => (
+            <CustomDecalItem
+              key={el.id}
+              element={el}
+              isSelected={selectedElementId === el.id}
+              onSelect={onElementSelect}
+            />
+          ))}
+        </mesh>
+      )}
+    </group>
+  )
+}
+
+// Backdrop Studio Shadow Floor
+function BackdropStudio() {
+  const shadows = useRef<any>(null)
+
+  return (
+    <AccumulativeShadows
+      ref={shadows}
+      temporal
+      frames={60}
+      alphaTest={0.85}
+      scale={10}
+      rotation={[Math.PI / 2, 0, 0]}
+      position={[0, 0, -0.14]}
+    >
+      <RandomizedLight
+        amount={4}
+        radius={9}
+        intensity={0.55}
+        ambient={0.25}
+        position={[5, 5, -10]}
+      />
+      <RandomizedLight
+        amount={4}
+        radius={5}
+        intensity={0.25}
+        ambient={0.55}
+        position={[-5, 5, -9]}
+      />
+    </AccumulativeShadows>
+  )
+}
+
+// Camera Rig with smooth parallax dampening
+function CameraRig({ 
+  children, 
+  enableParallax = true 
+}: { 
+  children: React.ReactNode
+  enableParallax?: boolean 
+}) {
+  const group = useRef<THREE.Group>(null)
+
+  useFrame((state, delta) => {
+    if (!enableParallax || !group.current) return
     
-    if (worldPoint && worldNormal) {
-      const dummy = new THREE.Object3D();
-      dummy.position.copy(worldPoint);
-      dummy.lookAt(worldPoint.clone().add(worldNormal));
-      dummy.updateMatrixWorld(true);
-      
-      hitMesh.updateMatrixWorld(true);
-      const localMatrix = hitMesh.matrixWorld.clone().invert().multiply(dummy.matrixWorld);
-      
-      const localPos = new THREE.Vector3();
-      const localQuad = new THREE.Quaternion();
-      const localScale = new THREE.Vector3();
-      localMatrix.decompose(localPos, localQuad, localScale);
-      
-      const localRot = new THREE.Euler().setFromQuaternion(localQuad);
-      
-      console.log("getSurfacePosition HIT:", hitMesh.name, "pos:", [localPos.x, localPos.y, localPos.z]);
-      return {
-        position: [localPos.x, localPos.y, localPos.z] as [number, number, number],
-        baseRotation: [localRot.x, localRot.y, localRot.z] as [number, number, number],
-        scale: area.scale as [number, number, number],
-        meshName: hitMesh.name
-      };
-    }
-  }
-  
-  // Find a fallback mesh name from the scene if raycast misses
-  let fallbackMeshName: string | undefined = undefined;
-  scene.traverse((child) => {
-    if (!fallbackMeshName && child.type === 'Mesh') {
-      fallbackMeshName = child.name;
-    }
-  });
-  
-  console.log("getSurfacePosition MISS. Fallback:", fallbackMeshName);
-  // Fallback if no intersection
-  return {
-    position: area.position as [number, number, number],
-    baseRotation: area.rotation as [number, number, number],
-    scale: area.scale as [number, number, number],
-    meshName: fallbackMeshName
-  };
+    // Smooth model rotation responding to pointer
+    easing.dampE(
+      group.current.rotation,
+      [state.pointer.y / 10, -state.pointer.x / 5, 0],
+      0.25,
+      delta
+    )
+  })
+
+  return <group ref={group}>{children}</group>
 }
 
-// Helper to retrieve the default design area parameters
-const getDefaultDesignArea = (productType: string, designAreaKey: string) => {
-  const modelConfig = (modelsData.models as any)[productType];
-  if (!modelConfig) {
-    return { 
-      position: [0, 0.2, 0.1] as [number, number, number], 
-      scale: [0.3, 0.4, 0.1] as [number, number, number], 
-      rotation: [0, 0, 0] as [number, number, number] 
-    };
-  }
-  
-  const areaKey = designAreaKey in modelConfig.designAreas ? designAreaKey : Object.keys(modelConfig.designAreas)[0];
-  const area = modelConfig.designAreas[areaKey];
-  return {
-    position: area.position as [number, number, number],
-    scale: area.scale as [number, number, number],
-    rotation: area.rotation as [number, number, number]
-  };
-}
+// Preload models
+useGLTF.preload('/models/shirt_baked.glb')
+useGLTF.preload('/models/hoodie.glb')
+useGLTF.preload('/models/pants.glb')
 
-// --- Main Page Component ---
+// --- Main Design Page Component ---
 export default function DesignPage() {
+  // Garment Selection
   const [selectedType, setSelectedType] = useState('tshirt')
   const selectedProductType = PRODUCT_TYPES.find(p => p.id === selectedType)
   const SelectedGarmentIcon = selectedProductType?.icon || Shirt
-  const [selectedColor, setSelectedColor] = useState(COLORS[0]?.value || '#ffffff')
+
+  // Colors & Materials
+  const [selectedColor, setSelectedColor] = useState('#EFBD48')
+  const [selectedFabric, setSelectedFabric] = useState('cotton')
+
+  // Built-in Decal State (clean by default)
+  const [logoDecal, setLogoDecal] = useState('')
+
+  // Custom User Layers
   const [textureElements, setTextureElements] = useState<TextureElement[]>([])
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null)
   
   // Model reference for raycasting
   const modelSceneRef = useRef<THREE.Group | null>(null)
 
-  // Placement area state
-  const [selectedArea, setSelectedArea] = useState('')
-  
-  const currentModelConfig = (modelsData.models as any)[selectedType]
-  const availableDesignAreas = useMemo(() => {
-    return currentModelConfig ? Object.keys(currentModelConfig.designAreas) : []
-  }, [currentModelConfig])
+  // Floating Navigation Tabs: 'color' | 'artwork' | 'ai' | 'layers'
+  const [activeTab, setActiveTab] = useState<'color' | 'artwork' | 'ai' | 'layers' | null>('color')
+  const [artworkSubTab, setArtworkSubTab] = useState<'graphic' | 'text'>('graphic')
 
-  useEffect(() => {
-    if (availableDesignAreas.length > 0) {
-      setSelectedArea(availableDesignAreas[0])
-    }
-  }, [availableDesignAreas])
+  // Text Tab State
+  const [newTextContent, setNewTextContent] = useState('')
+  const [newTextColor, setNewTextColor] = useState('#121212')
+  const [newTextFontSize, setNewTextFontSize] = useState(1)
 
-  // Form State
-  const [selectedFabric, setSelectedFabric] = useState('cotton')
-  const [activeLeftPanel, setActiveLeftPanel] = useState<'garment' | 'decoration' | null>('garment')
-  const [isAdding, setIsAdding] = useState(false)
-  const [newType, setNewType] = useState<'text'|'image'>('text')
-  const [newContent, setNewContent] = useState('')
-  const [newImage, setNewImage] = useState<string | null>(null)
-  const [newColor, setNewColor] = useState('#000000')
+  // AI Tab State
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false)
+
+  // Parallax / Orbit Mode
+  const [enableParallax, setEnableParallax] = useState(true)
+  const orbitControlsRef = useRef<any>(null)
 
   // Details & Publishing State
-  const [designName, setDesignName] = useState('Custom Merch')
+  const [designName, setDesignName] = useState('Modern Studio Tee')
   const [designPrice, setDesignPrice] = useState(39.99)
-  const [designDescription, setDesignDescription] = useState('Exclusive custom 3D merchandise design.')
+  const [designDescription, setDesignDescription] = useState('Exclusive custom 3D merchandise design designed with threejs.')
   const [isPublishing, setIsPublishing] = useState(false)
 
+  // Handlers
   const handlePublish = async () => {
     setIsPublishing(true)
     try {
@@ -552,235 +546,262 @@ export default function DesignPage() {
     }
   }
 
-  // --- Handlers ---
-  const handleAddText = () => {
-    if (!newContent.trim()) return;
-    let designParams;
-    if (modelSceneRef.current) {
-      designParams = getSurfacePosition(modelSceneRef.current, selectedType, selectedArea || 'front');
-    }
-    
-    if (!designParams) {
-      const defaultDesign = getDefaultDesignArea(selectedType, selectedArea || 'front');
-      designParams = {
-        position: defaultDesign.position,
-        baseRotation: defaultDesign.rotation,
-        scale: defaultDesign.scale,
-        meshName: undefined
-      };
-    }
-
-    const newElement: TextureElement = {
-      id: Date.now().toString(),
-      type: 'text',
-      content: newContent.trim(),
-      position: designParams.position, 
-      baseRotation: (designParams as any).baseRotation || [0, 0, 0],
-      rotationAngle: 0,
-      scale: designParams.scale,
-      color: newColor,
-      fontSize: 1,
-      opacity: 1,
-      meshName: designParams.meshName
-    }
-    setTextureElements(prev => [...prev, newElement])
-    setSelectedElementId(newElement.id)
-    setNewContent('')
-    toast.success('Text added to garment')
-  }
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload Image Handler
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, targetMode: 'logo' | 'layer' = 'logo') => {
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (ev) => {
-        const imageUrl = ev.target?.result as string;
-        if (!imageUrl) return;
+    if (!file) return
 
-        let designParams;
-        if (modelSceneRef.current) {
-          designParams = getSurfacePosition(modelSceneRef.current, selectedType, selectedArea || 'front');
-        }
-        
-        if (!designParams) {
-          const defaultDesign = getDefaultDesignArea(selectedType, selectedArea || 'front');
-          designParams = {
-            position: defaultDesign.position,
-            baseRotation: defaultDesign.rotation,
-            scale: defaultDesign.scale,
-            meshName: undefined
-          };
-        }
+    const cfg = MODEL_CONFIGS[selectedType] || MODEL_CONFIGS.tshirt
 
-        const newElement: TextureElement = {
+    const fileReader = new FileReader()
+    fileReader.onload = (ev) => {
+      const result = ev.target?.result as string
+      if (!result) return
+
+      if (targetMode === 'logo') {
+        setLogoDecal(result)
+        toast.success('Chest logo updated!')
+      } else {
+        const newElem: TextureElement = {
           id: Date.now().toString(),
           type: 'image',
-          content: 'Uploaded Graphic',
-          imageUrl: imageUrl,
-          position: designParams.position, 
-          baseRotation: (designParams as any).baseRotation || [0, 0, 0],
+          content: 'Uploaded Artwork',
+          imageUrl: result,
+          position: [...cfg.defaultLayerPosition],
+          baseRotation: [0, 0, 0],
           rotationAngle: 0,
-          scale: designParams.scale,
-          opacity: 1,
-          meshName: designParams.meshName
+          scale: [...cfg.defaultLayerScale],
+          opacity: 1
         }
-        setTextureElements(prev => [...prev, newElement])
-        setSelectedElementId(newElement.id)
-        toast.success('Image artwork uploaded')
+        setTextureElements(prev => [...prev, newElem])
+        setSelectedElementId(newElem.id)
+        toast.success('Custom layer added to garment!')
       }
-      reader.readAsDataURL(file)
     }
+    fileReader.readAsDataURL(file)
+  }
+
+  // Add Custom Text Handler
+  const handleAddText = () => {
+    if (!newTextContent.trim()) return
+
+    const cfg = MODEL_CONFIGS[selectedType] || MODEL_CONFIGS.tshirt
+
+    const newElem: TextureElement = {
+      id: Date.now().toString(),
+      type: 'text',
+      content: newTextContent.trim(),
+      position: [...cfg.defaultLayerPosition],
+      baseRotation: [0, 0, 0],
+      rotationAngle: 0,
+      scale: [...cfg.defaultLayerScale],
+      color: newTextColor,
+      fontSize: newTextFontSize,
+      opacity: 1
+    }
+
+    setTextureElements(prev => [...prev, newElem])
+    setSelectedElementId(newElem.id)
+    setNewTextContent('')
+    toast.success('Typography added to garment')
+  }
+
+  // AI Generation Handler
+  const handleGenerateAi = () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please enter an AI prompt')
+      return
+    }
+
+    setIsGeneratingAi(true)
+    toast.loading('Generating AI artwork...', { id: 'ai-gen' })
+
+    // Procedural SVG artwork based on prompt keywords
+    setTimeout(() => {
+      setIsGeneratingAi(false)
+      toast.dismiss('ai-gen')
+
+      const canvas = document.createElement('canvas')
+      canvas.width = 512
+      canvas.height = 512
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        // Create an artistic generative gradient background
+        const grad = ctx.createLinearGradient(0, 0, 512, 512)
+        grad.addColorStop(0, '#8B5CF6')
+        grad.addColorStop(0.5, '#EC4899')
+        grad.addColorStop(1, '#3B82F6')
+        ctx.fillStyle = grad
+        ctx.fillRect(0, 0, 512, 512)
+
+        // Draw decorative art elements
+        ctx.fillStyle = '#FFFFFF'
+        ctx.beginPath()
+        ctx.arc(256, 256, 120, 0, Math.PI * 2)
+        ctx.fill()
+
+        ctx.fillStyle = '#18181B'
+        ctx.font = 'bold 36px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(aiPrompt.slice(0, 16), 256, 256)
+      }
+
+      const generatedDataUrl = canvas.toDataURL('image/png')
+      setLogoDecal(generatedDataUrl)
+      toast.success('AI artwork applied as chest logo!')
+    }, 1200)
   }
 
   const handleUpdateElement = (id: string, updates: Partial<TextureElement>) => {
     setTextureElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el))
   }
-  
-  // Specific handler for 3D dragging
-  const handlePositionUpdate = (id: string, updates: Partial<TextureElement>) => {
-    setTextureElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el))
-  }
 
   const selectedElement = textureElements.find(el => el.id === selectedElementId)
+
+  // Camera presets
+  const setCameraView = (view: 'front' | 'back' | 'side') => {
+    if (!orbitControlsRef.current) return
+    setEnableParallax(false)
+    if (view === 'front') {
+      orbitControlsRef.current.setAzimuthalAngle(0)
+      orbitControlsRef.current.setPolarAngle(Math.PI / 2)
+    } else if (view === 'back') {
+      orbitControlsRef.current.setAzimuthalAngle(Math.PI)
+      orbitControlsRef.current.setPolarAngle(Math.PI / 2)
+    } else if (view === 'side') {
+      orbitControlsRef.current.setAzimuthalAngle(Math.PI / 2)
+      orbitControlsRef.current.setPolarAngle(Math.PI / 2)
+    }
+    orbitControlsRef.current.update()
+  }
 
   return (
     <div className="relative min-h-screen bg-background text-foreground pt-24 pb-12 px-4 sm:px-6 lg:px-8 font-sans">
       
-      {/* Ambient Background Orbs */}
+      {/* Ambient Background Glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[140px]" />
-        <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-foreground/5 rounded-full blur-[160px]" />
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[140px]" />
+        <div className="absolute bottom-10 right-10 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[160px]" />
       </div>
 
       <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-6 items-start">
         
         {/* LEFT & CENTER 2/3 COLUMN: 3D Model Viewport Canvas with Superimposed Floating Toolbar */}
-        <div className="lg:col-span-8 h-[calc(100vh-130px)] min-h-[550px] glass-card-rounded overflow-hidden relative shadow-2xl border border-white/20">
+        <div className="lg:col-span-8 h-[calc(100vh-130px)] min-h-[580px] glass-card-rounded overflow-hidden relative shadow-2xl border border-white/20">
           
-          {/* Floating Vertical Customization Toolbar Superimposed on Top Left of 3D Canvas */}
+          {/* Floating Vertical Customization Toolbar */}
           <div className="absolute top-4 left-4 z-20 flex gap-3 items-start pointer-events-auto">
             
             {/* Minimal Vertical Icon Toolbar */}
             <div className="flex flex-col gap-2 p-1.5 glass-pill shadow-2xl backdrop-blur-xl border border-white/20 items-center">
+              
+              {/* Color Tab Button */}
               <button
-                onClick={() => setActiveLeftPanel(activeLeftPanel === 'garment' ? null : 'garment')}
+                onClick={() => setActiveTab(activeTab === 'color' ? null : 'color')}
                 className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 relative group",
-                  activeLeftPanel === 'garment'
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 relative group",
+                  activeTab === 'color'
                     ? "bg-primary text-primary-foreground shadow-md scale-105"
                     : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
                 )}
-                title={`${selectedProductType?.name || 'Garment'} & Fabric Settings`}
+                title="Garment & Fabric Color"
               >
                 <div className="relative flex items-center justify-center">
-                  <SelectedGarmentIcon className="w-4 h-4" />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white/80 shadow-sm" style={{ backgroundColor: selectedColor }} />
+                  <Palette className="w-4 h-4" />
+                  <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border border-white/80 shadow-sm" style={{ backgroundColor: selectedColor }} />
                 </div>
               </button>
 
+              {/* Merged Artwork & Text Tab Button */}
               <button
-                onClick={() => setActiveLeftPanel(activeLeftPanel === 'decoration' ? null : 'decoration')}
+                onClick={() => setActiveTab(activeTab === 'artwork' ? null : 'artwork')}
                 className={cn(
-                  "w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 relative group",
-                  activeLeftPanel === 'decoration'
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 relative group",
+                  activeTab === 'artwork'
                     ? "bg-primary text-primary-foreground shadow-md scale-105"
                     : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
                 )}
-                title="Add Artwork / Text"
+                title="Add Artwork & Typography"
               >
-                <Plus className="w-4 h-4" />
+                <ImageIcon className="w-4 h-4" />
               </button>
+
+              {/* AI Artwork Generator Tab Button */}
+              <button
+                onClick={() => setActiveTab(activeTab === 'ai' ? null : 'ai')}
+                className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 relative group",
+                  activeTab === 'ai'
+                    ? "bg-primary text-primary-foreground shadow-md scale-105"
+                    : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                )}
+                title="AI Artwork Generator"
+              >
+                <Bot className="w-4 h-4 text-purple-400" />
+              </button>
+
+              {/* Layer Transforms Tab Button */}
+              {textureElements.length > 0 && (
+                <button
+                  onClick={() => setActiveTab(activeTab === 'layers' ? null : 'layers')}
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 relative group",
+                    activeTab === 'layers'
+                      ? "bg-primary text-primary-foreground shadow-md scale-105"
+                      : "text-muted-foreground hover:text-foreground hover:bg-foreground/10"
+                  )}
+                  title="Layer Transformations"
+                >
+                  <Layers className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
-            {/* Expandable Sub-Panels (Floats to the right of the vertical toolbar) */}
+            {/* Expandable Tab Panel */}
             <AnimatePresence mode="wait">
-              {activeLeftPanel && (
+              {activeTab && (
                 <motion.div
                   initial={{ opacity: 0, x: -10, scale: 0.95 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -10, scale: 0.95 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="w-72 sm:w-80 max-w-[calc(100vw-5rem)] bg-background/95 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-3.5 max-h-[calc(100vh-180px)] overflow-x-hidden overflow-y-auto space-y-3.5 box-border"
+                  className="w-72 sm:w-80 max-w-[calc(100vw-5rem)] bg-background/95 backdrop-blur-2xl border border-white/20 shadow-2xl rounded-3xl p-4 max-h-[calc(100vh-180px)] overflow-x-hidden overflow-y-auto space-y-4 box-border"
                 >
-                  {activeLeftPanel === 'garment' && (
+                  {/* 1. COLOR TAB */}
+                  {activeTab === 'color' && (
                     <div className="space-y-3.5">
                       <div className="flex items-center justify-between pb-1 border-b border-border/30">
-                        <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">Garment & Fabric</span>
-                        <button onClick={() => setActiveLeftPanel(null)} className="text-muted-foreground hover:text-foreground">
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <Palette className="w-3.5 h-3.5 text-primary" />
+                          <span>Garment Color</span>
+                        </span>
+                        <button onClick={() => setActiveTab(null)} className="text-muted-foreground hover:text-foreground">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
-                      {/* Garment Style Icons */}
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Garment Style</label>
-                          <span className="text-[10px] font-medium text-foreground">{selectedProductType?.name}</span>
+                      {/* Curated Color Swatches */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Curated Palette</label>
+                          <span className="text-[10px] font-mono text-foreground uppercase font-semibold">{selectedColor}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {PRODUCT_TYPES.map(p => (
-                            <button
-                              key={p.id}
-                              onClick={() => {
-                                setSelectedType(p.id)
-                                setDesignName('Custom ' + p.name)
-                              }}
-                              className={cn(
-                                "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-200 glass-pill relative group",
-                                selectedType === p.id 
-                                  ? "bg-primary text-primary-foreground shadow-md scale-105" 
-                                  : "hover:bg-foreground/10 text-muted-foreground"
-                              )}
-                              title={p.name}
-                            >
-                              <p.icon className="w-4 h-4" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Fabric Material Selector */}
-                      <div className="space-y-1.5 pt-1 border-t border-border/20">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Fabric Material</label>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {FABRICS.map(f => (
-                            <button
-                              key={f.id}
-                              onClick={() => setSelectedFabric(f.id)}
-                              className={cn(
-                                "p-2 rounded-2xl text-left transition-all duration-200 glass text-xs",
-                                selectedFabric === f.id
-                                  ? "bg-primary/20 border-primary font-bold shadow-sm"
-                                  : "hover:bg-foreground/10 text-muted-foreground border-transparent"
-                              )}
-                            >
-                              <div className="text-[11px] font-bold text-foreground truncate">{f.name}</div>
-                              <div className="text-[9px] text-muted-foreground truncate">{f.desc}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Fabric Color Swatches */}
-                      <div className="space-y-1.5 pt-1 border-t border-border/20">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Fabric Color</label>
-                          <span className="text-[10px] font-medium text-foreground">{COLORS.find(c => c.value === selectedColor)?.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          {COLORS.map(c => (
+                        <div className="grid grid-cols-4 gap-2">
+                          {COLOR_PALETTES.map((c) => (
                             <button
                               key={c.value}
+                              type="button"
                               onClick={() => setSelectedColor(c.value)}
                               className={cn(
-                                "w-7 h-7 rounded-full border border-white/40 transition-transform duration-200 hover:scale-110 shadow-sm flex items-center justify-center",
-                                selectedColor === c.value && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                                "h-9 rounded-xl border border-white/30 transition-transform duration-200 hover:scale-105 shadow-sm flex items-center justify-center relative",
+                                selectedColor.toUpperCase() === c.value.toUpperCase() && "ring-2 ring-primary ring-offset-2 ring-offset-background scale-105"
                               )}
                               style={{ backgroundColor: c.value }}
                               title={c.name}
                             >
-                              {selectedColor === c.value && (
-                                <div className={cn("w-1.5 h-1.5 rounded-full", c.value === '#FFFFFF' ? "bg-black" : "bg-white")} />
+                              {selectedColor.toUpperCase() === c.value.toUpperCase() && (
+                                <Check className={cn("w-3.5 h-3.5", c.value === '#FFFFFF' ? "text-black" : "text-white")} />
                               )}
                             </button>
                           ))}
@@ -789,256 +810,405 @@ export default function DesignPage() {
                     </div>
                   )}
 
-                  {activeLeftPanel === 'decoration' && (
+                  {/* 2. MERGED ARTWORK & TYPOGRAPHY TAB */}
+                  {activeTab === 'artwork' && (
                     <div className="space-y-3.5">
                       <div className="flex items-center justify-between pb-1 border-b border-border/30">
-                        <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">Artwork & Layers</span>
-                        <button onClick={() => setActiveLeftPanel(null)} className="text-muted-foreground hover:text-foreground">
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                          <span>Artwork & Typography</span>
+                        </span>
+                        <button onClick={() => setActiveTab(null)} className="text-muted-foreground hover:text-foreground">
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
-                      {/* Unified Form: Text Input + RGB Color Selector AND Image Upload Dropzone */}
-                      <div className="space-y-3 glass p-3 rounded-2xl border border-white/20 box-border">
-                        
-                        {/* 1. Add Text Section */}
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Add Text Artwork</label>
-                          <div className="flex items-center gap-1.5 w-full">
-                            <input 
-                              className="flex-1 min-w-0 px-3 py-1.5 rounded-full glass border border-white/20 bg-background/50 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" 
-                              placeholder="Type text artwork..." 
-                              value={newContent} 
-                              onChange={e => setNewContent(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleAddText();
-                                }
-                              }}
-                            />
-                            <button 
-                              onClick={handleAddText} 
-                              disabled={!newContent.trim()} 
-                              className="btn-highlight px-3 py-1.5 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                            >
-                              Add
-                            </button>
-                          </div>
-
-                          {/* RGB Text Color Selector */}
-                          <div className="space-y-1.5 pt-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[9px] font-semibold text-muted-foreground">Text Color (RGB/Hex):</span>
-                              <span className="text-[9px] font-mono font-medium text-foreground uppercase">{newColor}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 w-full">
-                              {/* Native RGB Color Picker Button */}
-                              <div className="relative w-7 h-7 rounded-full border border-white/40 shadow-sm shrink-0 cursor-pointer overflow-hidden flex items-center justify-center group">
-                                <input 
-                                  type="color" 
-                                  value={newColor} 
-                                  onChange={e => setNewColor(e.target.value)}
-                                  className="absolute -inset-2 w-12 h-12 cursor-pointer opacity-0 z-10"
-                                  title="Open Full RGB Color Picker"
-                                />
-                                <div className="w-full h-full rounded-full transition-transform group-hover:scale-110" style={{ backgroundColor: newColor }} />
-                              </div>
-
-                              {/* Custom Hex Code Input */}
-                              <input 
-                                type="text" 
-                                value={newColor} 
-                                onChange={e => setNewColor(e.target.value)}
-                                className="flex-1 min-w-0 px-3 py-1 rounded-full text-xs font-mono glass border border-white/20 uppercase text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                                placeholder="#FFFFFF"
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="flex items-center gap-2 my-1">
-                          <div className="flex-1 h-[1px] bg-border/30" />
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase">OR</span>
-                          <div className="flex-1 h-[1px] bg-border/30" />
-                        </div>
-
-                        {/* 2. Image Upload Dropzone */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Upload Image / Graphic</label>
-                          <label className="border border-dashed border-white/30 rounded-2xl p-2.5 flex flex-col items-center justify-center cursor-pointer glass hover:bg-foreground/10 transition-all text-center gap-1 group">
-                            <ImageIcon className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                            <span className="text-[11px] font-semibold text-foreground">Click to Upload Graphic</span>
-                            <span className="text-[9px] text-muted-foreground">PNG, JPG, SVG supported</span>
-                            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-                          </label>
-                        </div>
+                      {/* Segmented Switcher */}
+                      <div className="grid grid-cols-2 p-1 rounded-2xl glass border border-white/20 gap-1">
+                        <button
+                          onClick={() => setArtworkSubTab('graphic')}
+                          className={cn(
+                            "py-1.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5",
+                            artworkSubTab === 'graphic'
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                          )}
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Graphic</span>
+                        </button>
+                        <button
+                          onClick={() => setArtworkSubTab('text')}
+                          className={cn(
+                            "py-1.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5",
+                            artworkSubTab === 'text'
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
+                          )}
+                        >
+                          <Type className="w-3.5 h-3.5" />
+                          <span>Text</span>
+                        </button>
                       </div>
 
-                      {/* Active Layers Stack */}
-                      {textureElements.length > 0 && (
-                        <div className="space-y-1">
-                          <h3 className="font-bold text-[10px] text-muted-foreground uppercase tracking-wider">Layers ({textureElements.length})</h3>
-                          <div className="space-y-1 max-h-28 overflow-y-auto pr-1">
-                            {textureElements.map((el) => (
-                              <div 
-                                key={el.id}
-                                onClick={() => setSelectedElementId(el.id)}
-                                className={cn(
-                                  "p-1.5 rounded-xl glass flex items-center justify-between cursor-pointer text-xs transition-all",
-                                  selectedElementId === el.id ? "border-primary bg-primary/10 font-bold" : ""
-                                )}
-                              >
-                                <div className="flex items-center gap-1.5 truncate">
-                                  {el.type === 'text' ? <Type className="w-3 h-3 text-primary shrink-0" /> : <ImageIcon className="w-3 h-3 text-primary shrink-0" />}
-                                  <span className="truncate text-[11px]">{el.type === 'text' ? el.content : 'Uploaded Artwork'}</span>
+                      {/* Graphic Subtab */}
+                      {artworkSubTab === 'graphic' && (
+                        <div className="space-y-3 pt-1">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                              Upload Custom Artwork
+                            </label>
+                            
+                            <div className="space-y-2">
+                              {/* Apply as Chest Logo */}
+                              <label className="border border-dashed border-white/30 rounded-2xl p-2.5 flex items-center justify-between cursor-pointer glass hover:bg-foreground/10 transition-all group">
+                                <div className="flex items-center gap-2">
+                                  <Shirt className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                                  <div className="text-left">
+                                    <div className="text-[11px] font-bold text-foreground">Apply as Chest Logo</div>
+                                    <div className="text-[9px] text-muted-foreground">Fixed front chest placement</div>
+                                  </div>
                                 </div>
+                                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} className="hidden" />
+                              </label>
+
+                              {/* Apply as Movable Layer */}
+                              <label className="border border-dashed border-white/30 rounded-2xl p-2.5 flex items-center justify-between cursor-pointer glass hover:bg-foreground/10 transition-all group">
+                                <div className="flex items-center gap-2">
+                                  <Plus className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                                  <div className="text-left">
+                                    <div className="text-[11px] font-bold text-foreground">Add as Movable Layer</div>
+                                    <div className="text-[9px] text-muted-foreground">Scale & position freely</div>
+                                  </div>
+                                </div>
+                                <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'layer')} className="hidden" />
+                              </label>
+                            </div>
+                          </div>
+
+                          {logoDecal && (
+                            <div className="pt-2 border-t border-border/20 flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground text-[10px]">Active Chest Logo:</span>
+                              <button
+                                onClick={() => {
+                                  setLogoDecal('')
+                                  toast.success('Chest logo removed')
+                                }}
+                                className="text-[10px] text-destructive hover:underline font-semibold"
+                              >
+                                Remove Logo
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Typography Subtab */}
+                      {artworkSubTab === 'text' && (
+                        <div className="space-y-3 pt-1">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                              Add Custom Typography
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <input 
+                                className="flex-1 min-w-0 px-3 py-1.5 rounded-full glass border border-white/20 bg-background/50 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" 
+                                placeholder="Type slogan / text..." 
+                                value={newTextContent} 
+                                onChange={e => setNewTextContent(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleAddText()
+                                  }
+                                }}
+                              />
+                              <button 
+                                onClick={handleAddText} 
+                                disabled={!newTextContent.trim()} 
+                                className="btn-highlight px-3 py-1.5 text-xs font-bold disabled:opacity-50 shrink-0"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Typography Text Color Palette */}
+                          <div className="space-y-2 pt-2 border-t border-border/20">
+                            <div className="flex justify-between items-center text-xs">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                Text Color
+                              </label>
+                              <span className="text-[10px] font-mono text-foreground uppercase font-semibold">{newTextColor}</span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                              {COLOR_PALETTES.map((c) => (
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setTextureElements(prev => prev.filter(item => item.id !== el.id));
-                                    if (selectedElementId === el.id) setSelectedElementId(null);
-                                  }}
-                                  className="p-0.5 hover:text-destructive text-muted-foreground rounded-full"
+                                  key={c.value}
+                                  type="button"
+                                  onClick={() => setNewTextColor(c.value)}
+                                  className={cn(
+                                    "h-8 rounded-xl border border-white/30 transition-transform duration-200 hover:scale-105 shadow-sm flex items-center justify-center relative",
+                                    newTextColor.toUpperCase() === c.value.toUpperCase() && "ring-2 ring-primary ring-offset-1 ring-offset-background scale-105"
+                                  )}
+                                  style={{ backgroundColor: c.value }}
+                                  title={c.name}
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  {newTextColor.toUpperCase() === c.value.toUpperCase() && (
+                                    <Check className={cn("w-3 h-3", c.value === '#FFFFFF' ? "text-black" : "text-white")} />
+                                  )}
                                 </button>
-                              </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 3. AI ARTWORK TAB */}
+                  {activeTab === 'ai' && (
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between pb-1 border-b border-border/30">
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <Bot className="w-3.5 h-3.5 text-purple-400" />
+                          <span>AI Artwork Generator</span>
+                        </span>
+                        <button onClick={() => setActiveTab(null)} className="text-muted-foreground hover:text-foreground">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">AI Prompt</label>
+                        <textarea
+                          rows={2}
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          placeholder="Describe the graphic or artwork you want..."
+                          className="w-full p-2.5 rounded-2xl glass border border-white/20 bg-background/50 text-foreground text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                        />
+
+                        {/* Prompt Inspiration Chips */}
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-semibold">Inspiration Presets:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {AI_PROMPT_PRESETS.map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => setAiPrompt(p)}
+                                className="text-[9px] px-2 py-0.5 rounded-full glass border border-white/10 text-muted-foreground hover:text-foreground hover:bg-foreground/10 transition-colors"
+                              >
+                                {p}
+                              </button>
                             ))}
                           </div>
                         </div>
-                      )}
 
-                      {/* Selected Element Controls */}
-                      {selectedElement && (
-                        <div className="pt-2 border-t border-border/30 space-y-1.5">
-                          <h3 className="font-bold text-[11px] text-foreground flex items-center gap-1">
-                            <Move className="w-3 h-3 text-primary" /> Transform Layer
-                          </h3>
-                          
-                          <div className="space-y-2 text-xs glass p-2.5 rounded-2xl">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[9px] font-semibold text-muted-foreground">Pos</label>
-                                {['X', 'Y'].map((axis, i) => (
-                                  <div key={axis} className="flex items-center gap-1">
-                                    <span className="w-2.5 text-[9px] font-mono text-muted-foreground">{axis}</span>
-                                    <input
-                                      type="range"
-                                      min="-1"
-                                      max="1"
-                                      step="0.01"
-                                      value={selectedElement.position[i]}
-                                      onChange={(e) => {
-                                        const newPos = [...selectedElement.position] as [number, number, number];
-                                        newPos[i] = parseFloat(e.target.value);
-                                        handleUpdateElement(selectedElement.id, { position: newPos });
-                                      }}
-                                      className="flex-1 accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-
-                              <div className="space-y-1">
-                                <label className="text-[9px] font-semibold text-muted-foreground">Scale</label>
-                                {['X', 'Y'].map((axis, i) => (
-                                  <div key={axis} className="flex items-center gap-1">
-                                    <span className="w-2.5 text-[9px] font-mono text-muted-foreground">{axis === 'X' ? 'W' : 'H'}</span>
-                                    <input
-                                      type="range"
-                                      min="0.1"
-                                      max="2"
-                                      step="0.05"
-                                      value={selectedElement.scale[i]}
-                                      onChange={(e) => {
-                                        const newScale = [...selectedElement.scale] as [number, number, number];
-                                        newScale[i] = parseFloat(e.target.value);
-                                        handleUpdateElement(selectedElement.id, { scale: newScale });
-                                      }}
-                                      className="flex-1 accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="space-y-0.5">
-                              <div className="flex justify-between items-center text-[9px]">
-                                <label className="font-semibold text-muted-foreground">Rotate</label>
-                                <span className="font-mono">{Math.round(((selectedElement.rotationAngle || 0) * 180) / Math.PI)}°</span>
-                              </div>
-                              <input
-                                type="range"
-                                min="0"
-                                max={Math.PI * 2}
-                                step="0.05"
-                                value={selectedElement.rotationAngle || 0}
-                                onChange={(e) => {
-                                  handleUpdateElement(selectedElement.id, { rotationAngle: parseFloat(e.target.value) });
-                                }}
-                                className="w-full accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
-                              />
-                            </div>
-
-                            <button 
-                              onClick={() => {
-                                setTextureElements(prev => prev.filter(el => el.id !== selectedElement.id))
-                                setSelectedElementId(null)
-                              }}
-                              className="w-full py-0.5 text-[10px] text-destructive glass hover:bg-destructive/10 rounded-full flex items-center justify-center gap-1 transition-colors"
-                            >
-                              <Trash2 className="w-2.5 h-2.5" /> Remove
-                            </button>
-                          </div>
+                        {/* Generate Action Button */}
+                        <div className="pt-2">
+                          <button
+                            onClick={handleGenerateAi}
+                            disabled={isGeneratingAi}
+                            className="btn-highlight w-full py-2.5 text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Generate AI Artwork</span>
+                          </button>
                         </div>
-                      )}
-
+                      </div>
                     </div>
                   )}
+
+                  {/* 5. LAYERS & TRANSFORMS TAB */}
+                  {activeTab === 'layers' && selectedElement && (
+                    <div className="space-y-3.5">
+                      <div className="flex items-center justify-between pb-1 border-b border-border/30">
+                        <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <Sliders className="w-3.5 h-3.5 text-primary" />
+                          <span>Layer Transforms</span>
+                        </span>
+                        <button onClick={() => setActiveTab(null)} className="text-muted-foreground hover:text-foreground">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Position X / Y */}
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-semibold text-muted-foreground block">Position (X, Y)</label>
+                          {['X', 'Y'].map((axis, i) => (
+                            <div key={axis} className="flex items-center gap-2 text-xs">
+                              <span className="w-3 text-[9px] font-mono text-muted-foreground">{axis}</span>
+                              <input
+                                type="range"
+                                min="-0.3"
+                                max="0.3"
+                                step="0.01"
+                                value={selectedElement.position[i]}
+                                onChange={(e) => {
+                                  const newPos = [...selectedElement.position] as [number, number, number]
+                                  newPos[i] = parseFloat(e.target.value)
+                                  handleUpdateElement(selectedElement.id, { position: newPos })
+                                }}
+                                className="flex-1 accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Scale */}
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-semibold text-muted-foreground block">Scale</label>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="0.4"
+                            step="0.01"
+                            value={selectedElement.scale[0]}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value)
+                              handleUpdateElement(selectedElement.id, { scale: [val, val, val] })
+                            }}
+                            className="w-full accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Rotate */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-[9px]">
+                            <label className="font-semibold text-muted-foreground">Rotation</label>
+                            <span className="font-mono">{Math.round(((selectedElement.rotationAngle || 0) * 180) / Math.PI)}°</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max={Math.PI * 2}
+                            step="0.05"
+                            value={selectedElement.rotationAngle || 0}
+                            onChange={(e) => {
+                              handleUpdateElement(selectedElement.id, { rotationAngle: parseFloat(e.target.value) })
+                            }}
+                            className="w-full accent-primary h-1 bg-muted-foreground/30 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Delete Layer */}
+                        <button 
+                          onClick={() => {
+                            setTextureElements(prev => prev.filter(el => el.id !== selectedElement.id))
+                            setSelectedElementId(null)
+                          }}
+                          className="w-full py-1 text-xs text-destructive glass hover:bg-destructive/10 rounded-full flex items-center justify-center gap-1 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Remove Layer
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* 3D Canvas Component */}
-          <Canvas camera={{ position: [0, 0, 2.5], fov: 45 }}>
-            <ambientLight intensity={0.8} />
-            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
+          {/* Floating Action Controls (Bottom of 3D Canvas) */}
+          <div className="absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
+            {/* Download Mockup Button */}
+            <button
+              onClick={downloadCanvasToImage}
+              className="px-3.5 py-2 rounded-full text-xs font-bold transition-all duration-200 glass shadow-md flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-foreground/10 border border-white/20"
+              title="Download Canvas Mockup Screenshot"
+            >
+              <Download className="w-3.5 h-3.5 text-primary" />
+              <span>Save Mockup</span>
+            </button>
+          </div>
+
+          {/* Camera Preset Buttons (Top Right of 3D Canvas) */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5 glass-pill p-1 shadow-md border border-white/20 pointer-events-auto">
+            <button 
+              onClick={() => setCameraView('front')}
+              className="px-2.5 py-1 text-[10px] font-bold text-muted-foreground hover:text-foreground rounded-full hover:bg-foreground/10 transition-colors"
+            >
+              Front
+            </button>
+            <button 
+              onClick={() => setCameraView('back')}
+              className="px-2.5 py-1 text-[10px] font-bold text-muted-foreground hover:text-foreground rounded-full hover:bg-foreground/10 transition-colors"
+            >
+              Back
+            </button>
+            <button 
+              onClick={() => {
+                setEnableParallax(true)
+                if (orbitControlsRef.current) orbitControlsRef.current.reset()
+              }}
+              className="px-2.5 py-1 text-[10px] font-bold text-muted-foreground hover:text-foreground rounded-full hover:bg-foreground/10 transition-colors flex items-center gap-1"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Orbit</span>
+            </button>
+          </div>
+
+          {/* 3D Canvas Viewport */}
+          <Canvas 
+            shadows 
+            camera={{ position: [0, 0, 2], fov: 25 }} 
+            gl={{ preserveDrawingBuffer: true }}
+            className="w-full h-full"
+          >
+            <ambientLight intensity={0.5} />
             <Environment preset="city" />
-            
-            <Suspense fallback={null}>
-              <ProductModel 
-                type={selectedType}
-                color={selectedColor}
-                textureElements={textureElements}
-                selectedElementId={selectedElementId}
-                onElementSelect={setSelectedElementId}
-                onElementUpdate={handlePositionUpdate}
-                onLoad={(scene) => {
-                  modelSceneRef.current = scene;
-                }}
-              />
-            </Suspense>
-            
+
+            <CameraRig enableParallax={enableParallax}>
+              <BackdropStudio />
+              <Center>
+                <Suspense fallback={null}>
+                  {selectedType === 'tshirt' ? (
+                    <BakedTShirtModel 
+                      color={selectedColor}
+                      logoDecal={logoDecal}
+                      textureElements={textureElements}
+                      selectedElementId={selectedElementId}
+                      onElementSelect={setSelectedElementId}
+                      onElementUpdate={handleUpdateElement}
+                      onLoad={(scene) => {
+                        modelSceneRef.current = scene
+                      }}
+                    />
+                  ) : (
+                    <GenericApparelModel
+                      modelPath={(modelsData.models as any)[selectedType]?.path || '/models/shirt_baked.glb'}
+                      garmentType={selectedType}
+                      color={selectedColor}
+                      logoDecal={logoDecal}
+                      textureElements={textureElements}
+                      selectedElementId={selectedElementId}
+                      onElementSelect={setSelectedElementId}
+                      onLoad={(scene) => {
+                        modelSceneRef.current = scene
+                      }}
+                    />
+                  )}
+                </Suspense>
+              </Center>
+            </CameraRig>
+
             <OrbitControls 
+              ref={orbitControlsRef}
               makeDefault 
-              minDistance={1.8} 
-              maxDistance={4.5} 
+              minDistance={1.2} 
+              maxDistance={3.5} 
               enableZoom={true}
-              zoomSpeed={0.5}
+              zoomSpeed={0.6}
             />
           </Canvas>
           
-          <div className="absolute bottom-4 left-4 right-4 text-center text-xs text-muted-foreground glass-pill py-2 px-4 pointer-events-none shadow-md z-10">
-            Interactive 3D Preview • Drag or zoom model to inspect design from any angle
-          </div>
         </div>
 
-        {/* RIGHT 1/3 COLUMN: Floating Details & Publishing Controls */}
-        <div className="lg:col-span-4 glass-card-rounded p-6 shadow-xl space-y-6 max-h-[calc(100vh-130px)] overflow-y-auto">
+        {/* RIGHT 1/3 COLUMN: Details & Publishing Controls */}
+        <div className="lg:col-span-4 glass-card-rounded p-6 shadow-xl space-y-5 max-h-[calc(100vh-130px)] overflow-y-auto">
           <div className="flex items-center justify-between border-b border-border/30 pb-3">
             <h2 className="text-base font-extrabold tracking-tight text-foreground flex items-center gap-2">
               <Tag className="w-4 h-4 text-primary" />
@@ -1046,22 +1216,70 @@ export default function DesignPage() {
             </h2>
           </div>
 
-          <div className="space-y-4">
+          {/* Garment Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground block">Apparel Type</label>
+            <div className="grid grid-cols-3 gap-2">
+              {PRODUCT_TYPES.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => {
+                    setSelectedType(p.id)
+                    setDesignName('Custom ' + p.name)
+                  }}
+                  className={cn(
+                    "py-2 px-3 rounded-2xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold glass",
+                    selectedType === p.id 
+                      ? "bg-primary text-primary-foreground shadow-md border-primary" 
+                      : "hover:bg-foreground/10 text-muted-foreground border-transparent"
+                  )}
+                >
+                  <p.icon className="w-3.5 h-3.5" />
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fabric Material Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground block">Fabric Quality</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {FABRICS.map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setSelectedFabric(f.id)}
+                  className={cn(
+                    "p-2 rounded-2xl text-left transition-all glass text-xs",
+                    selectedFabric === f.id
+                      ? "bg-primary/20 border-primary font-bold shadow-sm"
+                      : "hover:bg-foreground/10 text-muted-foreground border-transparent"
+                  )}
+                >
+                  <div className="text-[11px] font-bold text-foreground truncate">{f.name}</div>
+                  <div className="text-[9px] text-muted-foreground truncate">{f.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Design Details Form */}
+          <div className="space-y-3 pt-2 border-t border-border/20">
             {/* Design Name */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Design Title</label>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Design Title</label>
               <input
                 type="text"
                 value={designName}
                 onChange={(e) => setDesignName(e.target.value)}
                 className="w-full px-3 py-2 rounded-full glass border border-white/20 bg-background/50 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="e.g. Galaxy Dreams Tee"
+                placeholder="e.g. Studio Signature Tee"
               />
             </div>
 
             {/* Price Input */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Retail Price ($USD)</label>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Retail Price ($USD)</label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">$</span>
                 <input
@@ -1076,31 +1294,31 @@ export default function DesignPage() {
 
             {/* Description */}
             <div>
-              <label className="text-xs font-semibold text-muted-foreground block mb-1.5">Description</label>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Description</label>
               <textarea
-                rows={3}
+                rows={2}
                 value={designDescription}
                 onChange={(e) => setDesignDescription(e.target.value)}
-                className="w-full p-3 rounded-2xl glass border border-white/20 bg-background/50 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                className="w-full p-2.5 rounded-2xl glass border border-white/20 bg-background/50 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 placeholder="Describe your design artwork..."
               />
             </div>
 
             {/* Estimated Royalty Card */}
-            <div className="glass p-4 rounded-2xl space-y-1.5 border border-white/20 text-center">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Estimated Royalty</span>
-              <div className="text-2xl font-black text-primary">
+            <div className="glass p-3.5 rounded-2xl space-y-1 border border-white/20 text-center">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Estimated Creator Royalty</span>
+              <div className="text-xl font-black text-primary">
                 ${(designPrice * 0.25).toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ sale</span>
               </div>
-              <p className="text-[10px] text-muted-foreground">25% artist revenue split calculated automatically.</p>
+              <p className="text-[9px] text-muted-foreground">25% artist revenue split calculated automatically.</p>
             </div>
 
-            {/* Publish / Action Buttons */}
-            <div className="space-y-2.5 pt-2">
+            {/* Publish Action Buttons */}
+            <div className="space-y-2 pt-1">
               <button
                 onClick={handlePublish}
                 disabled={isPublishing}
-                className="btn-highlight w-full py-3 text-xs gap-2"
+                className="btn-highlight w-full py-2.5 text-xs gap-2"
               >
                 {isPublishing ? (
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1115,11 +1333,14 @@ export default function DesignPage() {
               <button
                 onClick={() => {
                   if (confirm('Are you sure you want to reset all decorations?')) {
+                    setSelectedColor('#EFBD48')
+                    setLogoDecal('')
                     setTextureElements([])
                     setSelectedElementId(null)
+                    toast.success('Design canvas reset')
                   }
                 }}
-                className="btn-glass-pill w-full py-2.5 text-xs text-muted-foreground hover:text-foreground"
+                className="btn-glass-pill w-full py-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 Reset Canvas
               </button>

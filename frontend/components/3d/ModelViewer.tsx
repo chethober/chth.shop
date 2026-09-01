@@ -1,9 +1,9 @@
 'use client'
 
-import { Suspense, useRef, useState, useEffect } from 'react'
-import { Canvas, useFrame, useLoader } from '@react-three/fiber'
-import { OrbitControls, Environment, ContactShadows, Html, useProgress } from '@react-three/drei'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import { Suspense, useRef, useEffect } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { OrbitControls, Environment, ContactShadows, Html, useProgress, useGLTF, Decal, useTexture } from '@react-three/drei'
+import { easing } from 'maath'
 import * as THREE from 'three'
 import { ProductType } from '@/types'
 import { cn } from '@/lib/utils'
@@ -24,166 +24,63 @@ function Loader() {
   return (
     <Html center>
       <div className="flex flex-col items-center space-y-4">
-        <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-        <div className="text-sm text-muted-foreground">
-          Loading model... {Math.round(progress)}%
+        <div className="w-10 h-10 border-3 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+        <div className="text-xs text-muted-foreground">
+          Loading 3D model... {Math.round(progress)}%
         </div>
       </div>
     </Html>
   )
 }
 
-// 3D Model Component
-function Model({
-  productType,
-  color = '#ffffff',
-  texture,
-  design,
-  onLoad,
-  onError
-}: {
-  productType: ProductType
-  color: string
-  texture?: string | null
-  design?: string | null
-  onLoad?: () => void
-  onError?: (error: Error) => void
-}) {
-  const meshRef = useRef<THREE.Group>(null)
-  const [modelData, setModelData] = useState<any>(null)
+// 3D Shirt Model
+function ShirtModel({ color = '#ffffff', design }: { color?: string; design?: string | null }) {
+  const { nodes, materials } = useGLTF('/models/shirt_baked.glb') as any
+  const designTexture = design ? useTexture(design) : null
 
-  // Create a simple geometric model as fallback
-  const createFallbackModel = (type: ProductType) => {
-    const geometry = new THREE.Group()
-
-    switch (type) {
-      case 'tshirt':
-        // Simple T-shirt shape
-        const tshirtBody = new THREE.BoxGeometry(1, 1.2, 0.1)
-        const tshirtSleeves = new THREE.BoxGeometry(1.6, 0.4, 0.1)
-
-        const bodyMesh = new THREE.Mesh(tshirtBody, new THREE.MeshStandardMaterial({ color }))
-        const sleevesMesh = new THREE.Mesh(tshirtSleeves, new THREE.MeshStandardMaterial({ color }))
-
-        bodyMesh.position.set(0, 0, 0)
-        sleevesMesh.position.set(0, 0.4, 0)
-
-        geometry.add(bodyMesh)
-        geometry.add(sleevesMesh)
-        break
-
-      case 'hoodie':
-        // Simple hoodie shape
-        const hoodieBody = new THREE.BoxGeometry(1.2, 1.4, 0.12)
-        const hoodieSleeves = new THREE.BoxGeometry(1.8, 0.5, 0.12)
-        const hood = new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)
-
-        const hBodyMesh = new THREE.Mesh(hoodieBody, new THREE.MeshStandardMaterial({ color }))
-        const hSleevesMesh = new THREE.Mesh(hoodieSleeves, new THREE.MeshStandardMaterial({ color }))
-        const hoodMesh = new THREE.Mesh(hood, new THREE.MeshStandardMaterial({ color }))
-
-        hBodyMesh.position.set(0, 0, 0)
-        hSleevesMesh.position.set(0, 0.45, 0)
-        hoodMesh.position.set(0, 0.8, -0.1)
-        hoodMesh.rotation.x = -Math.PI / 4
-
-        geometry.add(hBodyMesh)
-        geometry.add(hSleevesMesh)
-        geometry.add(hoodMesh)
-        break
-
-      case 'pants':
-        // Simple pants shape
-        const waist = new THREE.BoxGeometry(1, 0.3, 0.1)
-        const leftLeg = new THREE.BoxGeometry(0.4, 1.2, 0.1)
-        const rightLeg = new THREE.BoxGeometry(0.4, 1.2, 0.1)
-
-        const waistMesh = new THREE.Mesh(waist, new THREE.MeshStandardMaterial({ color }))
-        const leftLegMesh = new THREE.Mesh(leftLeg, new THREE.MeshStandardMaterial({ color }))
-        const rightLegMesh = new THREE.Mesh(rightLeg, new THREE.MeshStandardMaterial({ color }))
-
-        waistMesh.position.set(0, 0.5, 0)
-        leftLegMesh.position.set(-0.3, -0.1, 0)
-        rightLegMesh.position.set(0.3, -0.1, 0)
-
-        geometry.add(waistMesh)
-        geometry.add(leftLegMesh)
-        geometry.add(rightLegMesh)
-        break
-    }
-
-    return geometry
-  }
-
-  // Load or create model
-  useEffect(() => {
-    try {
-      // For now, we'll use fallback geometric models
-      const fallbackModel = createFallbackModel(productType)
-      setModelData(fallbackModel)
-      onLoad?.()
-    } catch (error) {
-      console.error('Error loading model:', error)
-      onError?.(error as Error)
-    }
-  }, [productType, onLoad, onError])
-
-  // Update color when it changes
-  useEffect(() => {
-    if (modelData) {
-      modelData.traverse((child: any) => {
-        if (child.isMesh && child.material) {
-          child.material.color.setStyle(color)
-          child.material.needsUpdate = true
-        }
-      })
-    }
-  }, [modelData, color])
-
-  // Animation
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1
+  useFrame((_, delta) => {
+    if (materials?.lambert1?.color) {
+      easing.dampC(materials.lambert1.color, color, 0.25, delta)
     }
   })
 
-  if (!modelData) return null
-
   return (
-    <group ref={meshRef}>
-      <primitive object={modelData} />
-
-      {/* Add design overlay if provided */}
-      {design && (
-        <mesh position={[0, 0, 0.06]}>
-          <planeGeometry args={[0.6, 0.8]} />
-          <meshBasicMaterial
-            map={new THREE.TextureLoader().load(design)}
-            transparent
-            alphaTest={0.1}
+    <group dispose={null}>
+      <mesh
+        castShadow
+        receiveShadow
+        geometry={nodes?.T_Shirt_male?.geometry}
+        material={materials?.lambert1}
+        material-roughness={1}
+      >
+        {designTexture && (
+          <Decal
+            position={[0, 0.04, 0.15]}
+            rotation={[0, 0, 0]}
+            scale={0.15}
+            map={designTexture}
           />
-        </mesh>
-      )}
+        )}
+      </mesh>
     </group>
   )
 }
 
-// Error Boundary Component
-function ErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }) {
-  return (
-    <Html center>
-      <div className="text-center p-4 max-w-sm">
-        <div className="text-destructive text-sm mb-2">Failed to load 3D model</div>
-        <div className="text-xs text-muted-foreground mb-4">{error.message}</div>
-        <button
-          onClick={onRetry}
-          className="btn-outline text-xs px-3 py-1"
-        >
-          Retry
-        </button>
-      </div>
-    </Html>
-  )
+// Generic GLTF Model
+function GenericModel({ modelPath, color = '#ffffff' }: { modelPath: string; color?: string }) {
+  const { scene } = useGLTF(modelPath) as any
+
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child: any) => {
+        if (child.isMesh && child.material && child.material.color) {
+          child.material.color.set(color)
+        }
+      })
+    }
+  }, [scene, color])
+
+  return <primitive object={scene} />
 }
 
 // Main ModelViewer Component
@@ -193,92 +90,52 @@ const ModelViewer = ({
   texture,
   design,
   className,
-  onLoad,
-  onError
+  onLoad
 }: ModelViewerProps) => {
-  const [error, setError] = useState<Error | null>(null)
-  const [key, setKey] = useState(0) // For forcing re-render
-
-  const handleError = (error: Error) => {
-    setError(error)
-    onError?.(error)
-  }
-
-  const handleRetry = () => {
-    setError(null)
-    setKey(prev => prev + 1)
-  }
-
-  const handleLoad = () => {
-    setError(null)
-    onLoad?.()
-  }
-
   return (
     <div className={cn('w-full h-full relative bg-gradient-to-b from-background to-secondary/20', className)}>
       <Canvas
-        key={key}
-        camera={{ position: [0, 0, 4], fov: 50 }}
+        camera={{ position: [0, 0, 2.2], fov: 30 }}
         shadows
-        gl={{ antialias: true, alpha: true }}
+        gl={{ preserveDrawingBuffer: true, antialias: true, alpha: true }}
         className="w-full h-full"
       >
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight
-          position={[10, 10, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-        />
-        <pointLight position={[-10, -10, -10]} intensity={0.3} />
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
+        <Environment preset="city" />
 
-        {/* Environment */}
-        <Environment preset="studio" />
-
-        {/* Ground */}
         <ContactShadows
-          position={[0, -1.5, 0]}
+          position={[0, -0.8, 0]}
           opacity={0.4}
-          scale={10}
+          scale={5}
           blur={2}
-          far={4}
+          far={3}
           resolution={512}
-          color="#000000"
         />
 
-        {/* Controls */}
         <OrbitControls
           enablePan={false}
           enableZoom={true}
-          enableRotate={true}
-          minDistance={2}
-          maxDistance={8}
+          minDistance={1.2}
+          maxDistance={4}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI - Math.PI / 6}
         />
 
-        {/* Model */}
-        {error ? (
-          <ErrorFallback error={error} onRetry={handleRetry} />
-        ) : (
-          <Suspense fallback={<Loader />}>
-            <Model
-              productType={productType}
+        <Suspense fallback={<Loader />}>
+          {productType === 'tshirt' ? (
+            <ShirtModel color={color} design={design} />
+          ) : (
+            <GenericModel
+              modelPath={productType === 'hoodie' ? '/models/hoodie.glb' : '/models/pants.glb'}
               color={color}
-              texture={texture}
-              design={design}
-              onLoad={handleLoad}
-              onError={handleError}
             />
-          </Suspense>
-        )}
+          )}
+        </Suspense>
       </Canvas>
 
-      {/* Controls overlay */}
-      <div className="absolute bottom-4 left-4 right-4 flex justify-center">
-        <div className="glass px-3 py-2 rounded-lg text-xs text-muted-foreground">
+      <div className="absolute bottom-3 left-3 right-3 flex justify-center pointer-events-none">
+        <div className="glass-pill px-3 py-1.5 text-[11px] text-muted-foreground shadow-sm">
           Drag to rotate • Scroll to zoom
         </div>
       </div>

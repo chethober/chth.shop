@@ -9,31 +9,24 @@ const {
   clearCart
 } = require('../controllers/cartController');
 
-// Test route to verify cart endpoint is working
-router.get('/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Cart endpoint is working',
-    timestamp: new Date().toISOString()
-  });
-});
-
 // All cart routes require authentication
 router.use(authenticateToken);
 
-// Get user's cart
+// GET /api/cart - Get user's cart
 router.get('/', getUserCart);
 
-// Add item to cart
+// POST /api/cart & POST /api/cart/add - Add item to cart
+router.post('/', addToCart);
 router.post('/add', addToCart);
 
-// Update cart item quantity
+// PUT /api/cart/items/:itemId - Update cart item quantity
 router.put('/items/:itemId', updateCartItem);
 
-// Remove item from cart
+// DELETE /api/cart/items/:itemId - Remove item from cart
 router.delete('/items/:itemId', removeFromCart);
 
-// Clear cart
+// DELETE /api/cart & DELETE /api/cart/clear - Clear cart
+router.delete('/', clearCart);
 router.delete('/clear', clearCart);
 
-module.exports = router; 
+module.exports = router;

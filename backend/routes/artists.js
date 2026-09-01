@@ -37,20 +37,17 @@ router.get('/:username', async (req, res) => {
       include: {
         artist: {
           include: {
+            user: {
+              select: {
+                username: true,
+                email: true
+              }
+            },
             products: {
               orderBy: {
                 createdAt: 'desc'
               }
             }
-          }
-        }
-      },
-      select: {
-        id: true,
-        username: true,
-        artist: {
-          include: {
-            products: true
           }
         }
       }
@@ -83,7 +80,7 @@ router.get('/:username', async (req, res) => {
 // Create artist profile (authenticated)
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { bio, storeName } = req.body;
+    const { bio, storeName, instagram, twitter, tiktok, youtube, spotify, telegram, discord, website } = req.body;
     const userId = req.user.userId;
 
     // Check if user already has an artist profile
@@ -111,7 +108,15 @@ router.post('/', authenticateToken, async (req, res) => {
       data: {
         userId,
         bio,
-        storeName
+        storeName,
+        instagram,
+        twitter,
+        tiktok,
+        youtube,
+        spotify,
+        telegram,
+        discord,
+        website
       },
       include: {
         user: {
@@ -141,7 +146,7 @@ router.post('/', authenticateToken, async (req, res) => {
 // Update artist profile (authenticated)
 router.put('/', authenticateToken, async (req, res) => {
   try {
-    const { bio, storeName } = req.body;
+    const { bio, storeName, instagram, twitter, tiktok, youtube, spotify, telegram, discord, website } = req.body;
     const userId = req.user.userId;
 
     // Find existing artist profile
@@ -161,7 +166,15 @@ router.put('/', authenticateToken, async (req, res) => {
       where: { userId },
       data: {
         bio,
-        storeName
+        storeName,
+        instagram,
+        twitter,
+        tiktok,
+        youtube,
+        spotify,
+        telegram,
+        discord,
+        website
       },
       include: {
         user: {
@@ -258,6 +271,48 @@ router.get('/profile/me', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Internal server error'
+    });
+  }
+});
+
+// Delete current user's artist profile (authenticated)
+router.delete('/', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const artist = await prisma.artist.findUnique({
+      where: { userId }
+    });
+
+    if (!artist) {
+      return res.status(404).json({
+        success: false,
+        message: 'Artist profile not found'
+      });
+    }
+
+    // Delete artist and cascade (products, etc.)
+    await prisma.artist.delete({
+      where: { id: artist.id }
+    });
+
+    // Optionally update user isArtist flag
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isArtist: false }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Artist profile deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete artist profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: error.message
     });
   }
 });

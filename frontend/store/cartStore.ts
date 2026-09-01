@@ -1,31 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { buildApiUrl } from '@/lib/config'
-
-export interface CartItem {
-  id: string
-  productId: number
-  quantity: number
-  product: {
-    id: number
-    name: string
-    type: string
-    price: number
-    imageUrl?: string
-    artist: {
-      id: number
-      storeName?: string
-      username: string
-    }
-  }
-}
-
-export interface Cart {
-  id: number
-  items: CartItem[]
-  totalItems: number
-  totalPrice: number
-}
+import api from '@/lib/api'
+import { Cart, CartItem } from '@/types'
 
 interface CartStore {
   cart: Cart | null
@@ -34,7 +10,7 @@ interface CartStore {
   
   // Actions
   fetchCart: () => Promise<void>
-  addToCart: (productId: number, quantity?: number) => Promise<void>
+  addToCart: (productId: string, quantity?: number) => Promise<void>
   updateCartItem: (itemId: string, quantity: number) => Promise<void>
   removeFromCart: (itemId: string) => Promise<void>
   clearCart: () => Promise<void>
@@ -51,168 +27,77 @@ const useCartStore = create<CartStore>()(
       fetchCart: async () => {
         set({ isLoading: true, error: null })
         try {
-          const token = localStorage.getItem('token')
-          if (!token) {
-            set({ cart: null, isLoading: false })
-            return
-          }
-
-          console.log('Fetching cart from:', buildApiUrl('/api/cart'))
-          const response = await fetch(buildApiUrl('/api/cart'), {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          console.log('Cart response status:', response.status)
-
-          if (response.ok) {
-            const data = await response.json()
-            set({ cart: data.cart, isLoading: false })
-          } else if (response.status === 404) {
-            // Cart doesn't exist yet, create an empty cart state
-            set({ 
-              cart: { 
-                id: 0, 
-                items: [], 
-                totalItems: 0, 
-                totalPrice: 0 
-              }, 
-              isLoading: false 
-            })
-          } else {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.message || `HTTP ${response.status}: Failed to fetch cart`)
-          }
-        } catch (error) {
+          const cart = await api.getCart()
+          set({ cart, isLoading: false })
+        } catch (error: any) {
           console.error('Cart fetch error:', error)
+          // If not authenticated or cart empty, clear state gracefully
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to fetch cart', 
+            cart: null,
+            error: error.message || 'Failed to fetch cart', 
             isLoading: false 
           })
         }
       },
 
-      addToCart: async (productId: number, quantity: number = 1) => {
+      addToCart: async (productId: string, quantity: number = 1) => {
         set({ isLoading: true, error: null })
         try {
-          const token = localStorage.getItem('token')
-          if (!token) {
-            throw new Error('Authentication required')
-          }
-
-          const response = await fetch(buildApiUrl('/api/cart/add'), {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ productId, quantity })
-          })
-
-          if (response.ok) {
-            // Refresh cart after adding item
-            await get().fetchCart()
-          } else {
-            const errorData = await response.json()
-            throw new Error(errorData.message || 'Failed to add item to cart')
-          }
-        } catch (error) {
+          await api.addToCart(productId, quantity)
+          // Refresh cart after adding
+          await get().fetchCart()
+        } catch (error: any) {
+          console.error('Add to cart error:', error)
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to add item to cart', 
+            error: error.message || 'Failed to add item to cart', 
             isLoading: false 
           })
+          throw error
         }
       },
 
       updateCartItem: async (itemId: string, quantity: number) => {
         set({ isLoading: true, error: null })
         try {
-          const token = localStorage.getItem('token')
-          if (!token) {
-            throw new Error('Authentication required')
-          }
-
-          const response = await fetch(buildApiUrl(`/api/cart/items/${itemId}`), {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ quantity })
-          })
-
-          if (response.ok) {
-            // Refresh cart after updating item
-            await get().fetchCart()
-          } else {
-            const errorData = await response.json()
-            throw new Error(errorData.message || 'Failed to update cart item')
-          }
-        } catch (error) {
+          await api.updateCartItem(itemId, quantity)
+          await get().fetchCart()
+        } catch (error: any) {
+          console.error('Update cart item error:', error)
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to update cart item', 
+            error: error.message || 'Failed to update cart item', 
             isLoading: false 
           })
+          throw error
         }
       },
 
       removeFromCart: async (itemId: string) => {
         set({ isLoading: true, error: null })
         try {
-          const token = localStorage.getItem('token')
-          if (!token) {
-            throw new Error('Authentication required')
-          }
-
-          const response = await fetch(buildApiUrl(`/api/cart/items/${itemId}`), {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-
-          if (response.ok) {
-            // Refresh cart after removing item
-            await get().fetchCart()
-          } else {
-            const errorData = await response.json()
-            throw new Error(errorData.message || 'Failed to remove item from cart')
-          }
-        } catch (error) {
+          await api.removeFromCart(itemId)
+          await get().fetchCart()
+        } catch (error: any) {
+          console.error('Remove from cart error:', error)
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to remove item from cart', 
+            error: error.message || 'Failed to remove item from cart', 
             isLoading: false 
           })
+          throw error
         }
       },
 
       clearCart: async () => {
         set({ isLoading: true, error: null })
         try {
-          const token = localStorage.getItem('token')
-          if (!token) {
-            throw new Error('Authentication required')
-          }
-
-          const response = await fetch(buildApiUrl('/api/cart/clear'), {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-
-          if (response.ok) {
-            // Refresh cart after clearing
-            await get().fetchCart()
-          } else {
-            const errorData = await response.json()
-            throw new Error(errorData.message || 'Failed to clear cart')
-          }
-        } catch (error) {
+          await api.clearCart()
+          await get().fetchCart()
+        } catch (error: any) {
+          console.error('Clear cart error:', error)
           set({ 
-            error: error instanceof Error ? error.message : 'Failed to clear cart', 
+            error: error.message || 'Failed to clear cart', 
             isLoading: false 
           })
+          throw error
         }
       },
 
@@ -227,4 +112,4 @@ const useCartStore = create<CartStore>()(
   )
 )
 
-export default useCartStore 
+export default useCartStore
