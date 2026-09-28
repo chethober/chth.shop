@@ -1,0 +1,21 @@
+# Build context is the repo root; keep it small and free of secrets.
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+!**/.env.example
+**/*.tsbuildinfo
+**/npm-debug.log*
+**/yarn-error.log*
+.git
+.github
+.agents
+.specify
+specs
+hezar
+assets
+backend/public/uploads/*
+backend/prisma/migrations
+Dockerfile*
+**/Dockerfile*
+docker-compose*.yml

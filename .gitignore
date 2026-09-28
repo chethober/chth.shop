@@ -189,7 +189,6 @@ coverage/
 *.pfx
 
 # Docker
-.dockerignore
 docker-compose.override.yml
 
 # Terraform
