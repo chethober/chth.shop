@@ -1,157 +1,28 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const session = require('express-session');
-const passport = require('passport');
-require('dotenv').config();
+const env = require('./src/config/env');
+const prisma = require('./src/lib/prisma');
+const app = require('./src/app');
 
-// Import Prisma client
-const prisma = require('./lib/prisma');
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const productRoutes = require('./routes/products');
-const artistRoutes = require('./routes/artists');
-const cartRoutes = require('./routes/cart');
-const orderRoutes = require('./routes/orders');
-const uploadRoutes = require('./routes/upload');
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Security middleware
-app.use(helmet());
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.'
-  }
-});
-
-app.use('/api/', limiter);
-
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
-
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-session-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-// Passport middleware
-app.use(passport.initialize());
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/artists', artistRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/upload', uploadRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Default route
-app.get('/api', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Merchandise Platform API',
-    version: '1.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      products: '/api/products',
-      artists: '/api/artists',
-      health: '/api/health'
-    }
-  });
-});
-
-// 404 handler
-app.use('/api/*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'API endpoint not found'
-  });
-});
-
-// Global error handler
-app.use((error, req, res, next) => {
-  console.error('Unhandled error:', error);
-
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { error: error.message })
-  });
-});
-
-// Initialize database and start server
-const startServer = async () => {
+async function start() {
   try {
-    // Test database connection
     await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    console.log('✅ Database connected');
 
-    // Start server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 API available at http://localhost:${PORT}/api`);
-      console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    app.listen(env.port, () => {
+      console.log(`🚀 API running at http://localhost:${env.port}/api`);
     });
-
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
-};
+}
 
-// Handle graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully...');
+async function shutdown(signal) {
+  console.log(`${signal} received, shutting down...`);
+  await prisma.$disconnect();
   process.exit(0);
-});
+}
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received, shutting down gracefully...');
-  process.exit(0);
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
-// Start the server
-startServer();
-
-module.exports = app;
+start();

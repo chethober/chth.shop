@@ -1,317 +1,103 @@
-// User types
+// Shapes of the data returned by the backend API.
+
+export type AuthProvider = 'google' | 'x' | 'telegram'
+
 export interface User {
-  id: string | number;
-  username: string;
-  email: string;
-  isArtist?: boolean;
-  googleId?: string;
-  isGoogleUser?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  id: string
+  username: string
+  email: string
+  isArtist?: boolean | null
+  authProvider?: AuthProvider | string | null
+  googleId?: string | null
+  twitterId?: string | null
+  telegramId?: string | null
+  createdAt?: string
+  updatedAt?: string
 }
 
-// Cart types
+export type ProductType = 'tshirt' | 'hoodie' | 'pants'
+
+export interface Product {
+  id: string
+  name: string
+  type: string
+  price: number
+  imageUrl: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface SocialHandles {
+  instagram?: string | null
+  twitter?: string | null
+  tiktok?: string | null
+  youtube?: string | null
+  spotify?: string | null
+  telegram?: string | null
+  discord?: string | null
+  website?: string | null
+}
+
+export interface Artist extends SocialHandles {
+  id: string
+  userId: string
+  bio: string | null
+  storeName: string | null
+  createdAt?: string
+  updatedAt?: string
+  user?: Pick<User, 'username' | 'email'>
+  products?: Product[]
+}
+
+export type ArtistProfileInput = SocialHandles & {
+  storeName: string
+  bio: string
+}
+
 export interface CartItem {
-  id: string;
-  cartId?: string;
-  productId: string;
-  quantity: number;
-  createdAt?: string;
-  updatedAt?: string;
-  product: Product;
+  id: string
+  productId: string
+  quantity: number
+  product: (Product & { artist?: { id: string; storeName: string | null; username: string } | null }) | null
 }
 
 export interface Cart {
-  id: string | number;
-  items: CartItem[];
-  totalItems: number;
-  totalPrice: number;
+  id: string | null
+  items: CartItem[]
+  totalItems: number
+  totalPrice: number
 }
 
-// Order types
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
 
 export interface OrderItem {
-  id: string;
-  orderId?: string;
-  productId: string;
-  quantity: number;
-  price: number;
-  createdAt?: string;
-  updatedAt?: string;
-  product?: Product | null;
+  id: string
+  productId: string
+  quantity: number
+  price: number
+  product?: Pick<Product, 'id' | 'name' | 'type' | 'imageUrl'> | null
 }
 
 export interface Order {
-  id: string;
-  userId?: string;
-  status: OrderStatus;
-  total: number;
-  shippingAddress?: string | null;
-  createdAt: string;
-  updatedAt?: string;
-  items: OrderItem[];
+  id: string
+  status: OrderStatus
+  total: number
+  shippingAddress?: string | null
+  createdAt: string
+  items: OrderItem[]
 }
 
-// Artist types
-export interface Artist {
-  id: string | number;
-  userId: string | number;
-  bio: string | null;
-  storeName: string | null;
-  instagram?: string | null;
-  twitter?: string | null;
-  tiktok?: string | null;
-  youtube?: string | null;
-  spotify?: string | null;
-  telegram?: string | null;
-  discord?: string | null;
-  website?: string | null;
-  contractAccepted?: boolean;
-  contractAcceptedAt?: string;
-  user?: User;
-  products?: Product[];
-  createdAt?: string;
-  updatedAt?: string;
+export interface TelegramAuthData {
+  id: number | string
+  first_name: string
+  last_name?: string
+  username?: string
+  photo_url?: string
+  auth_date: number
+  hash: string
 }
 
-// Product types
-export type ProductType = 'tshirt' | 'hoodie' | 'pants';
-
-export interface ProductCustomization {
-  color?: string;
-  texture?: string;
-  design?: string;
-  logoUrl?: string;
-  [key: string]: any;
+export interface TelegramConfig {
+  botUsername: string
+  isConfigured: boolean
 }
-
-export interface Product {
-  id: string | number;
-  name: string;
-  description?: string | null;
-  price: number;
-  type: string;
-  imageUrl: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-// API Response types
-export interface ApiResponse<T = any> {
-  success: boolean;
-  message: string;
-  data?: T;
-}
-
-export interface PaginationData {
-  total: number;
-  page: number;
-  pages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
-export interface ProductsResponse {
-  products: Product[];
-  pagination: PaginationData;
-}
-
-export interface ArtistsResponse {
-  artists: Artist[];
-  pagination: PaginationData;
-}
-
-// Auth types
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterCredentials {
-  username: string;
-  email: string;
-  password: string;
-}
-
-export interface GoogleAuthResponse {
-  user: User;
-  token: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  token: string;
-}
-
-// Google OAuth types
-export interface GoogleUser {
-  id: string;
-  email: string;
-  name: string;
-  picture: string;
-  given_name: string;
-  family_name: string;
-}
-
-// Form types
-export interface ProductFormData {
-  name: string;
-  type: ProductType;
-  price: number;
-  imageUrl?: string;
-  customization?: ProductCustomization;
-}
-
-export interface ArtistProfileFormData {
-  bio: string;
-  storeName: string;
-  instagram?: string | null;
-  twitter?: string | null;
-  tiktok?: string | null;
-  youtube?: string | null;
-  spotify?: string | null;
-  telegram?: string | null;
-  discord?: string | null;
-  website?: string | null;
-}
-
-// 3D Design types
-export interface ColorOption {
-  name: string;
-  value: string;
-  hex: string;
-}
-
-export interface TextureOption {
-  name: string;
-  url: string;
-  preview: string;
-}
-
-export interface DesignState {
-  selectedProductType: ProductType;
-  color: string;
-  texture: string | null;
-  uploadedDesign: string | null;
-  logoPosition: { x: number; y: number; z: number };
-  logoScale: number;
-}
-
-export interface Model3D {
-  type: ProductType;
-  path: string;
-  name: string;
-  scale?: number;
-  position?: [number, number, number];
-  rotation?: [number, number, number];
-}
-
-// Store types
-export interface AuthStore {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (credentials: RegisterCredentials) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  completeOAuth: (user: User, token: string) => Promise<void>;
-  logout: () => void;
-  updateProfile: (data: Partial<User>) => Promise<void>;
-  updateUsername: (newUsername: string) => Promise<void>;
-  checkAuth: () => Promise<void>;
-}
-
-export interface ProductStore {
-  products: Product[];
-  userProducts: Product[];
-  currentProduct: Product | null;
-  isLoading: boolean;
-  fetchProducts: (params?: { type?: ProductType; artist?: string; page?: number }) => Promise<void>;
-  fetchUserProducts: () => Promise<void>;
-  createProduct: (data: ProductFormData) => Promise<void>;
-  updateProduct: (id: string, data: Partial<ProductFormData>) => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>;
-  setCurrentProduct: (product: Product | null) => void;
-}
-
-export interface DesignStore {
-  designState: DesignState;
-  availableColors: ColorOption[];
-  availableTextures: TextureOption[];
-  updateDesign: (updates: Partial<DesignState>) => void;
-  resetDesign: () => void;
-  saveDesign: (name: string) => Promise<void>;
-}
-
-// Component props
-export interface ProductCardProps {
-  product: Product;
-  onClick?: (product: Product) => void;
-  showArtist?: boolean;
-}
-
-export interface ArtistCardProps {
-  artist: Artist;
-  onClick?: (artist: Artist) => void;
-}
-
-export interface Model3DViewerProps {
-  productType: ProductType;
-  color?: string;
-  texture?: string | null;
-  design?: string | null;
-  onLoad?: () => void;
-  onError?: (error: Error) => void;
-}
-
-export interface ColorPickerProps {
-  colors: ColorOption[];
-  selectedColor: string;
-  onColorChange: (color: string) => void;
-}
-
-export interface FileUploadProps {
-  accept?: string;
-  maxSize?: number;
-  onUpload: (file: File) => void;
-  onError?: (error: string) => void;
-  preview?: boolean;
-}
-
-// Navigation types
-export interface NavItem {
-  name: string;
-  href: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  requireAuth?: boolean;
-}
-
-// Error types
-export interface ApiError {
-  message: string;
-  status?: number;
-  code?: string;
-}
-
-export class CustomError extends Error {
-  status?: number;
-  code?: string;
-
-  constructor(message: string, status?: number, code?: string) {
-    super(message);
-    this.name = 'CustomError';
-    this.status = status;
-    this.code = code;
-  }
-}
-
-// Utility types
-export type DeepPartial<T> = {
-  [P in keyof T]?: T[P] extends object ? DeepPartial<T[P]> : T[P];
-};
-
-export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
-export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;

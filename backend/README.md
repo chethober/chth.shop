@@ -1,360 +1,70 @@
-# MerchCraft Backend
+# CHTH backend
 
-A Node.js/Express API backend for the MerchCraft merchandise platform with Prisma ORM and PostgreSQL.
+Express REST API with Prisma (PostgreSQL). Sign-in is OAuth only (Google, X, Telegram); the API issues JWTs.
 
-## Features
-
-- 🔐 **JWT Authentication** - Secure user authentication with bcrypt password hashing
-- 🎨 **Artist Management** - Artist profiles and collaboration features
-- 🛍️ **Product Management** - CRUD operations for merchandise products
-- 🗄️ **Database** - PostgreSQL with Prisma ORM for type-safe database operations
-- 🔒 **Security** - CORS, rate limiting, and input validation
-- 📊 **API Documentation** - RESTful API endpoints with clear documentation
-
-## Tech Stack
-
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL
-- **ORM**: Prisma
-- **Authentication**: JWT + bcrypt
-- **Security**: Helmet, CORS, Rate Limiting
-- **Validation**: Built-in validation with error handling
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- PostgreSQL database
-- npm or yarn
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd backend
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-   Create a `.env` file in the backend directory:
-   ```env
-   # Database
-   DATABASE_URL="postgresql://username:password@localhost:5432/merch_platform"
-   
-   # JWT Secret
-   JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-   
-   # Server Configuration
-   PORT=5000
-   NODE_ENV=development
-   
-   # Frontend URL for CORS
-   FRONTEND_URL="http://localhost:3000"
-   ```
-
-4. **Set up the database**
-   ```bash
-   # Generate Prisma client
-   npm run prisma:generate
-   
-   # Run database migrations
-   npm run prisma:migrate
-   
-   # Seed the database with sample data
-   npm run db:seed
-   ```
-
-5. **Start the development server**
-   ```bash
-   npm run dev
-   ```
-
-6. **Verify the API is running**
-   Visit [http://localhost:5000/api/health](http://localhost:5000/api/health)
-
-## Database Schema
-
-### Users
-- `id` - Primary key
-- `username` - Unique username
-- `email` - Unique email address
-- `password` - Hashed password
-- `createdAt` - Account creation timestamp
-- `updatedAt` - Last update timestamp
-
-### Artists
-- `id` - Primary key
-- `userId` - Foreign key to Users table
-- `bio` - Artist biography
-- `storeName` - Artist's store name
-- `createdAt` - Profile creation timestamp
-- `updatedAt` - Last update timestamp
-
-### Products
-- `id` - Primary key
-- `name` - Product name
-- `type` - Product type (tshirt, hoodie, pants)
-- `price` - Product price
-- `imageUrl` - Product image URL
-- `artistId` - Foreign key to Users table
-- `createdAt` - Product creation timestamp
-- `updatedAt` - Last update timestamp
-
-## API Endpoints
-
-### Authentication
-
-#### POST `/api/auth/register`
-Register a new user account.
-
-**Request Body:**
-```json
-{
-  "username": "artist_name",
-  "email": "artist@example.com",
-  "password": "secure_password"
-}
+```bash
+cp .env.example .env        # DATABASE_URL, JWT_SECRET, SESSION_SECRET, OAuth keys
+npm run prisma:migrate
+npm run db:seed             # optional demo artists and products (wipes users!)
+npm run dev                 # http://localhost:5000/api
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "id": 1,
-      "username": "artist_name",
-      "email": "artist@example.com",
-      "createdAt": "2024-01-01T00:00:00.000Z"
-    },
-    "token": "jwt_token_here"
-  }
-}
+`JWT_SECRET` and `SESSION_SECRET` are required when `NODE_ENV=production`; the server refuses to start without them.
+
+### OAuth and other devices
+
+The browser never calls this server directly: the frontend proxies `/api` here (see `frontend/next.config.js`).
+OAuth callback and redirect URLs are built from the origin the user is on (via `X-Forwarded-Host`),
+checked against `FRONTEND_URL` (plus private-network hosts in development). Register
+`<origin>/api/auth/google/callback` and `<origin>/api/auth/x/callback` with each provider for every origin you use.
+Google only accepts `localhost` or public domains, so to sign in from a phone use a tunnel/domain
+(e.g. `cloudflared tunnel --url http://localhost:3000`) and add that origin to `FRONTEND_URL` and Google.
+Telegram's widget only works on the domain set with BotFather's `/setdomain`.
+
+## Layout
+
+```
+server.js                 Connects to the database and starts listening.
+src/
+  app.js                  Express app: security middleware, sessions, routes, error handling.
+  config/env.js           All environment variables, read and validated in one place.
+  config/passport.js      Google OAuth strategy.
+  routes/index.js         Every endpoint in one table → controller functions.
+  controllers/            One file per resource: request in, response out.
+  services/               Logic shared by controllers (OAuth identity, X, Telegram).
+  middleware/             requireAuth / optionalAuth, 404 + error handler.
+  lib/                    prisma client, HTTP helpers, JWT, query shapes, response serializers.
+prisma/                   Schema and migrations.
+scripts/seed.js           Demo data.
 ```
 
-#### POST `/api/auth/login`
-Authenticate user and get JWT token.
+Controllers throw `HttpError(status, message)`; the error middleware turns it into
+`{ success: false, message }`. Successful responses are `{ success: true, message?, data }`.
 
-**Request Body:**
-```json
-{
-  "email": "artist@example.com",
-  "password": "secure_password"
-}
-```
+## Endpoints (all under `/api`)
 
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "user": {
-      "id": 1,
-      "username": "artist_name",
-      "email": "artist@example.com",
-      "artist": {
-        "id": 1,
-        "bio": "Artist bio",
-        "storeName": "Artist Store"
-      }
-    },
-    "token": "jwt_token_here"
-  }
-}
-```
-
-#### GET `/api/auth/me`
-Get current user profile (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-### Products
-
-#### GET `/api/products`
-Get all products.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "products": [
-      {
-        "id": 1,
-        "name": "Galaxy Dreams Tee",
-        "type": "tshirt",
-        "price": 29.99,
-        "imageUrl": "https://example.com/image.jpg",
-        "artist": {
-          "id": 1,
-          "bio": "Artist bio",
-          "storeName": "Artist Store",
-          "user": {
-            "username": "artist_name"
-          }
-        }
-      }
-    ]
-  }
-}
-```
-
-#### POST `/api/products`
-Create a new product (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "name": "New Product",
-  "type": "tshirt",
-  "price": 29.99,
-  "imageUrl": "https://example.com/image.jpg"
-}
-```
-
-#### GET `/api/products/:id`
-Get a specific product by ID.
-
-#### GET `/api/products/artist/:username`
-Get all products by a specific artist.
-
-### Artists
-
-#### GET `/api/artists`
-Get all artists.
-
-#### GET `/api/artists/:username`
-Get artist profile and products by username.
-
-#### POST `/api/artists`
-Create artist profile (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "bio": "Artist biography",
-  "storeName": "Artist Store Name"
-}
-```
-
-#### PUT `/api/artists`
-Update artist profile (requires authentication).
-
-## Available Scripts
-
-- `npm start` - Start production server
-- `npm run dev` - Start development server with nodemon
-- `npm run prisma:generate` - Generate Prisma client
-- `npm run prisma:migrate` - Run database migrations
-- `npm run prisma:studio` - Open Prisma Studio
-- `npm run db:seed` - Seed database with sample data
-
-## Environment Variables
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Yes | - |
-| `JWT_SECRET` | Secret key for JWT tokens | Yes | - |
-| `PORT` | Server port | No | 5000 |
-| `NODE_ENV` | Environment mode | No | development |
-| `FRONTEND_URL` | Frontend URL for CORS | No | http://localhost:3000 |
-
-## Database Setup
-
-### Using Docker (Recommended)
-
-1. **Start PostgreSQL container**
-   ```bash
-   docker run --name merch-postgres \
-     -e POSTGRES_DB=merch_platform \
-     -e POSTGRES_USER=postgres \
-     -e POSTGRES_PASSWORD=password \
-     -p 5432:5432 \
-     -d postgres:15
-   ```
-
-2. **Update DATABASE_URL in .env**
-   ```env
-   DATABASE_URL="postgresql://postgres:password@localhost:5432/merch_platform"
-   ```
-
-### Using Local PostgreSQL
-
-1. **Install PostgreSQL**
-2. **Create database**
-   ```sql
-   CREATE DATABASE merch_platform;
-   ```
-3. **Update DATABASE_URL in .env**
-
-## Seed Data
-
-The database comes with sample data including:
-- 2 demo artists (cosmic_artist, street_designer)
-- 5 sample products
-- Demo login credentials:
-  - Email: `cosmic@example.com`
-  - Password: `password123`
-
-## Security Features
-
-- **Password Hashing**: bcrypt with salt rounds
-- **JWT Authentication**: Secure token-based auth
-- **CORS Protection**: Configured for frontend domain
-- **Rate Limiting**: 100 requests per 15 minutes per IP
-- **Input Validation**: Request body validation
-- **Helmet**: Security headers
-
-## Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "success": false,
-  "message": "Error description"
-}
-```
-
-Common HTTP status codes:
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request
-- `401` - Unauthorized
-- `403` - Forbidden
-- `404` - Not Found
-- `500` - Internal Server Error
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License. 
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/health` | – | Health check |
+| GET | `/auth/google`, `/auth/google/callback` | – | Google OAuth |
+| GET | `/auth/x`, `/auth/x/callback` (also `/auth/twitter/…`) | – | X OAuth 2.0 (PKCE) |
+| GET | `/auth/telegram/config` | – | Telegram widget config |
+| GET | `/auth/telegram/callback` · POST `/auth/telegram` | – | Telegram login (redirect / JSON) |
+| GET | `/auth/me` | ✓ | Current user |
+| PUT | `/auth/username` | ✓ | Change username (returns a new token) |
+| GET | `/users/me` | ✓ | Current user |
+| GET | `/users/username-available?username=` | ✓ | Username availability |
+| DELETE | `/users/me` | ✓ | Delete account (cascades) |
+| GET | `/artists` · `/artists/:username` | – | List / view artists |
+| GET | `/artists/profile/me` | ✓ | Own artist profile |
+| POST · PUT · DELETE | `/artists` | ✓ | Create / update / delete own store |
+| POST | `/artists/contract/accept` | ✓ | Join the artist program |
+| GET | `/products` (`?type&artist&search&page&limit`) | – | Browse products |
+| GET | `/products/:id` · `/products/artist/:username` | – | Product / artist products |
+| GET | `/products/user/me` | ✓ | Own products |
+| POST · PUT · DELETE | `/products`, `/products/:id` | ✓ | Manage own products |
+| GET · POST · DELETE | `/cart` | ✓ | View / add to / clear cart |
+| PUT · DELETE | `/cart/items/:itemId` | ✓ | Change quantity / remove |
+| GET · POST | `/orders` | ✓ | List orders / check out the cart |
+| GET | `/orders/:orderId` | ✓ | Order details |
+| PUT | `/orders/:orderId/cancel` | ✓ | Cancel a pending order |

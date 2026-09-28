@@ -15,6 +15,9 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   googleId     String?   @unique
+  twitterId    String?   @unique
+  telegramId   String?   @unique
+  authProvider String?   @default("google")
   isGoogleUser Boolean   @default(false)
   isArtist     Boolean?  @default(false)
   artist       Artist?

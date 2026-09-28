@@ -1,51 +1,22 @@
+/** Where the Express API runs, as seen from the Next.js server. */
+const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/+$/, '')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
   images: {
-    // Replaces deprecated 'domains'
-    remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-      },
-    ],
+    // Product images can come from the API or any HTTPS host.
     unoptimized: true,
   },
-  transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
-  
-  // Removed 'swcMinify' (it is invalid in Next 16+)
-  
-  reactStrictMode: true,
-
-  env: {
-    NEXT_PUBLIC_API_URL:
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
+  // The browser only ever talks to this origin; Next forwards API calls to the backend.
+  // This keeps OAuth redirects, cookies and CORS working from any device or domain.
+  async rewrites() {
+    return [
+      { source: '/api/:path*', destination: `${BACKEND_URL}/api/:path*` },
+      { source: '/uploads/:path*', destination: `${BACKEND_URL}/uploads/:path*` },
+    ]
   },
+}
 
-  webpack: (config, { isServer }) => {
-    // Handle GLTF and GLB files
-    config.module.rules.push({
-      test: /\.(gltf|glb)$/,
-      type: "asset/resource",
-    });
-
-    // Handle shader files
-    config.module.rules.push({
-      test: /\.(glsl|vs|fs|vert|frag)$/,
-      type: "asset/source",
-    });
-
-    // Optimize Three.js for production
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        path: false,
-        crypto: false,
-      };
-    }
-
-    return config;
-  },
-};
-
-module.exports = nextConfig;
+module.exports = nextConfig

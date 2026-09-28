@@ -1,7 +1,6 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import AuthPage from '@/app/auth/page'
-
+/** Accounts are created on first sign-in, so registration is the sign-in page. */
 export default function RegisterPage() {
-  return <AuthPage />
+  redirect('/auth')
 }

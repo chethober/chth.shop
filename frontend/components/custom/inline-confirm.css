@@ -1,0 +1,209 @@
+/* Bencho - InlineConfirm / GlassKit Confirm styles
+ * Adapted for chth.shop with dark/light mode support
+ */
+
+.say-well {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.say-shell {
+  border-radius: var(--say-r, 22px);
+  align-items: center;
+  height: 42px;
+  transition: width 340ms cubic-bezier(0.24, 1.34, 0.38, 1);
+  display: inline-flex;
+  box-sizing: border-box;
+  overflow: hidden;
+  user-select: none;
+}
+
+.say-clip {
+  border-radius: inherit;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Glass pane styling */
+.say-shell.gpane {
+  background: var(--pane, rgba(255, 255, 255, 0.8));
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid var(--pane-edge, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  color: var(--ink, #17181a);
+  isolation: isolate;
+  position: relative;
+}
+
+:is(.dark, [data-theme="dark"]) .say-shell.gpane {
+  background: var(--pane, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--pane-edge, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: var(--ink, #eceae5);
+}
+
+/* Phase widths */
+.say-shell[data-phase="idle"] {
+  width: var(--idle-w, 148px);
+}
+
+.say-shell[data-phase="asking"] {
+  width: var(--asking-w, 218px);
+}
+
+.say-shell[data-phase="done"] {
+  width: var(--done-w, 206px);
+}
+
+/* Button & interactive components */
+.say-face,
+.say-half {
+  height: 100%;
+  font-family: inherit;
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.16s ease, color 0.16s ease;
+  display: inline-flex;
+}
+
+.say-face {
+  width: 100%;
+}
+
+.say-half {
+  flex: 1;
+}
+
+.say-face:hover,
+.say-half:hover {
+  background: rgba(125, 125, 125, 0.08);
+}
+
+:is(.dark, [data-theme="dark"]) .say-face:hover,
+:is(.dark, [data-theme="dark"]) .say-half:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.say-face:focus-visible,
+.say-half:focus-visible,
+.say-undo:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: -2px;
+}
+
+.say-half[data-danger="true"] {
+  color: #ef4444;
+}
+
+.say-half[data-danger="true"]:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+:is(.dark, [data-theme="dark"]) .say-half[data-danger="true"] {
+  color: #f87171;
+}
+
+:is(.dark, [data-theme="dark"]) .say-half[data-danger="true"]:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.say-seam {
+  background: rgba(125, 125, 125, 0.2);
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+:is(.dark, [data-theme="dark"]) .say-seam {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.say-done {
+  color: #10b981;
+  white-space: nowrap;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+}
+
+:is(.dark, [data-theme="dark"]) .say-done {
+  color: #34d399;
+}
+
+.say-undo {
+  background: rgba(125, 125, 125, 0.06);
+  height: 100%;
+  font-family: inherit;
+  color: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 0;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 0 15px;
+  font-size: 12.5px;
+  font-weight: 500;
+  display: inline-flex;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.16s ease;
+}
+
+.say-undo:hover {
+  background: rgba(125, 125, 125, 0.12);
+}
+
+:is(.dark, [data-theme="dark"]) .say-undo {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:is(.dark, [data-theme="dark"]) .say-undo:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Animated fuse timer */
+.say-fuse {
+  background: currentColor;
+  opacity: 0.35;
+  height: 2px;
+  animation: linear forwards say-burn;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+@keyframes say-burn {
+  0% {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .say-shell {
+    transition-duration: 1ms;
+  }
+}
