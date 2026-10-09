@@ -75,22 +75,22 @@ export const ENDPOINT_GROUPS: EndpointGroup[] = [
     endpoints: [
       { method: 'GET', path: '/api/users/me', auth: 'required', summary: 'Current user (same as /auth/me).' },
       { method: 'GET', path: '/api/users/username-available?username=', auth: 'required', summary: 'Returns { available }.' },
-      { method: 'DELETE', path: '/api/users/me', auth: 'required', summary: 'Delete the account. The artist profile, products, cart and orders go with it.' },
+      { method: 'DELETE', path: '/api/users/me', auth: 'required', summary: 'Delete the account. The artist profile, products, cart and orders go with it. 409 if your products appear in other users’ orders.' },
     ],
   },
   {
     id: 'artists',
     title: 'Artists',
     intro:
-      'Profile fields: storeName, bio, instagram, twitter, tiktok, youtube, spotify, telegram, discord, website. PUT writes every field, so a field you leave out is cleared.',
+      'Profile fields: storeName, bio, instagram, twitter, tiktok, youtube, spotify, telegram, discord, website. Fields left out of a PUT keep their values; send null to clear one.',
     endpoints: [
       { method: 'GET', path: '/api/artists', auth: 'none', summary: 'All artists, newest first, each with their 3 latest products.' },
       { method: 'GET', path: '/api/artists/:username', auth: 'none', summary: 'One artist and their products.' },
       { method: 'GET', path: '/api/artists/profile/me', auth: 'required', summary: 'Your artist profile.' },
       { method: 'POST', path: '/api/artists/contract/accept', auth: 'required', summary: 'Join the artist program. Creates a default store if needed.' },
       { method: 'POST', path: '/api/artists', auth: 'required', summary: 'Create your store. storeName is required.', body: '{ "storeName": "My Store", "bio": "…" }' },
-      { method: 'PUT', path: '/api/artists', auth: 'required', summary: 'Update your store. Send the full profile.' },
-      { method: 'DELETE', path: '/api/artists', auth: 'required', summary: 'Delete your store and its products.' },
+      { method: 'PUT', path: '/api/artists', auth: 'required', summary: 'Update the fields you send.' },
+      { method: 'DELETE', path: '/api/artists', auth: 'required', summary: 'Delete your store and its products. 409 if any of them appear in an order.' },
     ],
   },
   {

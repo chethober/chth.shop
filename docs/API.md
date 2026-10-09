@@ -98,7 +98,7 @@ stored token with the new one, because the old one still carries the old usernam
 | --- | --- | --- | --- |
 | GET | `/api/users/me` | ✓ | Current user (same as `/auth/me`) |
 | GET | `/api/users/username-available?username=` | ✓ | `data: { available }`. Invalid names return `false`; your own name returns `true` |
-| DELETE | `/api/users/me` | ✓ | Delete the account. The artist profile, products, cart and orders are deleted with it |
+| DELETE | `/api/users/me` | ✓ | Delete the account. The artist profile, products, cart and orders are deleted with it. 409 if your products appear in other users' orders |
 
 **User object:** `{ id, username, email, googleId, twitterId, telegramId, authProvider, isGoogleUser, isArtist, createdAt, updatedAt, artist? }`
 
@@ -111,14 +111,14 @@ stored token with the new one, because the old one still carries the old usernam
 | GET | `/api/artists/profile/me` | ✓ | Your artist profile. 404 if you don't have one |
 | POST | `/api/artists/contract/accept` | ✓ | Join the artist program. Creates a default store (`"<username>'s Store"`) if you don't have one yet. Safe to call more than once |
 | POST | `/api/artists` | ✓ | Create your store. `storeName` is required. 400 if you already have one. Returns 201 |
-| PUT | `/api/artists` | ✓ | Update your store |
-| DELETE | `/api/artists` | ✓ | Delete your store and its products |
+| PUT | `/api/artists` | ✓ | Update the fields you send |
+| DELETE | `/api/artists` | ✓ | Delete your store and its products. 409 if any of them appear in an order |
 
 **Profile fields** (POST/PUT body):
 `storeName, bio, instagram, twitter, tiktok, youtube, spotify, telegram, discord, website`.
 All are strings.
 
-**Note:** PUT writes every profile field, so a field you leave out is cleared. Send the full profile.
+Fields you leave out of a PUT keep their values. Send `null` to clear one.
 
 **Artist object:** the profile fields plus `{ id, userId, createdAt, updatedAt, user: { username, email } }`.
 
