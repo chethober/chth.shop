@@ -10,6 +10,10 @@ export function SiteFooter() {
           <Link href="/terms" className="transition-colors hover:text-foreground">
             Terms of Service
           </Link>
+          <span className="text-border">·</span>
+          <Link href="/api-docs" className="transition-colors hover:text-foreground">
+            API
+          </Link>
         </div>
 
         <a
