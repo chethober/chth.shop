@@ -11,6 +11,7 @@ Monorepo for CHTH: a 3D merchandise designer and artist storefront.
 | `assets/brand/` | Master logo files (the web-ready copies live in `frontend/public`). |
 | `hezar/`      | Separate Python utility app, not used by the shop.                |
 | `specs/`      | Feature specs.                                                    |
+| `docs/API.md` | REST API reference (also served on the site at `/api-docs`).      |
 
 ## Running with Docker
 
