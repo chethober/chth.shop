@@ -155,4 +155,7 @@ described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE) © Cheth
+The code is released under the [MIT License](LICENSE) © Cheth.
+
+The CHTH name and logo (`assets/brand/`, `frontend/public/logo-*.png`) identify this project
+and are not covered by the code license. Please don't use them to brand a fork.
