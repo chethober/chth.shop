@@ -2,19 +2,25 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  verify:
+  frontend:
+    name: Frontend (typecheck + build)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: yarn
@@ -22,18 +28,67 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Typecheck
+        run: yarn workspace chth-frontend tsc --noEmit -p .
+
       - name: Build
         run: yarn workspace chth-frontend build
-        continue-on-error: true
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  lint:
+    name: Frontend lint
+    runs-on: ubuntu-latest
+    # Non-blocking for now: a few components in frontend/components/custom still trip the
+    # React Compiler `react-hooks/*` rules. Remove this line once `yarn workspace chth-frontend lint` is clean.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn workspace chth-frontend lint
+
+  backend:
+    name: Backend (schema + syntax)
+    runs-on: ubuntu-latest
+    env:
+      # Only used to satisfy `prisma validate`; nothing connects to it.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Validate Prisma schema
+        run: yarn workspace chth-backend prisma validate
+
+      - name: Generate Prisma client
+        run: yarn workspace chth-backend prisma:generate
+
+      - name: Check JavaScript syntax
+        run: find backend/server.js backend/src backend/scripts -name '*.js' -print0 | xargs -0 -n1 node --check
 
   docker:
+    name: Docker images
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Build backend image
         uses: docker/build-push-action@v6

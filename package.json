@@ -1,6 +1,8 @@
 {
   "name": "chth-shop-monorepo",
   "private": true,
+  "license": "MIT",
+  "repository": "github:chethober/chth.shop",
   "workspaces": [
     "frontend",
     "backend"

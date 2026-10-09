@@ -1,6 +1,19 @@
 # LLMs
 .agents/
 .agent/
+.claude/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Local TLS certs for the HTTPS dev server
+certs/
+
+# Telegram Serverless CLI state (holds credentials)
+.tgcloud/
 # Dependencies
 node_modules/
 */node_modules/
