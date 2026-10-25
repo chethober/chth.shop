@@ -87,17 +87,3 @@ export interface Order {
   items: OrderItem[]
 }
 
-export interface TelegramAuthData {
-  id: number | string
-  first_name: string
-  last_name?: string
-  username?: string
-  photo_url?: string
-  auth_date: number
-  hash: string
-}
-
-export interface TelegramConfig {
-  botUsername: string
-  isConfigured: boolean
-}

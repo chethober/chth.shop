@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { PageContainer } from '@/components/layout/page-container'
 import { DesignStudio } from '@/features/design/design-studio'
 
 export const metadata: Metadata = {
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function DesignPage() {
-  return (
-    <PageContainer>
-      <DesignStudio />
-    </PageContainer>
-  )
+  return <DesignStudio />
 }

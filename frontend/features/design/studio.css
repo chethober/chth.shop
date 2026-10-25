@@ -1,0 +1,77 @@
+/* ══ Design studio ═══════════════════════════════════════
+   The few pieces Tailwind can't say neatly: a range input
+   with a filled track, and the export menu's enter/exit. */
+
+/* ── Range: filled to the thumb, thumb grows on grab ───── */
+.studio-range {
+  appearance: none;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+.studio-range:disabled {
+  cursor: not-allowed;
+}
+.studio-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, hsl(var(--foreground)) var(--fill), hsl(var(--muted)) var(--fill));
+}
+.studio-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(to right, hsl(var(--foreground)) var(--fill), hsl(var(--muted)) var(--fill));
+}
+.studio-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 999px;
+  background: hsl(var(--card));
+  border: 1.5px solid hsl(var(--foreground));
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.studio-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: hsl(var(--card));
+  border: 1.5px solid hsl(var(--foreground));
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  transition: transform 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.studio-range:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.studio-range:active::-moz-range-thumb {
+  transform: scale(1.15);
+}
+
+/* ── Menu: grows from its trigger; leaves faster than it arrives ── */
+.studio-menu {
+  opacity: 0;
+  transform: scale(0.96) translateY(-4px);
+  visibility: hidden;
+  transition:
+    opacity 120ms ease-out,
+    transform 120ms ease-out,
+    visibility 0s 120ms;
+}
+.studio-menu[data-open='true'] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-menu,
+  .studio-menu[data-open='true'] {
+    transform: none;
+  }
+}

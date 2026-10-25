@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Moon, ShoppingBag, Star, Sun, User } from 'lucide-react'
 import { MobileNav, MobileNavHeader, NavBody, Navbar, NavbarLogo } from '@/components/custom/resizable-navbar'
 import TextType from '@/components/custom/text-type'
+import { ChthLogo } from '@/components/shared/chth-logo'
 import { useHydrated } from '@/hooks/use-hydrated'
 import { THEME_STORAGE_KEY, applyTheme, toggleTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
@@ -18,24 +19,21 @@ const iconLinkStyles =
 const iconStyles = 'size-3.5 transition-transform duration-300 group-hover:scale-110'
 
 function Logo({ size }: { size: 'sm' | 'md' }) {
-  const imageSize = size === 'md' ? 'size-10 sm:size-11' : 'size-9'
-  const imageStyles = cn(
-    imageSize,
-    'object-contain transition-transform duration-300 ease-out group-hover:rotate-[-3deg] group-hover:scale-110'
-  )
   return (
     <NavbarLogo
       href="/"
       aria-label="CHTH home"
       className={cn(
-        'group justify-center rounded-full p-1 transition-all duration-300 ease-out hover:scale-110 hover:bg-muted/60 active:scale-95',
-        size === 'md' ? 'size-12' : 'size-11'
+        'group justify-center rounded-full px-2 text-foreground transition-all duration-300 ease-out hover:scale-110 hover:bg-muted/60 active:scale-95',
+        size === 'md' ? 'h-12' : 'h-11'
       )}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-black.png" alt="CHTH" className={cn(imageStyles, 'block dark:hidden')} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-white.png" alt="" className={cn(imageStyles, 'hidden dark:block')} />
+      <ChthLogo
+        className={cn(
+          'h-auto transition-transform duration-300 ease-out group-hover:rotate-[-3deg] group-hover:scale-110',
+          size === 'md' ? 'w-12 sm:w-14' : 'w-11'
+        )}
+      />
     </NavbarLogo>
   )
 }

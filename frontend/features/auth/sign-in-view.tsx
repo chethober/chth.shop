@@ -1,19 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AlertCircle, Info, X } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { AlertCircle, X } from 'lucide-react'
 import { SonarGrid } from '@/components/custom/sonar-grid'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
 import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
-import type { TelegramAuthData, TelegramConfig } from '@/types'
 import { describeAuthError } from './auth-errors'
 import { GoogleIcon, TelegramIcon, XIcon } from './provider-icons'
 import { rememberRedirect, safeRedirectPath } from './redirect'
@@ -23,12 +19,6 @@ type Provider = 'google' | 'x' | 'telegram'
 const providerButtonStyles =
   'group flex items-center gap-2.5 rounded-xl border border-border/80 bg-background/70 px-4 py-3 text-xs font-medium text-foreground shadow-xs backdrop-blur-md transition-all duration-200 ease-out cursor-pointer hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-secondary/80 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-75 sm:text-sm'
 
-declare global {
-  interface Window {
-    onTelegramAuth?: (user: TelegramAuthData) => void
-  }
-}
-
 export function SignInView() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -36,13 +26,9 @@ export function SignInView() {
   const errorCode = searchParams.get('error')
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const signInWithTelegram = useAuthStore((state) => state.signInWithTelegram)
 
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null)
   const [dismissedError, setDismissedError] = useState(false)
-  const [telegramOpen, setTelegramOpen] = useState(false)
-  const [telegramConfig, setTelegramConfig] = useState<TelegramConfig | null>(null)
-  const telegramContainerRef = useRef<HTMLDivElement>(null)
 
   const errorMessage = errorCode && !dismissedError ? describeAuthError(errorCode) : ''
 
@@ -50,54 +36,15 @@ export function SignInView() {
     if (isAuthenticated) router.replace(redirectTo)
   }, [isAuthenticated, redirectTo, router])
 
-  useEffect(() => {
-    api.auth
-      .telegramConfig()
-      .then(setTelegramConfig)
-      .catch(() => setTelegramConfig({ botUsername: '', isConfigured: false }))
-  }, [])
-
-  // The Telegram widget reports back through a global callback.
-  useEffect(() => {
-    window.onTelegramAuth = async (data) => {
-      setLoadingProvider('telegram')
-      try {
-        const user = await signInWithTelegram(data)
-        toast.success(`Welcome, ${user.username}!`)
-        setTelegramOpen(false)
-        router.replace(redirectTo)
-      } catch (error) {
-        toast.danger(error instanceof Error ? error.message : 'Telegram sign-in failed')
-      } finally {
-        setLoadingProvider(null)
-      }
-    }
-    return () => {
-      delete window.onTelegramAuth
-    }
-  }, [signInWithTelegram, router, redirectTo])
-
-  // Inject the Telegram widget script whenever the dialog opens.
-  useEffect(() => {
-    const container = telegramContainerRef.current
-    if (!telegramOpen || !telegramConfig?.isConfigured || !container) return
-
-    container.innerHTML = ''
-    const script = document.createElement('script')
-    script.src = 'https://telegram.org/js/telegram-widget.js?22'
-    script.async = true
-    script.dataset.telegramLogin = telegramConfig.botUsername
-    script.dataset.size = 'large'
-    script.dataset.radius = '8'
-    script.dataset.requestAccess = 'write'
-    script.dataset.onauth = 'onTelegramAuth(user)'
-    container.appendChild(script)
-  }, [telegramOpen, telegramConfig])
-
-  const startOAuth = (provider: 'google' | 'x') => {
+  const startOAuth = (provider: Provider) => {
     setLoadingProvider(provider)
     rememberRedirect(redirectTo)
-    window.location.href = provider === 'google' ? api.auth.googleUrl : api.auth.xUrl
+    window.location.href = api.auth.providerUrl(provider)
+  }
+
+  // Opens the bot in Telegram; its sign-in button lands on /auth/callback in a new tab.
+  const startBotLogin = () => {
+    window.open(api.auth.telegramBotUrl(), '_blank', 'noopener')
   }
 
   return (
@@ -192,7 +139,7 @@ export function SignInView() {
 
           <button
             type="button"
-            onClick={() => setTelegramOpen(true)}
+            onClick={() => startOAuth('telegram')}
             disabled={loadingProvider !== null}
             className={cn(providerButtonStyles, 'w-full justify-between')}
           >
@@ -203,6 +150,18 @@ export function SignInView() {
                 <TelegramIcon className="size-4 shrink-0 text-[#24A1DE] transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
               )}
               Telegram
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={startBotLogin}
+            disabled={loadingProvider !== null}
+            className={cn(providerButtonStyles, 'w-full justify-between')}
+          >
+            <span className="flex items-center gap-2.5">
+              <TelegramIcon className="size-4 shrink-0 text-[#24A1DE] transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
+              Sign in via bot
             </span>
             <span className="flex items-center gap-1.5 rounded-full border border-border/80 bg-secondary/80 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
               <span className="size-1.5 rounded-full bg-[#24A1DE]" />
@@ -220,41 +179,6 @@ export function SignInView() {
         </p>
       </div>
 
-      <Dialog open={telegramOpen} onOpenChange={setTelegramOpen}>
-        <DialogContent className="max-w-sm text-center">
-          <TelegramIcon className="mx-auto mt-2 size-12 text-[#24A1DE]" />
-          <DialogHeader className="text-center">
-            <DialogTitle>Sign in with Telegram</DialogTitle>
-            <DialogDescription>
-              Authenticate via the CHTH Management Bot
-              {telegramConfig?.botUsername ? ` (@${telegramConfig.botUsername})` : ''}
-            </DialogDescription>
-          </DialogHeader>
-
-          {telegramConfig?.isConfigured ? (
-            <div ref={telegramContainerRef} className="flex min-h-[50px] items-center justify-center py-3" />
-          ) : (
-            <div className="space-y-2 rounded-xl border border-border bg-secondary/60 p-3.5 text-left text-xs text-muted-foreground">
-              <p className="flex items-center gap-1.5 font-semibold text-foreground">
-                <Info className="size-3.5 text-brand" />
-                Telegram bot setup
-              </p>
-              <p className="text-[11px] leading-relaxed">
-                To enable Telegram sign-in, add your bot credentials to{' '}
-                <code className="rounded bg-muted px-1 py-0.5 text-[10px] text-foreground">backend/.env</code>:
-              </p>
-              <ul className="space-y-0.5 pl-2 font-mono text-[10px] text-foreground/80">
-                <li>TELEGRAM_BOT_TOKEN=...</li>
-                <li>TELEGRAM_BOT_USERNAME=...</li>
-              </ul>
-            </div>
-          )}
-
-          <Button variant="outline" onClick={() => setTelegramOpen(false)} className="w-full">
-            Close
-          </Button>
-        </DialogContent>
-      </Dialog>
     </SonarGrid>
   )
 }

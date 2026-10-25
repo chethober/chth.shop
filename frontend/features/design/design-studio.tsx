@@ -1,228 +1,258 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Bot, Download, ImageIcon, Layers, Palette, RotateCcw, Sparkles, Tag, Type } from 'lucide-react'
+import { FolderOpen, ImagePlus, Layers, Palette, Shirt, Sparkles, Type, type LucideIcon } from 'lucide-react'
 import { toast } from '@heroui/react'
-import { Notch, type NotchItem } from '@/components/custom/notch'
-import { ConfirmButton } from '@/components/shared/confirm-button'
-import { Button } from '@/components/ui/button'
-import type { ProductType } from '@/types'
-import {
-  COLOR_PALETTE,
-  DEFAULT_GARMENT_COLOR,
-  FABRICS,
-  GARMENTS,
-  getGarment,
-  type DesignLayer,
-} from './constants'
+import { cn } from '@/lib/utils'
+import { BACKDROPS, DEFAULT_GARMENT_COLOR, EMPTY_DOC, getGarment, type DesignLayer } from './constants'
+import { captureThumbnail, composeTechSheet, download, slugify } from './files'
+import { clearStudioHandoff, peekStudioHandoff } from './handoff'
 import { AiPanel } from './panels/ai-panel'
-import { ArtworkPanel, type ArtworkTab } from './panels/artwork-panel'
 import { ColorPanel } from './panels/color-panel'
+import { DraftsPanel } from './panels/drafts-panel'
+import { Inspector } from './panels/inspector'
 import { LayersPanel } from './panels/layers-panel'
+import { ProductPanel } from './panels/product-panel'
+import { TextPanel } from './panels/text-panel'
+import { UploadsPanel, useImageUpload } from './panels/uploads-panel'
+import { sceneBridge } from './scene-bridge'
+import { useDrafts, useStudio, type Tool } from './store'
+import { StudioShell } from './studio-shell'
+import { Toolbar } from './toolbar'
+import { useStudioShortcuts } from './use-shortcuts'
+import { ViewportChrome } from './viewport-chrome'
+import './studio.css'
 
 // WebGL can't render on the server.
 const StudioCanvas = dynamic(() => import('./scene/studio-canvas').then((m) => m.StudioCanvas), { ssr: false })
 
-type Panel = 'color' | 'artwork' | 'ai' | 'layers'
+const TOOLS: { id: Tool; label: string; icon: LucideIcon }[] = [
+  { id: 'product', label: 'Product', icon: Shirt },
+  { id: 'color', label: 'Color', icon: Palette },
+  { id: 'uploads', label: 'Uploads', icon: ImagePlus },
+  { id: 'text', label: 'Text', icon: Type },
+  { id: 'ai', label: 'AI', icon: Sparkles },
+  { id: 'layers', label: 'Layers', icon: Layers },
+  { id: 'drafts', label: 'Drafts', icon: FolderOpen },
+]
 
-function downloadMockup() {
-  const canvas = document.querySelector('canvas')
-  if (!canvas) return
-  const link = document.createElement('a')
-  link.href = canvas.toDataURL('image/png')
-  link.download = `chth-design-${Date.now()}.png`
-  link.click()
-  toast.success('Mockup downloaded')
+function ToolRail() {
+  const tool = useStudio((state) => state.tool)
+  const layerCount = useStudio((state) => state.doc.layers.length)
+  const setTool = useStudio((state) => state.setTool)
+
+  return (
+    <nav
+      aria-label="Tools"
+      className="flex shrink-0 gap-1 overflow-x-auto border-border p-1.5 max-lg:border-b lg:w-16 lg:flex-col lg:overflow-visible lg:border-r"
+    >
+      {TOOLS.map(({ id, label, icon: Icon }) => (
+        <button
+          key={id}
+          type="button"
+          aria-current={tool === id ? 'page' : undefined}
+          onClick={() => setTool(id)}
+          className={cn(
+            'relative flex min-w-14 shrink-0 cursor-pointer flex-col items-center gap-1 rounded-lg px-1 py-2 text-[10px] font-medium transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.96]',
+            tool === id ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+          )}
+        >
+          <Icon className="size-[18px]" />
+          {label}
+          {id === 'layers' && layerCount > 0 && (
+            <span className="absolute right-1.5 top-1 min-w-4 rounded-full bg-foreground px-1 text-[9px] font-semibold leading-4 text-background">
+              {layerCount}
+            </span>
+          )}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+function ToolPanel({ onSave }: { onSave: () => void }) {
+  const tool = useStudio((state) => state.tool)
+  // Switching tools happens constantly while designing, so panels swap instantly.
+  switch (tool) {
+    case 'product':
+      return <ProductPanel />
+    case 'color':
+      return <ColorPanel />
+    case 'uploads':
+      return <UploadsPanel />
+    case 'text':
+      return <TextPanel />
+    case 'ai':
+      return <AiPanel />
+    case 'layers':
+      return <LayersPanel />
+    case 'drafts':
+      return <DraftsPanel onSave={onSave} />
+  }
+}
+
+/** The landing tee's last frame, held over the canvas until the studio's own tee has drawn. */
+function HandoffSnapshot({ snapshot, hidden }: { snapshot: HTMLCanvasElement; hidden: boolean }) {
+  const host = useRef<HTMLDivElement>(null)
+  const [gone, setGone] = useState(false)
+
+  useEffect(() => {
+    if (gone) return
+    host.current?.append(snapshot)
+    return () => snapshot.remove()
+  }, [snapshot, gone])
+
+  if (gone) return null
+  return (
+    <div
+      ref={host}
+      aria-hidden
+      onTransitionEnd={() => setGone(true)}
+      className={cn('pointer-events-none absolute inset-0 transition-opacity [&>canvas]:size-full duration-200 ease-out-strong', hidden && 'opacity-0')}
+    />
+  )
+}
+
+function useStudioSession() {
+  // Arriving from the landing page's launch: carry its tee over.
+  const [handoff] = useState(peekStudioHandoff)
+
+  useEffect(() => {
+    clearStudioHandoff()
+    void useDrafts.persist.rehydrate()
+    void Promise.resolve(useStudio.persist.rehydrate()).then(() => {
+      if (!handoff) return
+      // A fresh design in the landing tee's colour, its artwork on the chest. Not undoable back to the old autosave.
+      const garment = getGarment('tshirt')
+      const placement = garment.placements[0]
+      const layers: DesignLayer[] = handoff.logoUrl
+        ? [
+            {
+              id: crypto.randomUUID(),
+              type: 'image',
+              name: 'Your artwork',
+              content: '',
+              imageUrl: handoff.logoUrl,
+              position: [...garment.chestPosition],
+              side: 'front',
+              rotation: 0,
+              size: placement.size,
+              opacity: 1,
+              flipX: false,
+              visible: true,
+              locked: false,
+            },
+          ]
+        : []
+      useStudio.setState({
+        doc: { ...EMPTY_DOC, color: handoff.color, layers },
+        past: [],
+        future: [],
+        selectedId: null,
+        // The landing tee lands on the light backdrop; anything else would flash at the crossfade.
+        backdrop: 'light',
+      })
+    })
+  }, [handoff])
+
+  return handoff
 }
 
 export function DesignStudio() {
-  const [garmentId, setGarmentId] = useState<ProductType>('tshirt')
-  const [color, setColor] = useState(DEFAULT_GARMENT_COLOR)
-  const [fabric, setFabric] = useState(FABRICS[0].id)
-  const [logoUrl, setLogoUrl] = useState('')
-  const [layers, setLayers] = useState<DesignLayer[]>([])
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
-  const [panel, setPanel] = useState<Panel | null>('color')
-  const [artworkTab, setArtworkTab] = useState<ArtworkTab>('graphic')
+  const handoff = useStudioSession()
+  const [canvasDrawn, setCanvasDrawn] = useState(false)
+  const [dropping, setDropping] = useState(false)
+  const viewport = useRef<HTMLDivElement>(null)
 
-  const garment = getGarment(garmentId)
-  const selectedLayer = layers.find((layer) => layer.id === selectedLayerId)
+  const garmentId = useStudio((state) => state.doc.garmentId)
+  const color = useStudio((state) => state.doc.color)
+  const fabric = useStudio((state) => state.doc.fabric)
+  const backdrop = useStudio((state) => state.backdrop)
+  const upload = useImageUpload()
 
-  const addLayer = (layer: Omit<DesignLayer, 'id' | 'position' | 'rotation' | 'scale'>) => {
-    const id = crypto.randomUUID()
-    setLayers((current) => [
-      ...current,
-      { ...layer, id, position: [...garment.chestPosition], rotation: 0, scale: [...garment.chestScale] },
-    ])
-    setSelectedLayerId(id)
+  const saveDraft = useCallback(async () => {
+    const { doc } = useStudio.getState()
+    const saved = useDrafts.getState().save(doc, await captureThumbnail())
+    if (saved) toast.success(`Saved “${doc.name}”`)
+    else toast.danger('Browser storage is full. Export a design file instead.')
+  }, [])
+
+  useStudioShortcuts({ onSave: saveDraft })
+
+  const clear = () => {
+    const { doc, load } = useStudio.getState()
+    load({ ...doc, color: DEFAULT_GARMENT_COLOR, layers: [] })
+    toast.info('Design cleared. Undo brings it back.')
   }
 
-  const updateLayer = (id: string, changes: Partial<DesignLayer>) =>
-    setLayers((current) => current.map((layer) => (layer.id === id ? { ...layer, ...changes } : layer)))
+  const exportView = () => {
+    const still = sceneBridge.capture?.()
+    if (!still) return
+    const { doc } = useStudio.getState()
+    const filename = `${slugify(doc.name)}-${Date.now()}.png`
+    if (backdrop === 'checker' || !viewport.current) return download(still, filename)
 
-  const removeLayer = (id: string) => {
-    setLayers((current) => current.filter((layer) => layer.id !== id))
-    setSelectedLayerId(null)
+    // Paint the backdrop behind the render, since the canvas itself is transparent.
+    const image = new Image()
+    image.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = image.width
+      canvas.height = image.height
+      const ctx = canvas.getContext('2d')!
+      ctx.fillStyle = getComputedStyle(viewport.current!).backgroundColor
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(image, 0, 0)
+      download(canvas.toDataURL('image/png'), filename)
+    }
+    image.src = still
   }
 
-  const reset = () => {
-    setColor(DEFAULT_GARMENT_COLOR)
-    setLogoUrl('')
-    setLayers([])
-    setSelectedLayerId(null)
-    toast.info('Design reset')
+  const exportSheet = async () => {
+    const { doc } = useStudio.getState()
+    const sheet = await composeTechSheet(doc)
+    if (sheet) download(sheet, `${slugify(doc.name)}-tech-sheet.png`)
   }
-
-  const notchItems: NotchItem[] = useMemo(() => {
-    const GarmentIcon = getGarment(garmentId).icon
-    return [
-      {
-        id: 'garment',
-        label: 'Products',
-        icon: <GarmentIcon className="size-3.5" />,
-        value: garmentId,
-        options: GARMENTS.map(({ id, name, icon: Icon }) => ({
-          id,
-          label: name,
-          icon: <Icon className="size-3.5 text-neutral-300" />,
-        })),
-        onChange: (id) => setGarmentId(id as ProductType),
-      },
-      {
-        id: 'color',
-        label: 'Color',
-        icon: <span className="inline-block size-3 rounded-full border border-white/60" style={{ backgroundColor: color }} />,
-        value: color,
-        options: COLOR_PALETTE.map((swatch) => ({
-          id: swatch.value,
-          label: swatch.name,
-          icon: <span className="size-3.5 shrink-0 rounded-full border border-white/40" style={{ backgroundColor: swatch.value }} />,
-        })),
-        onChange: setColor,
-      },
-      {
-        id: 'fabric',
-        label: 'Fabric',
-        icon: <Tag className="size-3.5 text-neutral-300" />,
-        value: fabric,
-        options: FABRICS.map(({ id, name, description }) => ({ id, label: name, description })),
-        onChange: setFabric,
-      },
-      {
-        id: 'studio',
-        label: 'Studio',
-        icon: <Sparkles className="size-3.5 text-amber-400" />,
-        options: [
-          { id: 'graphic', label: 'Add graphic / artwork', icon: <ImageIcon className="size-3.5" /> },
-          { id: 'text', label: 'Text', icon: <Type className="size-3.5" /> },
-          { id: 'ai', label: 'AI generator', icon: <Bot className="size-3.5 text-amber-400" /> },
-          ...(layers.length > 0
-            ? [{ id: 'layers', label: `Transform layers (${layers.length})`, icon: <Layers className="size-3.5" /> }]
-            : []),
-          { id: 'color', label: 'Color palette', icon: <Palette className="size-3.5" /> },
-        ],
-        onChange: (id) => {
-          if (id === 'graphic' || id === 'text') {
-            setArtworkTab(id)
-            setPanel('artwork')
-          } else {
-            setPanel(id as Panel)
-          }
-        },
-      },
-    ]
-  }, [garmentId, color, fabric, layers.length])
-
-  const closePanel = () => setPanel(null)
 
   return (
-    <div className="relative h-[calc(100vh-140px)] min-h-[600px] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-      <div className="pointer-events-none absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-border/60 bg-card/75 px-3 py-1.5 shadow-xs backdrop-blur-md">
-        <span className="size-1.5 rounded-full bg-brand" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Design studio</span>
-      </div>
-
-      <AnimatePresence mode="wait">
-        {panel && (
-          <motion.div
-            key={panel}
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute left-4 top-4 z-20 max-h-[calc(100vh-180px)] w-72 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-card/95 p-4 shadow-xl backdrop-blur-md sm:w-80"
-          >
-            {panel === 'color' && <ColorPanel color={color} onColorChange={setColor} onClose={closePanel} />}
-            {panel === 'artwork' && (
-              <ArtworkPanel
-                tab={artworkTab}
-                onTabChange={setArtworkTab}
-                hasLogo={Boolean(logoUrl)}
-                onUploadLogo={(url) => {
-                  setLogoUrl(url)
-                  toast.success('Chest logo updated')
-                }}
-                onUploadLayer={(url) => {
-                  addLayer({ type: 'image', content: 'Uploaded artwork', imageUrl: url })
-                  toast.success('Layer added')
-                }}
-                onRemoveLogo={() => setLogoUrl('')}
-                onAddText={(text, textColor) => addLayer({ type: 'text', content: text, color: textColor })}
-                onClose={closePanel}
-              />
-            )}
-            {panel === 'ai' && (
-              <AiPanel
-                onGenerated={(url) => {
-                  setLogoUrl(url)
-                  toast.success('Artwork applied as chest logo')
-                }}
-                onClose={closePanel}
-              />
-            )}
-            {panel === 'layers' && selectedLayer && (
-              <LayersPanel
-                layer={selectedLayer}
-                onChange={(changes) => updateLayer(selectedLayer.id, changes)}
-                onRemove={() => removeLayer(selectedLayer.id)}
-                onClose={closePanel}
-              />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" onClick={downloadMockup} className="bg-card shadow-xs">
-          <Download />
-          Save mockup
-        </Button>
-        <ConfirmButton
-          variant="outline"
-          className="bg-card text-muted-foreground shadow-xs"
-          question="Reset all decorations?"
-          confirmLabel="Reset"
-          onConfirm={reset}
+    <StudioShell
+      viewportRef={viewport}
+      viewportClassName={cn(BACKDROPS[backdrop].className, 'transition-colors duration-200')}
+      toolbar={<Toolbar onSave={saveDraft} onClear={clear} onExportView={exportView} onExportSheet={exportSheet} />}
+      tools={
+        <>
+          <ToolRail />
+          <ToolPanel onSave={saveDraft} />
+        </>
+      }
+      inspector={<Inspector />}
+      viewport={
+        <div
+          className="size-full"
+          onDragOver={(event) => {
+            if (!event.dataTransfer.types.includes('Files')) return
+            event.preventDefault()
+            setDropping(true)
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropping(false)
+          }}
+          onDrop={(event) => {
+            event.preventDefault()
+            setDropping(false)
+            void upload(event.dataTransfer.files)
+          }}
         >
-          <RotateCcw />
-          Reset
-        </ConfirmButton>
-      </div>
-
-      <StudioCanvas
-        garment={garment}
-        color={color}
-        logoUrl={logoUrl}
-        layers={layers}
-        onSelectLayer={(id) => {
-          setSelectedLayerId(id)
-          setPanel('layers')
-        }}
-      />
-
-      <Notch items={notchItems} position="bottom" align="center" variant="docked" offset={16} accentColor={color} />
-    </div>
+          <StudioCanvas
+            garment={getGarment(garmentId)}
+            color={color}
+            fabric={fabric}
+            onDrawn={handoff ? () => setCanvasDrawn(true) : undefined}
+          />
+          {handoff && <HandoffSnapshot snapshot={handoff.snapshot} hidden={canvasDrawn} />}
+          <ViewportChrome dropping={dropping} />
+        </div>
+      }
+    />
   )
 }

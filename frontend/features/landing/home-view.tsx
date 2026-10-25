@@ -3,46 +3,44 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { useScroll, useSpring } from 'framer-motion'
+import { handOffToStudio } from '@/features/design/handoff'
+import { StudioShell } from '@/features/design/studio-shell'
 import { useIsDarkTheme } from '@/hooks/use-is-dark-theme'
-import { COLORWAYS, DEFAULT_COLORWAY, type Colorway, type SectionId } from './content'
-import { LaunchZone } from './launch-zone'
+import { cn } from '@/lib/utils'
+import { COLORWAYS, DEFAULT_COLORWAY, SECTION_IDS, type Colorway, type SectionId } from './content'
 import { ScrollHint } from './scroll-hint'
+import { TeeLoader } from './tee-loader'
 import { CollabSection } from './sections/collab-section'
 import { DesignSection } from './sections/design-section'
 import { HeroSection } from './sections/hero-section'
-import { StudioLaunchOverlay } from './studio-launch-overlay'
 
 // WebGL can't render on the server.
 const LandingScene = dynamic(() => import('./landing-scene'), {
   ssr: false,
   loading: () => (
-    <div className="flex size-full items-center justify-center lg:justify-end lg:pr-[22%]">
-      <div className="size-12 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+    <div className="flex size-full items-start justify-center pt-[18svh] lg:items-center lg:justify-end lg:pr-[22%] lg:pt-0">
+      <TeeLoader progress={0} />
     </div>
   ),
 })
 
-const NAV_OFFSET = 70
-/** Launch once the launch zone is scrolled through to the very bottom of the page. */
-const LAUNCH_AT = 0.98
-
 function scrollToSection(id: SectionId) {
-  const el = document.getElementById(id)
-  if (!el) return
-  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - NAV_OFFSET, behavior: 'smooth' })
+  // Land on the section's snap point so scroll snapping doesn't pull the page afterwards.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
 }
 
 /**
- * Three-part landing page (the tee → for artists → design studio). One 3D tee floats behind
- * all sections; scroll progress moves it between poses and reveals tips pinned to it.
- * Scrolling past the last section, to the bottom of the page, opens the design studio.
+ * Three-part landing page (the tee → for artists → design studio). The page snaps section by
+ * section; one 3D tee floats behind them all and swings to a fixed pose for each, with a tip
+ * pinned to it. The design section's button opens the design studio:
+ * the page gives way to a copy of the studio's frame, the tee flies into it, and the studio
+ * takes over the same tee.
  */
 export function HomeView() {
   const router = useRouter()
-  const containerRef = useRef<HTMLDivElement>(null)
   const tipsRef = useRef<HTMLDivElement>(null)
-  const launchZoneRef = useRef<HTMLDivElement>(null)
+  const studioFrameRef = useRef<HTMLDivElement>(null)
   const launched = useRef(false)
 
   // Until the visitor picks a swatch, the tee contrasts with the current theme.
@@ -50,76 +48,99 @@ export function HomeView() {
   const [chosenColorway, setColorway] = useState<Colorway | null>(null)
   const colorway =
     chosenColorway ?? COLORWAYS.find((c) => c.name === DEFAULT_COLORWAY[isDark ? 'dark' : 'light']) ?? COLORWAYS[0]
-  const [progress, setProgress] = useState(0)
-  const [launchProgress, setLaunchProgress] = useState<number | null>(null)
-  const [launchZoneProgress, setLaunchZoneProgress] = useState(0)
+  // Artwork dropped in the design section, as a data URL: printed on the tee and carried into the studio.
+  const [artwork, setArtwork] = useState<string | null>(null)
+  const [section, setSection] = useState<SectionId>('hero')
+  const [launching, setLaunching] = useState(false)
 
-  const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start start', 'end end'] })
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 70, damping: 24, restDelta: 0.001 })
-
-  useEffect(() => smoothProgress.on('change', setProgress), [smoothProgress])
-
-  // Tracked separately so the tee's poses keep mapping to the three sections only.
-  const { scrollYProgress: launchZoneScroll } = useScroll({ target: launchZoneRef, offset: ['start end', 'end end'] })
+  // The section crossing the middle of the screen is the one in view.
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries.find((e) => e.isIntersecting)
+        if (entry) setSection(entry.target.id as SectionId)
+      },
+      { rootMargin: '-50% 0px -50% 0px' }
+    )
+    for (const id of SECTION_IDS) {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    }
+    return () => observer.disconnect()
+  }, [])
 
   const openStudio = useCallback(() => {
     if (launched.current) return
     launched.current = true
-
-    let value = 0
-    setLaunchProgress(0)
-    const interval = setInterval(() => {
-      value = Math.min(100, value + 15)
-      setLaunchProgress(value)
-      if (value === 100) {
-        clearInterval(interval)
-        setTimeout(() => router.push('/design'), 350)
-      }
-    }, 70)
+    // Load the studio while the tee is in flight, so it's ready to take over.
+    router.prefetch('/design')
+    void import('@/features/design/scene/studio-canvas')
+    setLaunching(true)
   }, [router])
 
-  // Only a visitor scrolling down through the zone launches the studio. A page that opens
-  // already at the bottom (e.g. scroll restored after pressing Back) must be scrolled up first.
-  useEffect(() => {
-    let armed = false
-    return launchZoneScroll.on('change', (value) => {
-      setLaunchZoneProgress(value)
-      if (value < 0.9) armed = true
-      else if (armed && value >= LAUNCH_AT) openStudio()
-    })
-  }, [launchZoneScroll, openStudio])
+  const enterStudio = useCallback(
+    (snapshot: HTMLCanvasElement) => {
+      handOffToStudio({ color: colorway.hex, logoUrl: artwork ?? undefined, snapshot })
+      router.push('/design')
+    },
+    [artwork, colorway.hex, router]
+  )
 
   return (
-    <div className="relative selection:bg-brand selection:text-white">
+    <div data-scroll-snap className="relative selection:bg-brand selection:text-white">
       {/* Ambient dotted grid */}
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:36px_36px] opacity-35 [mask-image:radial-gradient(ellipse_75%_55%_at_50%_40%,#000_65%,transparent_100%)]" />
+
+      {/* Empty copy of the studio's layout; the tee flies into its viewport on launch. */}
+      <div
+        aria-hidden
+        className={cn(
+          'pointer-events-none fixed inset-0 z-0 flex flex-col bg-background opacity-0 transition-opacity duration-500 ease-out-strong',
+          launching && 'opacity-100'
+        )}
+      >
+        <StudioShell viewport={<div ref={studioFrameRef} className="size-full" />} />
+      </div>
 
       {/* The 3D tee floats behind every section. */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <LandingScene
-          progress={progress}
+          section={section}
           color={colorway.hex}
           decalUrl={colorway.decal}
-          isLaunching={launchProgress !== null}
+          artworkUrl={artwork ?? undefined}
+          isLaunching={launching}
           tipsPortal={tipsRef}
+          studioFrame={studioFrameRef}
+          onLaunched={enterStudio}
         />
       </div>
 
-      {/* Tips pinned to the tee render here, above the page text. */}
+      {/* The tip pinned to the tee renders here, above the page text. */}
       <div ref={tipsRef} className="pointer-events-none fixed inset-0 z-20" />
 
-      {launchProgress !== null && <StudioLaunchOverlay progress={launchProgress} />}
+      {launching && (
+        <p role="status" className="sr-only">
+          Opening the design studio
+        </p>
+      )}
 
-      <ScrollHint visible={progress < 0.03 && launchProgress === null} onClick={() => scrollToSection('collab')} />
+      <ScrollHint visible={section === 'hero' && !launching} onClick={() => scrollToSection('collab')} />
 
-      {/* Scroll progress across these three sections drives the tee's poses and tips. */}
-      <div ref={containerRef} className="relative z-10">
-        <HeroSection onDesign={() => scrollToSection('design')} onMeetArtists={() => scrollToSection('collab')} />
-        <CollabSection />
-        <DesignSection colorway={colorway} onColorwayChange={setColorway} onOpenStudio={openStudio} />
+      {/* The page text clears away on launch, leaving the tee and the studio frame. */}
+      <div className={cn('transition-opacity duration-300 ease-out-strong', launching && 'pointer-events-none opacity-0')}>
+        {/* Each section is a snap stop; the one in view sets the tee's pose and tips. */}
+        <div className="relative z-10">
+          <HeroSection onDesign={() => scrollToSection('design')} onMeetArtists={() => scrollToSection('collab')} />
+          <CollabSection />
+          <DesignSection
+            colorway={colorway}
+            onColorwayChange={setColorway}
+            onArtworkChange={setArtwork}
+            onOpenStudio={openStudio}
+          />
+        </div>
       </div>
-
-      <LaunchZone ref={launchZoneRef} progress={launchZoneProgress} />
     </div>
   )
 }
