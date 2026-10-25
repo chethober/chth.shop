@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { PageContainer } from '@/components/layout/page-container'
-import { STUDIO_FRAME_CLASS, handOffToStudio } from '@/features/design/handoff'
+import { handOffToStudio } from '@/features/design/handoff'
+import { StudioShell } from '@/features/design/studio-shell'
 import { useIsDarkTheme } from '@/hooks/use-is-dark-theme'
 import { cn } from '@/lib/utils'
 import { COLORWAYS, DEFAULT_COLORWAY, SECTION_IDS, type Colorway, type SectionId } from './content'
@@ -91,7 +91,7 @@ export function HomeView() {
       {/* Ambient dotted grid */}
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:36px_36px] opacity-35 [mask-image:radial-gradient(ellipse_75%_55%_at_50%_40%,#000_65%,transparent_100%)]" />
 
-      {/* Copy of the studio page's frame, which the tee flies into on launch. */}
+      {/* Empty copy of the studio's layout; the tee flies into its viewport on launch. */}
       <div
         aria-hidden
         className={cn(
@@ -99,11 +99,7 @@ export function HomeView() {
           launching && 'opacity-100'
         )}
       >
-        <PageContainer>
-          <div className={STUDIO_FRAME_CLASS}>
-            <div ref={studioFrameRef} className="size-full" />
-          </div>
-        </PageContainer>
+        <StudioShell viewport={<div ref={studioFrameRef} className="size-full" />} />
       </div>
 
       {/* The 3D tee floats behind every section. */}

@@ -1,80 +1,91 @@
-import { Sliders, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import type { DesignLayer } from '../constants'
-import { FieldLabel, PanelShell } from './panel-shell'
+'use client'
 
-function RangeInput({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
-}: {
-  label: string
-  value: number
-  min: number
-  max: number
-  step: number
-  onChange: (value: number) => void
-}) {
+import { Eye, EyeOff, Layers, Lock, LockOpen, Type } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { DesignLayer } from '../constants'
+import { useStudio } from '../store'
+import { IconButton, PanelShell } from './controls'
+
+function LayerThumb({ layer }: { layer: DesignLayer }) {
   return (
-    <label className="flex items-center gap-2">
-      <span className="w-3 text-[9px] text-muted-foreground">{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(parseFloat(event.target.value))}
-        className="h-1 flex-1 cursor-pointer appearance-none rounded-lg bg-muted-foreground/30 accent-primary"
-      />
-    </label>
+    <span className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted/60">
+      {layer.type === 'image' && layer.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- local data URL
+        <img src={layer.imageUrl} alt="" className="max-h-full max-w-full object-contain" />
+      ) : (
+        <Type className="size-4 text-muted-foreground" style={{ color: layer.color }} />
+      )}
+    </span>
   )
 }
 
-export function LayersPanel({
-  layer,
-  onChange,
-  onRemove,
-  onClose,
-}: {
-  layer: DesignLayer
-  onChange: (changes: Partial<DesignLayer>) => void
-  onRemove: () => void
-  onClose: () => void
-}) {
-  const setAxis = (axis: 0 | 1, value: number) => {
-    const position = [...layer.position] as DesignLayer['position']
-    position[axis] = value
-    onChange({ position })
-  }
+export function LayersPanel() {
+  const layers = useStudio((state) => state.doc.layers)
+  const selectedId = useStudio((state) => state.selectedId)
+  const select = useStudio((state) => state.select)
+  const updateLayer = useStudio((state) => state.updateLayer)
+  const setTool = useStudio((state) => state.setTool)
 
   return (
-    <PanelShell title="Layer transforms" icon={Sliders} onClose={onClose}>
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <FieldLabel>Position</FieldLabel>
-          <RangeInput label="X" value={layer.position[0]} min={-0.3} max={0.3} step={0.01} onChange={(v) => setAxis(0, v)} />
-          <RangeInput label="Y" value={layer.position[1]} min={-0.3} max={0.3} step={0.01} onChange={(v) => setAxis(1, v)} />
+    <PanelShell title="Layers" description="Top of the list prints on top.">
+      {layers.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-4 py-8 text-center">
+          <Layers className="size-5 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground">No layers yet.</p>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setTool('uploads')} className="cursor-pointer text-xs font-semibold text-foreground underline-offset-4 hover:underline">
+              Upload artwork
+            </button>
+            <span className="text-xs text-muted-foreground">or</span>
+            <button type="button" onClick={() => setTool('text')} className="cursor-pointer text-xs font-semibold text-foreground underline-offset-4 hover:underline">
+              add text
+            </button>
+          </div>
         </div>
-
-        <div className="space-y-1.5">
-          <FieldLabel>Scale</FieldLabel>
-          <RangeInput label="" value={layer.scale[0]} min={0.05} max={0.4} step={0.01} onChange={(v) => onChange({ scale: [v, v, v] })} />
-        </div>
-
-        <div className="space-y-1.5">
-          <FieldLabel aside={`${Math.round((layer.rotation * 180) / Math.PI)}°`}>Rotation</FieldLabel>
-          <RangeInput label="" value={layer.rotation} min={0} max={Math.PI * 2} step={0.05} onChange={(v) => onChange({ rotation: v })} />
-        </div>
-
-        <Button variant="destructive-outline" size="sm" className="w-full" onClick={onRemove}>
-          <Trash2 />
-          Remove layer
-        </Button>
-      </div>
+      ) : (
+        <ul className="space-y-1" aria-label="Layers">
+          {[...layers].reverse().map((layer) => {
+            const selected = layer.id === selectedId
+            return (
+              <li
+                key={layer.id}
+                className={cn(
+                  'group flex items-center gap-2.5 rounded-lg border p-1.5 pr-1 transition-[border-color,background-color] duration-150',
+                  selected ? 'border-foreground/60 bg-muted' : 'border-transparent hover:bg-muted/60'
+                )}
+              >
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => select(selected ? null : layer.id)}
+                  className={cn('flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left', !layer.visible && 'opacity-50')}
+                >
+                  <LayerThumb layer={layer} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs font-medium text-foreground">{layer.name || 'Untitled'}</span>
+                    <span className="block text-[11px] capitalize text-muted-foreground">
+                      {layer.type} · {layer.side}
+                    </span>
+                  </span>
+                </button>
+                <IconButton
+                  icon={layer.locked ? Lock : LockOpen}
+                  label={layer.locked ? 'Unlock' : 'Lock'}
+                  active={layer.locked}
+                  onClick={() => updateLayer(layer.id, { locked: !layer.locked })}
+                  className={cn('size-7', !layer.locked && '[@media(hover:hover)]:opacity-0 focus-visible:opacity-100 group-hover:opacity-100')}
+                />
+                <IconButton
+                  icon={layer.visible ? Eye : EyeOff}
+                  label={layer.visible ? 'Hide' : 'Show'}
+                  onClick={() => updateLayer(layer.id, { visible: !layer.visible })}
+                  className={cn('size-7', layer.visible && '[@media(hover:hover)]:opacity-0 focus-visible:opacity-100 group-hover:opacity-100')}
+                />
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </PanelShell>
   )
 }
