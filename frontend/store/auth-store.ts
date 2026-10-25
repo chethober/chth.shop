@@ -2,14 +2,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api, { onUnauthorized, tokenStorage } from '@/lib/api'
 import useCartStore from './cart-store'
-import type { TelegramAuthData, User } from '@/types'
+import type { User } from '@/types'
 
 interface AuthState {
   user: User | null
   isAuthenticated: boolean
   /** Stores a session returned by any sign-in method. */
   signIn: (user: User, token: string) => void
-  signInWithTelegram: (data: TelegramAuthData) => Promise<User>
   updateUsername: (newUsername: string) => Promise<void>
   /** Merges fields into the stored user after a server-side change. */
   patchUser: (changes: Partial<User>) => void
@@ -26,13 +25,6 @@ const useAuthStore = create<AuthState>()(
       signIn: (user, token) => {
         tokenStorage.set(token)
         set({ user, isAuthenticated: true })
-      },
-
-      signInWithTelegram: async (data) => {
-        const { user, token } = await api.auth.telegram(data)
-        tokenStorage.set(token)
-        set({ user, isAuthenticated: true })
-        return user
       },
 
       updateUsername: async (newUsername) => {

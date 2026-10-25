@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Bot, Download, ImageIcon, Layers, Palette, RotateCcw, Sparkles, Tag, Type } from 'lucide-react'
@@ -8,6 +8,7 @@ import { toast } from '@heroui/react'
 import { Notch, type NotchItem } from '@/components/custom/notch'
 import { ConfirmButton } from '@/components/shared/confirm-button'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { ProductType } from '@/types'
 import {
   COLOR_PALETTE,
@@ -17,6 +18,7 @@ import {
   getGarment,
   type DesignLayer,
 } from './constants'
+import { STUDIO_FRAME_CLASS, clearStudioHandoff, peekStudioHandoff } from './handoff'
 import { AiPanel } from './panels/ai-panel'
 import { ArtworkPanel, type ArtworkTab } from './panels/artwork-panel'
 import { ColorPanel } from './panels/color-panel'
@@ -37,11 +39,38 @@ function downloadMockup() {
   toast.success('Mockup downloaded')
 }
 
+/** The landing tee's last frame, held over the canvas until the studio's own tee has drawn. */
+function HandoffSnapshot({ snapshot, hidden }: { snapshot: HTMLCanvasElement; hidden: boolean }) {
+  const host = useRef<HTMLDivElement>(null)
+  const [gone, setGone] = useState(false)
+
+  useEffect(() => {
+    if (gone) return
+    host.current?.append(snapshot)
+    return () => snapshot.remove()
+  }, [snapshot, gone])
+
+  if (gone) return null
+  return (
+    <div
+      ref={host}
+      aria-hidden
+      onTransitionEnd={() => setGone(true)}
+      className={cn('pointer-events-none absolute inset-0 transition-opacity [&>canvas]:size-full duration-200 ease-out-strong', hidden && 'opacity-0')}
+    />
+  )
+}
+
 export function DesignStudio() {
+  // Arriving from the landing page's launch: carry its tee over.
+  const [handoff] = useState(peekStudioHandoff)
+  useEffect(() => clearStudioHandoff(), [])
+  const [canvasDrawn, setCanvasDrawn] = useState(false)
+
   const [garmentId, setGarmentId] = useState<ProductType>('tshirt')
-  const [color, setColor] = useState(DEFAULT_GARMENT_COLOR)
+  const [color, setColor] = useState(handoff?.color ?? DEFAULT_GARMENT_COLOR)
   const [fabric, setFabric] = useState(FABRICS[0].id)
-  const [logoUrl, setLogoUrl] = useState('')
+  const [logoUrl, setLogoUrl] = useState(handoff?.logoUrl ?? '')
   const [layers, setLayers] = useState<DesignLayer[]>([])
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel | null>('color')
@@ -138,7 +167,7 @@ export function DesignStudio() {
   const closePanel = () => setPanel(null)
 
   return (
-    <div className="relative h-[calc(100vh-140px)] min-h-[600px] w-full overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className={STUDIO_FRAME_CLASS}>
       <div className="pointer-events-none absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-border/60 bg-card/75 px-3 py-1.5 shadow-xs backdrop-blur-md">
         <span className="size-1.5 rounded-full bg-brand" />
         <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Design studio</span>
@@ -220,7 +249,10 @@ export function DesignStudio() {
           setSelectedLayerId(id)
           setPanel('layers')
         }}
+        onDrawn={handoff ? () => setCanvasDrawn(true) : undefined}
       />
+
+      {handoff && <HandoffSnapshot snapshot={handoff.snapshot} hidden={canvasDrawn} />}
 
       <Notch items={notchItems} position="bottom" align="center" variant="docked" offset={16} accentColor={color} />
     </div>

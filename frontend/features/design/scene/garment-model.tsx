@@ -6,6 +6,7 @@ import { useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
 import * as THREE from 'three'
 import { GARMENTS, type DesignLayer, type Garment } from '../constants'
+import { STUDIO_ROUGHNESS } from '../handoff'
 import { ChestDecal, LayerDecal } from './decals'
 
 GARMENTS.forEach((garment) => useGLTF.preload(garment.modelPath))
@@ -46,7 +47,7 @@ function BakedTShirt({ color, logoUrl, ...rest }: GarmentModelProps) {
   return (
     // Re-mounting on logo change refreshes the decal projection.
     <group key={`${color}:${logoUrl}`} dispose={null}>
-      <mesh castShadow receiveShadow geometry={nodes.T_Shirt_male.geometry} material={materials.lambert1} material-roughness={1}>
+      <mesh castShadow receiveShadow geometry={nodes.T_Shirt_male.geometry} material={materials.lambert1} material-roughness={STUDIO_ROUGHNESS}>
         <Decals logoUrl={logoUrl} {...rest} />
       </mesh>
     </group>

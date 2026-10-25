@@ -7,6 +7,7 @@ import { easing } from 'maath'
 import type * as THREE from 'three'
 import { StudioEnvironment } from '@/components/three/studio-environment'
 import type { DesignLayer, Garment } from '../constants'
+import { STUDIO_CAMERA } from '../handoff'
 import { GarmentModel } from './garment-model'
 
 /** Soft studio floor shadows. */
@@ -30,18 +31,28 @@ function PointerParallax({ children }: { children: React.ReactNode }) {
   return <group ref={group}>{children}</group>
 }
 
+/** Reports once the garment has been drawn. */
+function DrawnSignal({ onDrawn }: { onDrawn: () => void }) {
+  const frames = useRef(0)
+  useFrame(() => {
+    if (++frames.current === 2) onDrawn()
+  })
+  return null
+}
+
 interface StudioCanvasProps {
   garment: Garment
   color: string
   logoUrl: string
   layers: DesignLayer[]
   onSelectLayer: (id: string) => void
+  onDrawn?: () => void
 }
 
-export function StudioCanvas(props: StudioCanvasProps) {
+export function StudioCanvas({ onDrawn, ...props }: StudioCanvasProps) {
   return (
     // preserveDrawingBuffer lets "Save mockup" read the rendered pixels.
-    <Canvas shadows camera={{ position: [0, 0, 2], fov: 25 }} gl={{ preserveDrawingBuffer: true }} className="size-full">
+    <Canvas shadows camera={STUDIO_CAMERA} gl={{ preserveDrawingBuffer: true }} className="size-full">
       <ambientLight intensity={0.5} />
       <StudioEnvironment />
       <PointerParallax>
@@ -49,6 +60,7 @@ export function StudioCanvas(props: StudioCanvasProps) {
         <Center>
           <Suspense fallback={null}>
             <GarmentModel {...props} />
+            {onDrawn && <DrawnSignal onDrawn={onDrawn} />}
           </Suspense>
         </Center>
       </PointerParallax>

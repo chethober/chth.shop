@@ -2,7 +2,10 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 
-/** "Scroll" cue pinned to the bottom of the screen until the visitor starts scrolling. */
+/**
+ * "Scroll" cue pinned to the bottom of the screen until the visitor starts scrolling.
+ * Desktop only: on phones the hero text fills the bottom of the screen and swiping is a given.
+ */
 export function ScrollHint({ visible, onClick }: { visible: boolean; onClick: () => void }) {
   return (
     <AnimatePresence>
@@ -15,7 +18,7 @@ export function ScrollHint({ visible, onClick }: { visible: boolean; onClick: ()
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
           transition={{ duration: 0.4, delay: 0.8 }}
-          className="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-2 pb-[env(safe-area-inset-bottom,0px)] text-muted-foreground transition-colors hover:text-foreground"
+          className="fixed bottom-6 left-1/2 max-lg:hidden z-30 flex -translate-x-1/2 cursor-pointer flex-col items-center gap-2 pb-[env(safe-area-inset-bottom,0px)] text-muted-foreground transition-colors hover:text-foreground"
         >
           <span className="flex h-9 w-6 items-start justify-center rounded-full border-2 border-current p-1.5">
             <motion.span

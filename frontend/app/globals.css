@@ -63,8 +63,8 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-inter), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: var(--font-geist), "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -89,6 +89,16 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   --color-brand: hsl(var(--brand));
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Endless horizontal scroll: content is rendered twice, so sliding by half loops seamlessly. */
+  --animate-marquee: marquee 40s linear infinite;
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
 }
 
 /* ==========================================================================
@@ -107,6 +117,22 @@
     scroll-padding-top: 5.5rem;
     overflow-y: scroll;
     scrollbar-gutter: stable;
+  }
+
+  /* Landing page: every scroll lands on a section (or the footer at the very end).
+     Sections sit under the floating navbar, so they snap flush to the top. */
+  html:has([data-scroll-snap]) {
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: 0;
+  }
+  html:has([data-scroll-snap]) footer {
+    scroll-snap-align: end;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   body {

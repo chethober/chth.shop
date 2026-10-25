@@ -7,8 +7,6 @@ import type {
   CartItem,
   Order,
   Product,
-  TelegramAuthData,
-  TelegramConfig,
   User,
 } from '@/types'
 
@@ -77,11 +75,10 @@ async function request<T>(promise: Promise<{ data: Envelope<T> }>): Promise<T> {
 
 export const api = {
   auth: {
-    googleUrl: `${API_URL}/auth/google`,
-    xUrl: `${API_URL}/auth/x`,
-    telegramConfig: () => request<TelegramConfig>(http.get('/auth/telegram/config')),
-    telegram: (data: TelegramAuthData) =>
-      request<{ user: User; token: string }>(http.post('/auth/telegram', data)),
+    /** Starts a redirect-based OAuth sign-in; the backend sends the browser back to /auth/callback. */
+    providerUrl: (provider: 'google' | 'x' | 'telegram') => `${API_URL}/auth/${provider}`,
+    /** Opens the CHTH bot, which replies with a one-tap sign-in button back to /auth/callback. */
+    telegramBotUrl: () => `${API_URL}/auth/telegram/bot`,
     me: () => request<{ user: User }>(http.get('/auth/me')).then((d) => d.user),
     updateUsername: (newUsername: string) =>
       request<{ user: User; token: string }>(http.put('/auth/username', { newUsername })),
