@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { PageContainer } from '@/components/layout/page-container'
-import { AgreementCard } from '@/features/collab/agreement-card'
-import { EconomicsCard } from '@/features/collab/economics-card'
+import { Eyebrow } from '@/components/shared/eyebrow'
+import { CollabBento } from '@/features/collab/collab-bento'
 
 export const metadata: Metadata = {
   title: 'Artist Collaboration',
@@ -10,11 +10,15 @@ export const metadata: Metadata = {
 
 export default function CollabPage() {
   return (
-    <PageContainer className="justify-center">
-      <div className="grid w-full grid-cols-1 items-stretch gap-5 lg:grid-cols-12 lg:gap-6">
-        <EconomicsCard />
-        <AgreementCard />
+    <PageContainer className="justify-center gap-6">
+      <div className="space-y-3">
+        <Eyebrow pulse>Artist program</Eyebrow>
+        <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          Your art. <span className="font-serif font-light italic text-foreground/90">Our hustle.</span>
+        </h1>
       </div>
+
+      <CollabBento />
     </PageContainer>
   )
 }
