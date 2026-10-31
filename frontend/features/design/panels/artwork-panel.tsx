@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { DEFAULT_TEXT_COLOR } from '../constants'
 import { FieldLabel, PanelShell, SwatchGrid } from './panel-shell'
+import { useT } from '@/lib/i18n'
 
 export type ArtworkTab = 'graphic' | 'text'
 
@@ -54,6 +55,7 @@ function UploadTile({
 }
 
 export function ArtworkPanel(props: ArtworkPanelProps) {
+  const t = useT()
   const { tab, onTabChange, hasLogo, onRemoveLogo, onClose } = props
   const [text, setText] = useState('')
   const [textColor, setTextColor] = useState(DEFAULT_TEXT_COLOR)
@@ -65,7 +67,7 @@ export function ArtworkPanel(props: ArtworkPanelProps) {
   }
 
   return (
-    <PanelShell title="Artwork & typography" icon={ImageIcon} onClose={onClose}>
+    <PanelShell title={t("Artwork & typography")} icon={ImageIcon} onClose={onClose}>
       <div className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/30 p-1">
         {(
           [
@@ -90,21 +92,21 @@ export function ArtworkPanel(props: ArtworkPanelProps) {
 
       {tab === 'graphic' ? (
         <div className="space-y-3">
-          <FieldLabel>Upload graphic</FieldLabel>
-          <UploadTile icon={Shirt} title="Apply as chest logo" hint="Fixed front chest placement" onLoad={props.onUploadLogo} />
-          <UploadTile icon={Plus} title="Add as movable layer" hint="Scale & position freely" onLoad={props.onUploadLayer} />
+          <FieldLabel>{t("Upload graphic")}</FieldLabel>
+          <UploadTile icon={Shirt} title={t("Apply as chest logo")} hint="Fixed front chest placement" onLoad={props.onUploadLogo} />
+          <UploadTile icon={Plus} title={t("Add as movable layer")} hint="Scale & position freely" onLoad={props.onUploadLayer} />
           {hasLogo && (
             <div className="flex items-center justify-between border-t border-border/50 pt-2 text-[10px]">
-              <span className="text-muted-foreground">Chest logo applied</span>
+              <span className="text-muted-foreground">{t("Chest logo applied")}</span>
               <button type="button" onClick={onRemoveLogo} className="cursor-pointer font-semibold text-destructive hover:underline">
-                Remove logo
+                {t("Remove logo")}
               </button>
             </div>
           )}
         </div>
       ) : (
         <div className="space-y-3">
-          <FieldLabel>Add text layer</FieldLabel>
+          <FieldLabel>{t("Add text layer")}</FieldLabel>
           <div className="flex gap-1.5">
             <Input
               value={text}
@@ -115,15 +117,15 @@ export function ArtworkPanel(props: ArtworkPanelProps) {
                   addText()
                 }
               }}
-              placeholder="Type something cool…"
+              placeholder={t("Type something cool…")}
               className="h-8 min-w-0 flex-1 text-xs"
             />
             <Button size="sm" onClick={addText} disabled={!text.trim()}>
-              Add
+              {t("Add")}
             </Button>
           </div>
           <div className="space-y-2 border-t border-border/30 pt-2">
-            <FieldLabel aside={textColor}>Text color</FieldLabel>
+            <FieldLabel aside={textColor}>{t("Text color")}</FieldLabel>
             <SwatchGrid value={textColor} onChange={setTextColor} />
           </div>
         </div>

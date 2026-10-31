@@ -28,6 +28,13 @@ const env = {
   jwtExpiresIn: '7d',
   sessionSecret: required('SESSION_SECRET', 'dev-only-session-secret'),
 
+  /** CHTH hub reporting (optional): the hub's URL and this site's own secret. */
+  hub: {
+    url: process.env.HUB_URL || '',
+    secret: process.env.HUB_SECRET || '',
+    currency: process.env.SHOP_CURRENCY || 'USD',
+  },
+
   rateLimit: {
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,

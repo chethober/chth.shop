@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { formatDate } from '@/lib/format'
 import type { Artist } from '@/types'
+import { useT } from '@/lib/i18n'
 
-async function shareStore(title: string) {
+async function shareStore(title: string, copiedMessage: string) {
   const url = window.location.href
   if (navigator.share) {
     try {
@@ -20,10 +21,11 @@ async function shareStore(title: string) {
     }
   }
   await navigator.clipboard.writeText(url)
-  toast.info('Link copied to clipboard')
+  toast.info(copiedMessage)
 }
 
 export function ArtistProfileCard({ artist, productCount }: { artist: Artist; productCount: number }) {
+  const t = useT()
   const username = artist.user?.username ?? ''
   const displayName = artist.storeName || username
   const initials = displayName.slice(0, 2).toUpperCase()
@@ -41,15 +43,15 @@ export function ArtistProfileCard({ artist, productCount }: { artist: Artist; pr
               <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{displayName}</h1>
               <p className="text-xs font-medium text-brand">@{username}</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => shareStore(`${displayName} on CHTH`)}>
+            <Button variant="outline" size="sm" onClick={() => shareStore(t('{name} on CHTH', { name: displayName }), t('Link copied to clipboard'))}>
               <Share2 />
-              Share store
+              {t("Share store")}
             </Button>
           </div>
 
           <div className="flex-1 space-y-5 lg:pt-12">
             <div className="space-y-1.5">
-              <h2 className="text-sm font-bold text-foreground">About</h2>
+              <h2 className="text-sm font-bold text-foreground">{t("About")}</h2>
               <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                 {artist.bio || 'This artist creates unique custom merchandise and apparel.'}
               </p>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { COLORWAYS, DESIGN_STEPS, type Colorway } from '../content'
 import { LandingSection, SectionTitle } from '../section-parts'
+import { useT } from '@/lib/i18n'
 
 interface DesignSectionProps {
   colorway: Colorway
@@ -14,17 +15,18 @@ interface DesignSectionProps {
 }
 
 export function DesignSection({ colorway, onColorwayChange, onOpenStudio }: DesignSectionProps) {
+  const t = useT()
   return (
     <LandingSection id="design" align="left">
-      <Eyebrow icon={Palette}>Design studio</Eyebrow>
-      <SectionTitle accent="yours.">Make it</SectionTitle>
+      <Eyebrow icon={Palette}>{t("Design studio")}</Eyebrow>
+      <SectionTitle accent={t('yours.')}>{t("Make it")}</SectionTitle>
 
       <div className="space-y-2.5">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold uppercase tracking-wider text-muted-foreground">Try a colorway</span>
-          <span className="font-bold text-foreground">{colorway.name}</span>
+          <span className="font-semibold uppercase tracking-wider text-muted-foreground">{t("Try a colorway")}</span>
+          <span className="font-bold text-foreground">{t(colorway.name)}</span>
         </div>
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Tee colorway">
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("Tee colorway")}>
           {COLORWAYS.map((option) => {
             const selected = option.hex === colorway.hex
             return (
@@ -33,8 +35,8 @@ export function DesignSection({ colorway, onColorwayChange, onOpenStudio }: Desi
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                aria-label={option.name}
-                title={option.name}
+                aria-label={t(option.name)}
+                title={t(option.name)}
                 onClick={() => onColorwayChange(option)}
                 className={cn(
                   'size-9 cursor-pointer rounded-full border border-black/20 shadow-xs transition-transform hover:scale-110',
@@ -54,15 +56,15 @@ export function DesignSection({ colorway, onColorwayChange, onOpenStudio }: Desi
               {index + 1}
             </span>
             <div>
-              <h3 className="text-sm font-bold text-foreground">{step.title}</h3>
-              <p className="text-xs text-muted-foreground">{step.description}</p>
+              <h3 className="text-sm font-bold text-foreground">{t(step.title)}</h3>
+              <p className="text-xs text-muted-foreground">{t(step.description)}</p>
             </div>
           </li>
         ))}
       </ol>
 
       <Button size="lg" onClick={onOpenStudio} className="group shadow-xl shadow-brand/20">
-        Open design studio
+        {t("Open design studio")}
         <ArrowRight className="transition-transform group-hover:translate-x-1" />
       </Button>
     </LandingSection>

@@ -7,6 +7,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { AI_PROMPT_PRESETS } from '../constants'
 import { FieldLabel, PanelShell } from './panel-shell'
+import { useT } from '@/lib/i18n'
 
 /**
  * Placeholder artwork generator: draws a gradient badge with the prompt text.
@@ -41,6 +42,7 @@ function renderPlaceholderArtwork(prompt: string): string {
 }
 
 export function AiPanel({ onGenerated, onClose }: { onGenerated: (dataUrl: string) => void; onClose: () => void }) {
+  const t = useT()
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -54,14 +56,14 @@ export function AiPanel({ onGenerated, onClose }: { onGenerated: (dataUrl: strin
   }
 
   return (
-    <PanelShell title="AI artwork generator" icon={Bot} onClose={onClose}>
+    <PanelShell title={t("AI artwork generator")} icon={Bot} onClose={onClose}>
       <div className="space-y-2">
-        <FieldLabel>Prompt</FieldLabel>
+        <FieldLabel>{t("Prompt")}</FieldLabel>
         <Textarea
           rows={2}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Describe your artwork idea (e.g. cyberpunk streetwear skull)…"
+          placeholder={t("Describe your artwork idea (e.g. cyberpunk streetwear skull)…")}
           className="min-h-0 resize-none text-xs"
         />
         <div className="flex flex-wrap gap-1">

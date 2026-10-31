@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import api from '@/lib/api'
 import type { Cart, Order } from '@/types'
 import { OrderSummary } from './order-summary'
+import { useT } from '@/lib/i18n'
 
 interface CheckoutDialogProps {
   cart: Cart
@@ -29,6 +30,7 @@ interface CheckoutDialogProps {
 }
 
 export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: CheckoutDialogProps) {
+  const t = useT()
   const [shippingAddress, setShippingAddress] = useState('')
   const [isPlacing, setIsPlacing] = useState(false)
   const [order, setOrder] = useState<Order | null>(null)
@@ -47,7 +49,7 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
       setOrder(await api.orders.create(shippingAddress.trim()))
       setShippingAddress('')
       onOrderPlaced()
-      toast.success('Order placed!')
+      toast.success(t("Order placed!"))
     } catch (error) {
       toast.danger(error instanceof Error ? error.message : 'Could not place your order')
     } finally {
@@ -64,21 +66,21 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
               <CheckCircle2 className="size-9" />
             </div>
             <div className="space-y-1.5">
-              <DialogTitle className="text-xl">Order placed</DialogTitle>
-              <DialogDescription>We&apos;re preparing it for printing and delivery.</DialogDescription>
+              <DialogTitle className="text-xl">{t("Order placed")}</DialogTitle>
+              <DialogDescription>{t('We’re preparing it for printing and delivery.')}</DialogDescription>
               <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                Order ID: <code className="font-semibold text-foreground">{order.id.slice(0, 8).toUpperCase()}</code>
-                <CopyButton value={order.id} label="Copy order ID" />
+                {t("Order ID:")} <code className="font-semibold text-foreground">{order.id.slice(0, 8).toUpperCase()}</code>
+                <CopyButton value={order.id} label={t("Copy order ID")} />
               </p>
             </div>
             <div className="flex flex-col justify-center gap-2 sm:flex-row">
               <Button asChild>
                 <Link href="/account?tab=orders" onClick={close}>
-                  View orders
+                  {t("View orders")}
                 </Link>
               </Button>
               <Button variant="outline" onClick={close}>
-                Close
+                {t("Close")}
               </Button>
             </div>
           </div>
@@ -87,15 +89,15 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CreditCard className="size-5" />
-                Checkout
+                {t("Checkout")}
               </DialogTitle>
-              <DialogDescription>Enter your shipping details to place the order.</DialogDescription>
+              <DialogDescription>{t("Enter your shipping details to place the order.")}</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-1.5">
               <Label htmlFor="shipping-address">
                 <MapPin className="size-3.5" />
-                Shipping address
+                {t("Shipping address")}
               </Label>
               <Textarea
                 id="shipping-address"
@@ -103,7 +105,7 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
                 rows={3}
                 value={shippingAddress}
                 onChange={(event) => setShippingAddress(event.target.value)}
-                placeholder="Street, city, postal code, country"
+                placeholder={t("Street, city, postal code, country")}
               />
             </div>
 
@@ -111,7 +113,7 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
 
             <DialogFooter>
               <Button variant="outline" onClick={close}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={isPlacing || !shippingAddress.trim()}>
                 {isPlacing ? <Spinner /> : <CheckCircle2 />}

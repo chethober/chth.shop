@@ -19,7 +19,7 @@ export function LandingSection({
       id={id}
       className="relative flex min-h-screen items-end px-4 pb-16 pt-[46vh] sm:px-6 lg:items-center lg:px-8 lg:py-28"
     >
-      <div className="mx-auto grid w-full max-w-7xl lg:grid-cols-12">
+      <div className="landing-grid mx-auto grid w-full max-w-7xl lg:grid-cols-12">
         <div
           className={cn(
             'space-y-7 rounded-3xl bg-background/70 p-5 backdrop-blur-sm sm:p-6 lg:col-span-5 lg:bg-transparent lg:p-0 lg:backdrop-blur-none',

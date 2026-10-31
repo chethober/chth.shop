@@ -16,12 +16,14 @@ import useCartStore from '@/store/cart-store'
 import { CartLineItem } from './cart-line-item'
 import { CheckoutDialog } from './checkout-dialog'
 import { OrderSummary } from './order-summary'
+import { useT } from '@/lib/i18n'
 
 function showError(error: unknown) {
   toast.danger(error instanceof Error ? error.message : 'Something went wrong')
 }
 
 export function CartView() {
+  const t = useT()
   const isSignedIn = useRequireAuth('/cart')
   const { cart, isLoading, fetchCart, updateItem, removeItem, clear } = useCartStore()
   const [checkoutOpen, setCheckoutOpen] = useState(false)
@@ -30,26 +32,26 @@ export function CartView() {
     if (isSignedIn) fetchCart()
   }, [isSignedIn, fetchCart])
 
-  if (!isSignedIn || (isLoading && !cart)) return <LoadingState label="Loading your cart…" />
+  if (!isSignedIn || (isLoading && !cart)) return <LoadingState label={t("Loading your cart…")} />
 
   const items = cart?.items ?? []
 
   return (
     <>
-      <PageHeader title="Cart" description="Review your items before checkout." />
+      <PageHeader title={t("Cart")} description={t("Review your items before checkout.")} />
 
       {!cart || items.length === 0 ? (
         <EmptyState
           icon={ShoppingBag}
-          title="Your cart is empty"
-          description="Discover custom pieces made by independent artists."
+          title={t("Your cart is empty")}
+          description={t("Discover custom pieces made by independent artists.")}
           action={
             <>
               <Button asChild>
-                <Link href="/">Explore items</Link>
+                <Link href="/">{t("Explore items")}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/design">Start designing</Link>
+                <Link href="/design">{t("Start designing")}</Link>
               </Button>
             </>
           }
@@ -67,7 +69,7 @@ export function CartView() {
                   confirmLabel="Clear"
                   onConfirm={() => clear().catch(showError)}
                 >
-                  Clear cart
+                  {t("Clear cart")}
                 </ConfirmButton>
               </CardHeader>
               <CardContent>
@@ -89,13 +91,13 @@ export function CartView() {
           <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="lg:sticky lg:top-24 lg:col-span-4">
             <Card>
               <CardHeader>
-                <CardTitle>Order summary</CardTitle>
+                <CardTitle>{t("Order summary")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 <OrderSummary cart={cart} />
                 <Button className="w-full" onClick={() => setCheckoutOpen(true)}>
                   <CreditCard />
-                  Proceed to checkout
+                  {t("Proceed to checkout")}
                 </Button>
               </CardContent>
             </Card>

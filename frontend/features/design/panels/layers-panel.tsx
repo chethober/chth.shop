@@ -1,7 +1,10 @@
+'use client'
+
 import { Sliders, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { DesignLayer } from '../constants'
 import { FieldLabel, PanelShell } from './panel-shell'
+import { useT } from '@/lib/i18n'
 
 function RangeInput({
   label,
@@ -18,6 +21,7 @@ function RangeInput({
   step: number
   onChange: (value: number) => void
 }) {
+  const t = useT()
   return (
     <label className="flex items-center gap-2">
       <span className="w-3 text-[9px] text-muted-foreground">{label}</span>
@@ -45,6 +49,7 @@ export function LayersPanel({
   onRemove: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const setAxis = (axis: 0 | 1, value: number) => {
     const position = [...layer.position] as DesignLayer['position']
     position[axis] = value
@@ -52,27 +57,27 @@ export function LayersPanel({
   }
 
   return (
-    <PanelShell title="Layer transforms" icon={Sliders} onClose={onClose}>
+    <PanelShell title={t("Layer transforms")} icon={Sliders} onClose={onClose}>
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <FieldLabel>Position</FieldLabel>
+          <FieldLabel>{t("Position")}</FieldLabel>
           <RangeInput label="X" value={layer.position[0]} min={-0.3} max={0.3} step={0.01} onChange={(v) => setAxis(0, v)} />
           <RangeInput label="Y" value={layer.position[1]} min={-0.3} max={0.3} step={0.01} onChange={(v) => setAxis(1, v)} />
         </div>
 
         <div className="space-y-1.5">
-          <FieldLabel>Scale</FieldLabel>
+          <FieldLabel>{t("Scale")}</FieldLabel>
           <RangeInput label="" value={layer.scale[0]} min={0.05} max={0.4} step={0.01} onChange={(v) => onChange({ scale: [v, v, v] })} />
         </div>
 
         <div className="space-y-1.5">
-          <FieldLabel aside={`${Math.round((layer.rotation * 180) / Math.PI)}°`}>Rotation</FieldLabel>
+          <FieldLabel aside={`${Math.round((layer.rotation * 180) / Math.PI)}°`}>{t("Rotation")}</FieldLabel>
           <RangeInput label="" value={layer.rotation} min={0} max={Math.PI * 2} step={0.05} onChange={(v) => onChange({ rotation: v })} />
         </div>
 
         <Button variant="destructive-outline" size="sm" className="w-full" onClick={onRemove}>
           <Trash2 />
-          Remove layer
+          {t("Remove layer")}
         </Button>
       </div>
     </PanelShell>

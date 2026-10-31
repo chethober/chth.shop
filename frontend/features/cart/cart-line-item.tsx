@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { formatPrice } from '@/lib/format'
 import { getProductTypeLabel } from '@/lib/products'
 import type { CartItem } from '@/types'
+import { useT } from '@/lib/i18n'
 
 interface CartLineItemProps {
   item: CartItem
@@ -16,6 +17,7 @@ interface CartLineItemProps {
 }
 
 export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLineItemProps) {
+  const t = useT()
   const price = item.product?.price ?? 0
 
   return (
@@ -43,7 +45,7 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
           className="size-7"
           onClick={() => onQuantityChange(item.quantity - 1)}
           disabled={item.quantity <= 1}
-          aria-label="Decrease quantity"
+          aria-label={t("Decrease quantity")}
         >
           <Minus />
         </Button>
@@ -53,7 +55,7 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
           size="icon-sm"
           className="size-7"
           onClick={() => onQuantityChange(item.quantity + 1)}
-          aria-label="Increase quantity"
+          aria-label={t("Increase quantity")}
         >
           <Plus />
         </Button>
@@ -67,7 +69,7 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
         variant="ghost"
         size="icon-sm"
         onClick={onRemove}
-        aria-label="Remove item"
+        aria-label={t("Remove item")}
         className="hover:bg-destructive/10 hover:text-destructive"
       >
         <Trash2 />

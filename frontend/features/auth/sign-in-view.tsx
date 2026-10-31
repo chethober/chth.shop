@@ -17,6 +17,7 @@ import type { TelegramAuthData, TelegramConfig } from '@/types'
 import { describeAuthError } from './auth-errors'
 import { GoogleIcon, TelegramIcon, XIcon } from './provider-icons'
 import { rememberRedirect, safeRedirectPath } from './redirect'
+import { useT } from '@/lib/i18n'
 
 type Provider = 'google' | 'x' | 'telegram'
 
@@ -30,6 +31,7 @@ declare global {
 }
 
 export function SignInView() {
+  const t = useT()
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = safeRedirectPath(searchParams.get('redirect'))
@@ -125,8 +127,8 @@ export function SignInView() {
           transition={{ duration: 0.3 }}
           className="space-y-1.5 text-center"
         >
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Sign in</h1>
-          <p className="text-sm text-muted-foreground">Continue with your preferred account</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t("Sign in")}</h1>
+          <p className="text-sm text-muted-foreground">{t("Continue with your preferred account")}</p>
         </motion.div>
 
         <motion.div
@@ -149,7 +151,7 @@ export function SignInView() {
                 <button
                   type="button"
                   onClick={() => setDismissedError(true)}
-                  aria-label="Dismiss error"
+                  aria-label={t("Dismiss error")}
                   className="cursor-pointer text-destructive/70 transition-colors hover:text-destructive"
                 >
                   <X className="size-4" />
@@ -206,7 +208,7 @@ export function SignInView() {
             </span>
             <span className="flex items-center gap-1.5 rounded-full border border-border/80 bg-secondary/80 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
               <span className="size-1.5 rounded-full bg-[#24A1DE]" />
-              Management Bot
+              {t("Management Bot")}
             </span>
           </button>
         </motion.div>
@@ -214,7 +216,7 @@ export function SignInView() {
         <p className="px-4 text-center text-[11px] leading-relaxed text-muted-foreground">
           By signing in, you agree to our{' '}
           <Link href="/terms" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
-            Terms of Service
+            {t("Terms of Service")}
           </Link>
           .
         </p>
@@ -224,7 +226,7 @@ export function SignInView() {
         <DialogContent className="max-w-sm text-center">
           <TelegramIcon className="mx-auto mt-2 size-12 text-[#24A1DE]" />
           <DialogHeader className="text-center">
-            <DialogTitle>Sign in with Telegram</DialogTitle>
+            <DialogTitle>{t("Sign in with Telegram")}</DialogTitle>
             <DialogDescription>
               Authenticate via the CHTH Management Bot
               {telegramConfig?.botUsername ? ` (@${telegramConfig.botUsername})` : ''}
@@ -237,7 +239,7 @@ export function SignInView() {
             <div className="space-y-2 rounded-xl border border-border bg-secondary/60 p-3.5 text-left text-xs text-muted-foreground">
               <p className="flex items-center gap-1.5 font-semibold text-foreground">
                 <Info className="size-3.5 text-brand" />
-                Telegram bot setup
+                {t("Telegram bot setup")}
               </p>
               <p className="text-[11px] leading-relaxed">
                 To enable Telegram sign-in, add your bot credentials to{' '}
@@ -251,7 +253,7 @@ export function SignInView() {
           )}
 
           <Button variant="outline" onClick={() => setTelegramOpen(false)} className="w-full">
-            Close
+            {t("Close")}
           </Button>
         </DialogContent>
       </Dialog>

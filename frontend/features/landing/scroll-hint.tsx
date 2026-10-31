@@ -1,16 +1,18 @@
 'use client'
 
 import { AnimatePresence, motion } from 'framer-motion'
+import { useT } from '@/lib/i18n'
 
 /** "Scroll" cue pinned to the bottom of the screen until the visitor starts scrolling. */
 export function ScrollHint({ visible, onClick }: { visible: boolean; onClick: () => void }) {
+  const t = useT()
   return (
     <AnimatePresence>
       {visible && (
         <motion.button
           type="button"
           onClick={onClick}
-          aria-label="Scroll down"
+          aria-label={t("Scroll down")}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
@@ -24,7 +26,7 @@ export function ScrollHint({ visible, onClick }: { visible: boolean; onClick: ()
               className="size-1.5 rounded-full bg-brand"
             />
           </span>
-          <span className="text-[11px] font-semibold uppercase tracking-widest">Scroll</span>
+          <span className="text-[11px] font-semibold uppercase tracking-widest">{t("Scroll")}</span>
         </motion.button>
       )}
     </AnimatePresence>

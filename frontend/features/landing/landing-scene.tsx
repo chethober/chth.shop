@@ -8,6 +8,7 @@ import * as THREE from 'three'
 import { StudioEnvironment } from '@/components/three/studio-environment'
 import { cn } from '@/lib/utils'
 import { MODEL_TIPS, type ModelTip } from './content'
+import { useT } from '@/lib/i18n'
 
 const MODEL_PATH = '/models/shirt_baked.glb'
 useGLTF.preload(MODEL_PATH)
@@ -136,9 +137,11 @@ interface FloatingTeeProps {
   isLaunching: boolean
   isMobile: boolean
   tipsPortal?: React.RefObject<HTMLElement | null>
+  /** The tips, already translated: the 3D canvas doesn't see the page's language context. */
+  tips: ModelTip[]
 }
 
-function FloatingTee({ progress, color, decalUrl, isLaunching, isMobile, tipsPortal }: FloatingTeeProps) {
+function FloatingTee({ progress, color, decalUrl, isLaunching, isMobile, tipsPortal, tips }: FloatingTeeProps) {
   const group = useRef<THREE.Group>(null)
   const placed = useRef(false)
   const { nodes, materials } = useGLTF(MODEL_PATH) as unknown as {
@@ -190,7 +193,7 @@ function FloatingTee({ progress, color, decalUrl, isLaunching, isMobile, tipsPor
           <PrintDecal url={decalUrl} position={[0, 0.03, -0.13]} rotation={[0, Math.PI, 0]} />
         </Suspense>
       </mesh>
-      {MODEL_TIPS.map((tip) => (
+      {tips.map((tip) => (
         <Tip
           key={tip.id}
           tip={tip}
@@ -252,6 +255,8 @@ export interface LandingSceneProps {
 
 export default function LandingScene(props: LandingSceneProps) {
   const isMobile = useIsMobile()
+  const t = useT()
+  const tips = MODEL_TIPS.map((tip) => ({ ...tip, title: t(tip.title), text: t(tip.text) }))
 
   return (
     <Canvas camera={{ position: [0, 0, 2.5], fov: 25 }} gl={{ antialias: true, alpha: true }} dpr={[1, 2]} className="size-full">
@@ -264,7 +269,7 @@ export default function LandingScene(props: LandingSceneProps) {
       <directionalLight position={[0, -4, 2]} intensity={0.25} />
       <StudioEnvironment />
       <Suspense fallback={<TeeLoading progress={props.progress} isMobile={isMobile} />}>
-        <FloatingTee {...props} isMobile={isMobile} />
+        <FloatingTee {...props} isMobile={isMobile} tips={tips} />
       </Suspense>
       <ContactShadows position={[0, -0.85, 0]} opacity={0.35} scale={4.5} blur={1.8} far={2} />
     </Canvas>

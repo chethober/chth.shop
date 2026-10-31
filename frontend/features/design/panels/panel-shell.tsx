@@ -1,7 +1,10 @@
+'use client'
+
 import { X, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { COLOR_PALETTE } from '../constants'
+import { useT } from '@/lib/i18n'
 
 /** Header + body frame shared by every studio tool panel. */
 export function PanelShell({
@@ -15,6 +18,7 @@ export function PanelShell({
   onClose: () => void
   children: React.ReactNode
 }) {
+  const t = useT()
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between border-b border-border/50 pb-2">
@@ -22,7 +26,7 @@ export function PanelShell({
           <Icon className="size-3.5 text-brand" />
           {title}
         </h2>
-        <Button variant="ghost" size="icon-sm" className="size-6" onClick={onClose} aria-label="Close panel">
+        <Button variant="ghost" size="icon-sm" className="size-6" onClick={onClose} aria-label={t("Close panel")}>
           <X />
         </Button>
       </div>

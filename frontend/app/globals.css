@@ -143,3 +143,12 @@
     touch-action: none;
   }
 }
+
+/* Persian and Arabic: the CHTH RTL font. */
+html[dir='rtl'] body { font-family: var(--chth-font-rtl); }
+.chth-footer { --chth-line: hsl(var(--border)); }
+/* The landing keeps text beside the 3D tee: sections stay where they are, text reads right to left. */
+html[dir='rtl'] .landing-grid { direction: ltr; }
+html[dir='rtl'] .landing-grid > * { direction: rtl; }
+/* Arrows that mean "forward" point the reading direction. */
+html[dir='rtl'] :is(.lucide-arrow-right, .lucide-chevron-right) { transform: scaleX(-1); }
