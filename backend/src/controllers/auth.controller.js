@@ -7,11 +7,12 @@ const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
 const { serializeUser } = require('../lib/serializers');
 const {
   findOrCreateOAuthUser,
-  createSession,
   frontendCallbackUrl,
   frontendErrorUrl,
 } = require('../services/identity.service');
-const { isValidTelegramPayload, telegramIdentity } = require('../services/telegram.service');
+const { saveOAuthState, takeOAuthState } = require('../lib/oauth');
+const telegramService = require('../services/telegram.service');
+const telegramBotLogin = require('../services/telegram-bot-login.service');
 const xService = require('../services/x.service');
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/;
@@ -48,96 +49,103 @@ function googleCallback(req, res, next) {
   })(req, res, next);
 }
 
-/* ---------- X (Twitter) ---------- */
+/* ---------- OAuth 2.0 redirect flows (X, Telegram) ---------- */
 
-function startX(req, res) {
-  const origin = frontendOrigin(req);
-  if (!env.x.isConfigured) return res.redirect(frontendErrorUrl(origin, 'x_not_configured'));
+/**
+ * Shared redirect handlers for providers using the authorization-code + PKCE flow.
+ * `resolveIdentity(req, code, codeVerifier)` returns the identity for findOrCreateOAuthUser,
+ * or an error code string to show the user.
+ */
+function oauthFlow(provider, service, resolveIdentity) {
+  function start(req, res) {
+    const origin = frontendOrigin(req);
+    if (!env[provider].isConfigured) return res.redirect(frontendErrorUrl(origin, `${provider}_not_configured`));
 
-  const { url, state, codeVerifier } = xService.createAuthorization(req);
-  req.session.oauthState = state;
-  req.session.codeVerifier = codeVerifier;
-  res.redirect(url);
+    const { url, state, codeVerifier } = service.createAuthorization(req);
+    saveOAuthState(req, provider, { state, codeVerifier });
+    req.session.save((error) => {
+      if (error) {
+        console.error(`${provider} session save failed:`, error);
+        return res.redirect(frontendErrorUrl(origin, `${provider}_oauth_failed`));
+      }
+      res.redirect(url);
+    });
+  }
+
+  async function callback(req, res) {
+    const origin = frontendOrigin(req);
+    try {
+      const { code, state, error } = req.query;
+
+      if (error) return res.redirect(frontendErrorUrl(origin, error));
+      if (!code) return res.redirect(frontendErrorUrl(origin, `${provider}_missing_code`));
+
+      const saved = takeOAuthState(req, provider, state);
+      if (!saved) return res.redirect(frontendErrorUrl(origin, `${provider}_invalid_state`));
+
+      const identity = await resolveIdentity(req, code, saved.codeVerifier);
+      if (typeof identity === 'string') return res.redirect(frontendErrorUrl(origin, identity));
+
+      const user = await findOrCreateOAuthUser(identity);
+      res.redirect(frontendCallbackUrl(origin, user, provider));
+    } catch (error) {
+      console.error(`${provider} OAuth callback error:`, error);
+      res.redirect(frontendErrorUrl(origin, `${provider}_oauth_failed`));
+    }
+  }
+
+  return { start, callback };
 }
 
-async function xCallback(req, res) {
+const xFlow = oauthFlow('x', xService, async (req, code, codeVerifier) => {
+  const accessToken = await xService.exchangeCode(req, code, codeVerifier);
+  if (!accessToken) return 'x_token_failed';
+
+  const profile = await xService.fetchProfile(accessToken);
+  if (!profile) return 'x_profile_failed';
+
+  return { provider: 'x', providerId: profile.id, preferredUsername: profile.username };
+});
+
+const telegramFlow = oauthFlow('telegram', telegramService, async (req, code, codeVerifier) => {
+  const idToken = await telegramService.exchangeCode(req, code, codeVerifier);
+  if (!idToken) return 'telegram_token_failed';
+
+  const claims = await telegramService.verifyIdToken(idToken);
+  if (!claims) return 'telegram_id_token_invalid';
+
+  return telegramService.telegramIdentity(claims);
+});
+
+/* ---------- Telegram bot sign-in ---------- */
+
+/** Sends the browser to the bot, which replies with a one-tap sign-in button. */
+async function startTelegramBot(req, res) {
   const origin = frontendOrigin(req);
+  if (!env.telegram.isBotLoginConfigured) return res.redirect(frontendErrorUrl(origin, 'telegram_bot_not_configured'));
   try {
-    const { code, state, error } = req.query;
-
-    if (error) return res.redirect(frontendErrorUrl(origin, error));
-    if (!code) return res.redirect(frontendErrorUrl(origin, 'x_missing_code'));
-    if (!state || state !== req.session.oauthState) {
-      return res.redirect(frontendErrorUrl(origin, 'x_invalid_state'));
-    }
-
-    const accessToken = await xService.exchangeCode(req, code, req.session.codeVerifier);
-    if (!accessToken) return res.redirect(frontendErrorUrl(origin, 'x_token_failed'));
-
-    const profile = await xService.fetchProfile(accessToken);
-    if (!profile) return res.redirect(frontendErrorUrl(origin, 'x_profile_failed'));
-
-    const user = await findOrCreateOAuthUser({
-      provider: 'x',
-      providerId: profile.id,
-      preferredUsername: profile.username,
-    });
-
-    res.redirect(frontendCallbackUrl(origin, user, 'x'));
+    res.redirect(await telegramBotLogin.botLoginLink());
   } catch (error) {
-    console.error('X OAuth callback error:', error);
-    res.redirect(frontendErrorUrl(origin, 'x_oauth_failed'));
+    console.error('Telegram bot sign-in start failed:', error);
+    res.redirect(frontendErrorUrl(origin, 'telegram_bot_failed'));
   }
 }
 
-/* ---------- Telegram ---------- */
-
-function telegramConfig(req, res) {
-  sendSuccess(res, {
-    data: {
-      botUsername: env.telegram.botUsername,
-      isConfigured: env.telegram.isConfigured,
-    },
-  });
-}
-
-/** Redirect-based Telegram widget flow. */
-async function telegramCallback(req, res) {
+/** Target of the bot's `login_url` button; Telegram appends the signed user data. */
+async function telegramBotCallback(req, res) {
   const origin = frontendOrigin(req);
+  if (!env.telegram.isBotLoginConfigured) return res.redirect(frontendErrorUrl(origin, 'telegram_bot_not_configured'));
   try {
-    if (!req.query.id || !req.query.hash) {
-      return res.redirect(frontendErrorUrl(origin, 'telegram_invalid_data'));
-    }
-    if (!env.telegram.botToken) return res.redirect(frontendErrorUrl(origin, 'telegram_not_configured'));
-    if (!isValidTelegramPayload(req.query)) {
-      return res.redirect(frontendErrorUrl(origin, 'telegram_hash_invalid'));
-    }
+    const fields = telegramBotLogin.verifyLoginData(req.query);
+    if (typeof fields === 'string') return res.redirect(frontendErrorUrl(origin, fields));
 
-    const user = await findOrCreateOAuthUser(telegramIdentity(req.query));
+    const user = await findOrCreateOAuthUser(telegramBotLogin.botLoginIdentity(fields));
     res.redirect(frontendCallbackUrl(origin, user, 'telegram'));
   } catch (error) {
-    console.error('Telegram callback error:', error);
-    res.redirect(frontendErrorUrl(origin, 'telegram_auth_failed'));
+    console.error('Telegram bot sign-in failed:', error);
+    res.redirect(frontendErrorUrl(origin, 'telegram_bot_failed'));
   }
 }
-
-/** JS callback-based Telegram widget flow. */
-const telegramLogin = asyncHandler(async (req, res) => {
-  const data = req.body;
-
-  if (!data || !data.id || !data.hash) {
-    throw new HttpError(400, 'Invalid Telegram authentication payload');
-  }
-  if (!env.telegram.botToken) {
-    throw new HttpError(503, 'Telegram authentication is not configured on the server');
-  }
-  if (!isValidTelegramPayload(data)) {
-    throw new HttpError(401, 'Telegram signature verification failed');
-  }
-
-  const user = await findOrCreateOAuthUser(telegramIdentity(data));
-  sendSuccess(res, { data: createSession(user, 'telegram') });
-});
 
 /* ---------- Current user ---------- */
 
@@ -183,11 +191,12 @@ const updateUsername = asyncHandler(async (req, res) => {
 module.exports = {
   startGoogle,
   googleCallback,
-  startX,
-  xCallback,
-  telegramConfig,
-  telegramCallback,
-  telegramLogin,
+  startX: xFlow.start,
+  xCallback: xFlow.callback,
+  startTelegram: telegramFlow.start,
+  telegramCallback: telegramFlow.callback,
+  startTelegramBot,
+  telegramBotCallback,
   getMe,
   updateUsername,
 };

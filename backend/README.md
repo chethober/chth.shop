@@ -16,10 +16,9 @@ npm run dev                 # http://localhost:5000/api
 The browser never calls this server directly: the frontend proxies `/api` here (see `frontend/next.config.js`).
 OAuth callback and redirect URLs are built from the origin the user is on (via `X-Forwarded-Host`),
 checked against `FRONTEND_URL` (plus private-network hosts in development). Register
-`<origin>/api/auth/google/callback` and `<origin>/api/auth/x/callback` with each provider for every origin you use.
-Google only accepts `localhost` or public domains, so to sign in from a phone use a tunnel/domain
-(e.g. `cloudflared tunnel --url http://localhost:3000`) and add that origin to `FRONTEND_URL` and Google.
-Telegram's widget only works on the domain set with BotFather's `/setdomain`.
+`<origin>/api/auth/google/callback`, `<origin>/api/auth/x/callback` and `<origin>/api/auth/telegram/callback`
+with each provider for every origin you use (for Telegram: @BotFather → your bot → Login Widget → Allowed URLs,
+plus the bare `<origin>`).
 
 ## Layout
 

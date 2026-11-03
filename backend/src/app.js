@@ -11,6 +11,9 @@ const { isAllowedOrigin } = require('./lib/origin');
 const { notFound, errorHandler } = require('./middleware/errors');
 
 const app = express();
+// Behind the Next.js proxy on a private network: honor its X-Forwarded-* so secure cookies and
+// client IPs work, without letting clients spoof them from the public internet.
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: (origin, done) => done(null, !origin || isAllowedOrigin(origin)), credentials: true }));
@@ -25,13 +28,15 @@ app.use(
   })
 );
 
-// Sessions only hold the short-lived PKCE state for the X OAuth flow.
+// Sessions only hold the short-lived PKCE state for the X and Telegram OAuth flows.
 app.use(
   session({
     secret: env.sessionSecret,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: env.isProduction, httpOnly: true, maxAge: 24 * 60 * 60 * 1000 },
+    // 'auto': Secure over HTTPS (per X-Forwarded-Proto), still works over plain-HTTP LAN/dev origins.
+    // 'lax' so the cookie is sent on the top-level redirect back from the provider.
+    cookie: { secure: 'auto', sameSite: 'lax', httpOnly: true, maxAge: 10 * 60 * 1000 },
   })
 );
 app.use(passport.initialize());

@@ -19,3 +19,4 @@ backend/prisma/migrations
 Dockerfile*
 **/Dockerfile*
 docker-compose*.yml
+certs

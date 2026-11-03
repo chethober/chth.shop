@@ -201,14 +201,15 @@ function Tip({
             )}
             style={{ transitionDelay: visible ? `${delay + 150}ms` : '0ms' }}
           />
+          {/* Mono label on a light backing, so it stays legible where it crosses the tee. */}
           <div
             className={cn(
-              'rounded-xl border border-border bg-card/90 px-2.5 py-1.5 shadow-lg backdrop-blur-md transition-[opacity,translate] duration-500 ease-out-strong sm:w-48 sm:px-3 sm:py-2',
+              'rounded-sm bg-background/85 px-2 py-1 font-mono backdrop-blur-md transition-[opacity,translate] duration-500 ease-out-strong sm:w-52',
               visible ? 'translate-x-0 opacity-100' : left ? 'translate-x-2 opacity-0' : '-translate-x-2 opacity-0'
             )}
             style={{ transitionDelay: visible ? `${delay + 200}ms` : '0ms' }}
           >
-            <p className="whitespace-nowrap text-[11px] font-bold text-foreground sm:text-xs">{tip.title}</p>
+            <p className="whitespace-nowrap text-[11px] lowercase text-foreground">{tip.title}</p>
             <p className="mt-0.5 hidden text-[11px] leading-snug text-muted-foreground sm:block">{tip.text}</p>
           </div>
         </div>

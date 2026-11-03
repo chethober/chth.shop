@@ -1,0 +1,16 @@
+{
+  "name": "chth-telegram-bot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "CHTH artist management bot on Telegram Serverless (tgcloud)",
+  "type": "module",
+  "scripts": {
+    "status": "tgcloud status",
+    "deploy": "tgcloud push",
+    "migrate": "tgcloud migrate",
+    "webhook": "tgcloud webhook"
+  },
+  "devDependencies": {
+    "@tgcloud/cli": "0.2.0"
+  }
+}

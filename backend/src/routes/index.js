@@ -27,9 +27,10 @@ router.get('/auth/google/callback', auth.googleCallback);
 // `/twitter` aliases are kept because they may be registered as OAuth callback URLs.
 router.get(['/auth/x', '/auth/twitter'], auth.startX);
 router.get(['/auth/x/callback', '/auth/twitter/callback'], auth.xCallback);
-router.get('/auth/telegram/config', auth.telegramConfig);
+router.get('/auth/telegram', auth.startTelegram);
 router.get('/auth/telegram/callback', auth.telegramCallback);
-router.post('/auth/telegram', auth.telegramLogin);
+router.get('/auth/telegram/bot', auth.startTelegramBot);
+router.get('/auth/telegram/bot/callback', auth.telegramBotCallback);
 router.get('/auth/me', requireAuth, auth.getMe);
 router.put('/auth/username', requireAuth, auth.updateUsername);
 

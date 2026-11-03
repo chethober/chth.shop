@@ -43,14 +43,22 @@ const env = {
     clientSecret: process.env.TWITTER_CLIENT_SECRET,
   },
 
+  // Telegram OpenID Connect; the Client ID and Secret come from @BotFather → your bot → Login Widget.
   telegram: {
+    clientId: process.env.TELEGRAM_CLIENT_ID,
+    clientSecret: process.env.TELEGRAM_CLIENT_SECRET,
+    // Optional: sign-in through the artist bot and website order alerts (see telegram-bot/).
     botToken: process.env.TELEGRAM_BOT_TOKEN,
-    botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
+    adminIds: (process.env.TELEGRAM_ADMIN_IDS || '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean),
   },
 };
 
 env.google.isConfigured = Boolean(env.google.clientId && env.google.clientSecret);
-env.x.isConfigured = Boolean(env.x.clientId);
-env.telegram.isConfigured = Boolean(env.telegram.botToken && env.telegram.botUsername);
+env.x.isConfigured = Boolean(env.x.clientId && env.x.clientSecret);
+env.telegram.isConfigured = Boolean(env.telegram.clientId && env.telegram.clientSecret);
+env.telegram.isBotLoginConfigured = Boolean(env.telegram.botToken);
 
 module.exports = env;

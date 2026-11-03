@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
 const { orderWithItems } = require('../lib/queries');
 const { roundCurrency, serializeOrder } = require('../lib/serializers');
+const { notifyOrderPlacedInBackground } = require('../services/telegram-notify.service');
 
 /** Turns the user's cart into order lines, pricing each item at its current price. */
 async function cartToOrderLines(userId) {
@@ -46,6 +47,8 @@ const createOrder = asyncHandler(async (req, res) => {
     await tx.cartItem.deleteMany({ where: { cartId } });
     return created;
   });
+
+  notifyOrderPlacedInBackground(order.id);
 
   sendSuccess(res, {
     status: 201,

@@ -35,8 +35,16 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID:-}
       TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET:-}
+      TELEGRAM_CLIENT_ID: ${TELEGRAM_CLIENT_ID:-}
+      TELEGRAM_CLIENT_SECRET: ${TELEGRAM_CLIENT_SECRET:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      TELEGRAM_ADMIN_IDS: ${TELEGRAM_ADMIN_IDS:-}
+      # Optional HTTP proxy for outgoing calls (OAuth token exchange etc.), see OUTBOUND_PROXY in .env.example.
+      NODE_USE_ENV_PROXY: ${OUTBOUND_PROXY:+1}
+      HTTPS_PROXY: ${OUTBOUND_PROXY:-}
+      NO_PROXY: localhost,127.0.0.1,db,backend,frontend
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
       - uploads:/app/public/uploads
     depends_on:
@@ -51,6 +59,12 @@ services:
         BACKEND_URL: http://backend:5000
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     restart: unless-stopped
+    # HTTPS when certs/localhost.pem and certs/localhost-key.pem exist (see .env.example), else HTTP.
+    environment:
+      TLS_CERT_FILE: /app/certs/localhost.pem
+      TLS_KEY_FILE: /app/certs/localhost-key.pem
+    volumes:
+      - ./certs:/app/certs:ro
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     depends_on:
