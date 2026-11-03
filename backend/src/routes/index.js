@@ -9,6 +9,8 @@ const orders = require('../controllers/orders.controller');
 const paymentsController = require('../controllers/payments.controller');
 const uploads = require('../controllers/uploads.controller');
 const admin = require('../controllers/admin.controller');
+const collectibles = require('../controllers/collectibles.controller');
+const growth = require('../controllers/growth.controller');
 
 const router = express.Router();
 
@@ -17,7 +19,7 @@ router.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'CHTH API',
-    endpoints: ['/auth', '/users', '/catalog', '/products', '/stores', '/cart', '/orders', '/payments', '/uploads', '/health'],
+    endpoints: ['/auth', '/users', '/catalog', '/products', '/stores', '/cart', '/orders', '/payments', '/collectibles', '/wishlist', '/referrals', '/uploads', '/health'],
   });
 });
 router.get('/health', (req, res) => {
@@ -46,16 +48,29 @@ router.post('/stores/contract/accept', requireAuth, stores.acceptContract);
 router.post('/stores', requireAuth, stores.createStore);
 router.put('/stores', requireAuth, stores.updateStore);
 router.delete('/stores', requireAuth, stores.deleteStore);
-router.get('/stores/:username', stores.getStoreByUsername);
+router.get('/stores/following', requireAuth, growth.listFollowing);
+router.get('/stores/:username', optionalAuth, stores.getStoreByUsername);
+router.put('/stores/:username/follow', requireAuth, growth.followStore);
+router.delete('/stores/:username/follow', requireAuth, growth.unfollowStore);
 
 /* ---------- Catalog & products ---------- */
 router.get('/catalog', products.getCatalog);
-router.get('/products', products.listProducts);
+router.get('/products', optionalAuth, products.listProducts);
 router.get('/products/mine', requireAuth, products.listMyProducts);
 router.get('/products/:id', optionalAuth, products.getProduct);
 router.post('/products', requireAuth, products.createProduct);
 router.put('/products/:id', requireAuth, products.updateProduct);
 router.delete('/products/:id', requireAuth, products.deleteProduct);
+router.get('/products/:id/reviews', optionalAuth, growth.listReviews);
+router.put('/products/:id/reviews', requireAuth, growth.upsertReview);
+router.delete('/products/:id/reviews', requireAuth, growth.deleteReview);
+
+/* ---------- Wishlist & referrals ---------- */
+router.get('/wishlist', requireAuth, growth.listWishlist);
+router.put('/wishlist/:productId', requireAuth, growth.addToWishlist);
+router.delete('/wishlist/:productId', requireAuth, growth.removeFromWishlist);
+router.get('/referrals/me', requireAuth, growth.getMyReferrals);
+router.post('/referrals/claim', requireAuth, growth.claimReferral);
 
 /* ---------- Uploads ---------- */
 router.post('/uploads', requireAuth, uploads.uploadImage);
@@ -72,9 +87,19 @@ router.get('/orders', requireAuth, orders.listOrders);
 router.post('/orders', requireAuth, orders.createOrder);
 router.get('/orders/:orderId', requireAuth, orders.getOrder);
 router.post('/orders/:orderId/pay', requireAuth, orders.payOrder);
+router.post('/orders/:orderId/ton/check', requireAuth, orders.checkTonPayment);
 router.put('/orders/:orderId/cancel', requireAuth, orders.cancelOrder);
+router.get('/payments/methods', paymentsController.methods);
 router.post('/payments/webhook/:provider', paymentsController.webhook);
 router.post('/payments/mock/:orderId/confirm', requireAuth, paymentsController.confirmMockPayment);
+
+/* ---------- NFT-backed merch ---------- */
+router.get('/collectibles', requireAuth, collectibles.listMine);
+router.post('/collectibles/:id/claim', requireAuth, collectibles.claim);
+router.get('/collectibles/verify/:serial', collectibles.verify);
+// TEP-64 metadata read by wallets and marketplaces.
+router.get('/nft/collection.json', collectibles.collectionMetadata);
+router.get('/nft/:file', collectibles.itemMetadata);
 
 /* ---------- Admin (fulfillment) ---------- */
 router.get('/admin/orders', requireAuth, requireAdmin, admin.listOrders);

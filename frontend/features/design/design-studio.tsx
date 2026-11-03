@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -19,7 +19,15 @@ import { isProductType } from '@/lib/products'
 import useAuthStore from '@/store/auth-store'
 import useCartStore from '@/store/cart-store'
 import type { Product, ProductType } from '@/types'
-import { DEFAULT_GARMENT_COLOR, FABRICS, GARMENTS, getGarment, type DesignLayer, type LayerDraft } from './constants'
+import {
+  DEFAULT_GARMENT_COLOR,
+  FABRICS,
+  GARMENTS,
+  getGarment,
+  type DesignLayer,
+  type LayerDraft,
+  type PrintArea,
+} from './constants'
 import { uploadDesignImages, uploadStudioPreview } from './design-assets'
 import { AiPanel } from './panels/ai-panel'
 import { ArtworkPanel, type ArtworkTab } from './panels/artwork-panel'
@@ -33,7 +41,7 @@ const StudioCanvas = dynamic(() => import('./scene/studio-canvas').then((m) => m
 type Panel = 'color' | 'artwork' | 'ai' | 'layers'
 type Busy = 'cart' | 'publish' | null
 
-const APPAREL: ProductType[] = ['tshirt', 'hoodie', 'pants']
+const APPAREL: ProductType[] = ['tshirt', 'hoodie', 'pants', 'beanie']
 
 function downloadMockup() {
   const canvas = document.querySelector<HTMLCanvasElement>('[data-studio-canvas] canvas')
@@ -73,6 +81,10 @@ export function DesignStudio() {
   const [busy, setBusy] = useState<Busy>(null)
   const [publishOpen, setPublishOpen] = useState(false)
   const uploadCache = useRef(new Map<string, string>())
+  /** Where new artwork lands; reported by the 3D model once it has loaded. */
+  const [printArea, setPrintArea] = useState<PrintArea | null>(null)
+  /** Set when switching products: existing layers move to the new product's print area once known. */
+  const [relayoutPending, setRelayoutPending] = useState(false)
 
   const garment = getGarment(garmentId)
   const catalogItem = getCatalogItem(garmentId)
@@ -133,7 +145,13 @@ export function DesignStudio() {
     const id = crypto.randomUUID()
     setLayers((current) => [
       ...current,
-      { ...layer, id, position: [...garment.chestPosition], rotation: 0, scale: [...garment.chestScale] },
+      {
+        ...layer,
+        id,
+        position: [...(printArea?.position ?? garment.chestPosition)],
+        rotation: 0,
+        scale: [...(printArea?.scale ?? garment.chestScale)],
+      },
     ])
     setSelectedLayerId(id)
   }
@@ -157,12 +175,21 @@ export function DesignStudio() {
 
   const switchGarment = (id: ProductType) => {
     setGarmentId(id)
-    // Placements are per product; carry the artwork over at the new product's print area.
-    const next = getGarment(id)
-    setLayers((current) =>
-      current.map((layer) => ({ ...layer, position: [...next.chestPosition], scale: [...next.chestScale] }))
-    )
+    setPrintArea(null)
+    // Placements are per product; artwork moves to the new product's print area once it loads.
+    setRelayoutPending(true)
   }
+
+  const handlePrintArea = useCallback(
+    (area: PrintArea) => {
+      setPrintArea(area)
+      if (relayoutPending) {
+        setRelayoutPending(false)
+        setLayers((current) => current.map((layer) => ({ ...layer, position: [...area.position], scale: [...area.scale] })))
+      }
+    },
+    [relayoutPending]
+  )
 
   const requireSignIn = () => {
     if (hydrated && isAuthenticated) return false
@@ -433,6 +460,7 @@ export function DesignStudio() {
           color={activeColor}
           logoUrl={logoUrl}
           layers={layers}
+          onPrintArea={handlePrintArea}
           onSelectLayer={(id) => {
             if (lockedLayerIds.has(id)) return
             setSelectedLayerId(id)

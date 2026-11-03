@@ -19,7 +19,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import api from '@/lib/api'
 import type { Cart, Order } from '@/types'
-import { PayButton } from '@/features/checkout/pay-button'
+import { PaymentOptions } from '@/features/checkout/payment-options'
+import { formatPrice } from '@/lib/format'
 import { OrderSummary } from './order-summary'
 
 interface CheckoutDialogProps {
@@ -49,14 +50,6 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
       setOrder(created)
       setShippingAddress('')
       onOrderPlaced()
-      // Go straight to the crypto checkout; if that fails the dialog offers a retry.
-      try {
-        const { paymentUrl } = await api.orders.pay(created.id)
-        window.location.href = paymentUrl
-        return
-      } catch (error) {
-        toast.danger(error instanceof Error ? error.message : 'Could not start the payment')
-      }
     } catch (error) {
       toast.danger(error instanceof Error ? error.message : 'Could not place your order')
     } finally {
@@ -74,14 +67,19 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
             </div>
             <div className="space-y-1.5">
               <DialogTitle className="text-xl">Order created</DialogTitle>
-              <DialogDescription>Complete the crypto payment and we&apos;ll start printing.</DialogDescription>
+              <DialogDescription>Pay now and we&apos;ll start printing.</DialogDescription>
               <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 Order ID: <code className="font-semibold text-foreground">{order.id.slice(0, 8).toUpperCase()}</code>
                 <CopyButton value={order.id} label="Copy order ID" />
               </p>
             </div>
+            {order.discount > 0 && (
+              <p className="text-xs font-medium text-success">
+                Welcome discount: −{formatPrice(order.discount)} · you pay {formatPrice(order.total)}
+              </p>
+            )}
+            <PaymentOptions orderId={order.id} className="text-left" />
             <div className="flex flex-col justify-center gap-2 sm:flex-row">
-              <PayButton orderId={order.id} />
               <Button asChild variant="outline">
                 <Link href="/account?tab=orders" onClick={close}>
                   View orders
@@ -100,7 +98,7 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
                 Checkout
               </DialogTitle>
               <DialogDescription>
-                Enter your shipping details, then pay with USDT, BTC, ETH, TON and more.
+                Enter your shipping details, then pay from your TON wallet or with any major coin.
               </DialogDescription>
             </DialogHeader>
 

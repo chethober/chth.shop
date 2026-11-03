@@ -4,7 +4,15 @@ Monorepo for CHTH: a centralized print-on-demand marketplace where artists and m
 (tees, hoodies, pants, mugs, caps, totes) that buyers can personalize in a 3D studio and pay for in crypto.
 Sign-in is Google or Telegram.
 
-- `/shop`: every listing from every store, filterable by product type and seller kind.
+- `/shop`: every listing from every store: All, Drops & limited, and Following feeds, filters by product
+  type and seller kind, sort by top rated. `/p/<id>`: product page with options, reviews and wishlist.
+- 12 products: tee, hoodie, joggers, cap, beanie, mug, takeaway cup, water bottle, tote, phone case, poster,
+  sticker. Models and their licenses: [frontend/public/models/LICENSES.md](frontend/public/models/LICENSES.md).
+- Payments: pay from a TON wallet through TON Connect, or any coin through NOWPayments.
+- NFT-backed merch: sellers mark listings as NFT-backed and/or limited editions with timed drops. Each unit sold
+  gets a numbered collectible the buyer claims to their TON wallet; `/verify/<serial>` checks authenticity.
+- Growth: verified-buyer reviews, wishlist, follow stores, referral links (`?ref=CODE`: 10% off the first
+  order, 5% credit to the referrer), Telegram bot notifications for buyers and sellers.
 - `/design`: 3D studio. Buyers order their own designs; sellers publish them to their store; `?product=<id>`
   personalizes a listing the seller marked customizable.
 - `/collab`: open a store as an artist or merchant. `/account`: products, sales, payout address, orders.

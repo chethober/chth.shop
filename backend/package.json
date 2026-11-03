@@ -23,6 +23,9 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.14.0",
+    "@ton/core": "0.63.1",
+    "@ton/crypto": "3.3.0",
+    "@ton/ton": "16.3.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

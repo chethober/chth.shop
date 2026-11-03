@@ -6,6 +6,7 @@ const { getCatalogItem } = require('../lib/catalog');
 const { frontendOrigin } = require('../lib/origin');
 const { roundCurrency, serializeOrder, cartItemUnitPrice, cartItemName } = require('../lib/serializers');
 const payments = require('../services/payments');
+const { assertPurchasable } = require('../lib/availability');
 
 /** What the seller keeps from one line: the margin over production cost, minus the platform fee. */
 function sellerEarning(price, baseCost, quantity) {
@@ -22,6 +23,7 @@ async function cartToOrderLines(userId) {
     if (item.productId && (!item.product || !item.product.isActive)) {
       throw new HttpError(409, `"${cartItemName(item)}" is no longer available - please remove it from your cart`);
     }
+    if (item.product) assertPurchasable(item.product, item.quantity);
     const catalogItem = getCatalogItem(item.type);
     const price = cartItemUnitPrice(item);
     const baseCost = catalogItem ? catalogItem.baseCost : 0;
@@ -58,12 +60,32 @@ const createOrder = asyncHandler(async (req, res) => {
   if (!shippingAddress) throw new HttpError(400, 'Shipping address is required');
 
   const { lines, cartId } = await cartToOrderLines(req.userId);
-  const total = roundCurrency(lines.reduce((sum, line) => sum + line.price * line.quantity, 0));
+  const subtotal = roundCurrency(lines.reduce((sum, line) => sum + line.price * line.quantity, 0));
+
+  // Referred customers get a welcome discount on their first paid order (the platform absorbs it).
+  let discount = 0;
+  if (req.user.referredById) {
+    const paidOrders = await prisma.order.count({ where: { userId: req.userId, paymentStatus: 'PAID' } });
+    if (paidOrders === 0) discount = roundCurrency(subtotal * (env.referral.discountPercent / 100));
+  }
+  const total = roundCurrency(subtotal - discount);
 
   const order = await prisma.$transaction(async (tx) => {
+    // Reserve limited-edition stock atomically, so two buyers can't get the last unit.
+    for (const line of lines) {
+      if (!line.productId) continue;
+      const reserved = await tx.$executeRaw`
+        UPDATE "products" SET "editionsSold" = "editionsSold" + ${line.quantity}
+        WHERE "id" = ${line.productId}
+          AND ("editionSize" IS NULL OR "editionsSold" + ${line.quantity} <= "editionSize")`;
+      if (reserved === 0) throw new HttpError(409, `"${line.name}" just sold out`);
+    }
+
     const created = await tx.order.create({
       data: {
         userId: req.userId,
+        subtotal,
+        discount,
         total,
         currency: 'USD',
         shippingAddress: shippingAddress.slice(0, 1000),
@@ -83,13 +105,37 @@ const createOrder = asyncHandler(async (req, res) => {
   });
 });
 
-/** Creates (or reuses) the crypto invoice for an order and returns its payment URL. */
+/**
+ * Starts paying an order: `{ method: 'hosted' }` returns a checkout URL, `{ method: 'ton' }` a
+ * TON Connect transaction request.
+ */
 const payOrder = asyncHandler(async (req, res) => {
   const order = await findOwnedOrder(req.userId, req.params.orderId);
-  const updated = await payments.startPayment(order, { frontendOrigin: frontendOrigin(req) });
+  const method = req.body?.method === 'ton' ? 'ton' : 'hosted';
+  const payment = await payments.startPayment(order, { frontendOrigin: frontendOrigin(req), method });
 
-  sendSuccess(res, { data: { paymentUrl: updated.paymentUrl, provider: updated.paymentProvider } });
+  sendSuccess(res, { data: payment });
 });
+
+/** Checks the chain for this order's TON payment right away (the poller also does this). */
+const checkTonPayment = asyncHandler(async (req, res) => {
+  const order = await findOwnedOrder(req.userId, req.params.orderId);
+  if (order.paymentProvider === 'ton' && order.paymentStatus === 'WAITING') {
+    await payments.reconcileTonPayments([order]);
+  }
+  const updated = await prisma.order.findUnique({ where: { id: order.id }, include: orderWithItems });
+  sendSuccess(res, { data: { order: serializeOrder(updated) } });
+});
+
+/** Gives limited-edition stock back when an unpaid order is cancelled. */
+async function releaseEditions(tx, orderId) {
+  const items = await tx.orderItem.findMany({ where: { orderId, productId: { not: null } } });
+  for (const item of items) {
+    await tx.$executeRaw`
+      UPDATE "products" SET "editionsSold" = GREATEST("editionsSold" - ${item.quantity}, 0)
+      WHERE "id" = ${item.productId}`;
+  }
+}
 
 const listOrders = asyncHandler(async (req, res) => {
   const orders = await prisma.order.findMany({
@@ -120,10 +166,9 @@ const cancelOrder = asyncHandler(async (req, res) => {
     throw new HttpError(400, 'A payment is already in progress for this order - contact support to cancel');
   }
 
-  const cancelled = await prisma.order.update({
-    where: { id: order.id },
-    data: { status: 'CANCELLED' },
-    include: orderWithItems,
+  const cancelled = await prisma.$transaction(async (tx) => {
+    await releaseEditions(tx, order.id);
+    return tx.order.update({ where: { id: order.id }, data: { status: 'CANCELLED' }, include: orderWithItems });
   });
 
   sendSuccess(res, {
@@ -132,4 +177,4 @@ const cancelOrder = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { createOrder, payOrder, listOrders, getOrder, cancelOrder };
+module.exports = { createOrder, payOrder, checkTonPayment, listOrders, getOrder, cancelOrder, releaseEditions };

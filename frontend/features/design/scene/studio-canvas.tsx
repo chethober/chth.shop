@@ -6,7 +6,7 @@ import { AccumulativeShadows, Center, OrbitControls, RandomizedLight } from '@re
 import { easing } from 'maath'
 import type * as THREE from 'three'
 import { StudioEnvironment } from '@/components/three/studio-environment'
-import type { DesignLayer, Garment } from '../constants'
+import type { DesignLayer, Garment, PrintArea } from '../constants'
 import { GarmentModel } from './garment-model'
 
 /** Soft studio floor shadows. */
@@ -36,6 +36,7 @@ interface StudioCanvasProps {
   logoUrl: string
   layers: DesignLayer[]
   onSelectLayer: (id: string) => void
+  onPrintArea?: (area: PrintArea) => void
 }
 
 export function StudioCanvas(props: StudioCanvasProps) {

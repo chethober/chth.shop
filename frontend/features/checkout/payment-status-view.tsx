@@ -32,7 +32,7 @@ export function PaymentStatusView() {
 
     const load = async () => {
       try {
-        const next = await api.orders.get(orderId)
+        const next = await api.orders.checkTon(orderId)
         if (cancelled) return
         setOrder(next)
         if (SETTLING.includes(next.paymentStatus)) timer = setTimeout(load, POLL_INTERVAL_MS)

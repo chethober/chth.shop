@@ -1,6 +1,7 @@
 // Shapes database records into the JSON the frontend consumes.
 
 const { getCatalogItem } = require('./catalog');
+const { dropStatus, editionsRemaining } = require('./availability');
 
 const roundCurrency = (value) => Math.round(value * 100) / 100;
 
@@ -23,7 +24,12 @@ function serializeUser(user) {
 function serializeProduct(product) {
   if (!product) return null;
   const { store, ...rest } = product;
-  return { ...rest, ...(store !== undefined && { store: serializeStoreSummary(store) }) };
+  return {
+    ...rest,
+    dropStatus: dropStatus(product),
+    editionsRemaining: editionsRemaining(product),
+    ...(store !== undefined && { store: serializeStoreSummary(store) }),
+  };
 }
 
 /** Minimal user payload embedded in OAuth redirects and auth responses. */
@@ -34,6 +40,7 @@ function serializeAuthUser(user, authProvider) {
     email: user.email,
     role: user.role,
     isSeller: user.isSeller,
+    telegramId: user.telegramId,
     authProvider: authProvider || user.authProvider,
     ...(authProvider === 'google' ? { isGoogleUser: true } : {}),
   };
@@ -94,6 +101,8 @@ function serializeOrder(order) {
     id: order.id,
     userId: order.userId,
     status: order.status,
+    subtotal: order.subtotal || order.total,
+    discount: order.discount,
     total: order.total,
     currency: order.currency,
     shippingAddress: order.shippingAddress,
@@ -101,6 +110,7 @@ function serializeOrder(order) {
     paymentProvider: order.paymentProvider,
     paymentUrl: order.paymentUrl,
     payCurrency: order.payCurrency,
+    txHash: order.txHash,
     paidAt: order.paidAt,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,

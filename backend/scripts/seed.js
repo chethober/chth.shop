@@ -15,6 +15,24 @@ const STORES = [
       { name: 'Comfort Zone Pants', type: 'pants', price: 45.99, imageUrl: '/pants.png' },
       { name: 'Cozy Vibes Hoodie', type: 'hoodie', price: 64.99, imageUrl: '/hoodie.jpg' },
       { name: 'Nebula Morning Mug', type: 'mug', price: 19.99, imageUrl: '/mug.svg', customizable: true },
+      {
+        name: 'Genesis Hoodie (1 of 50)',
+        description: 'Limited run of 50. Each one ships with a numbered NFT certificate on TON.',
+        type: 'hoodie',
+        price: 89,
+        imageUrl: '/hoodie.jpg',
+        nftBacked: true,
+        editionSize: 50,
+      },
+      {
+        name: 'Eclipse Poster',
+        description: 'Timed drop: 7 days only.',
+        type: 'poster',
+        price: 30,
+        imageUrl: '/products/poster.svg',
+        dropStartsAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+        dropEndsAt: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
+      },
     ],
   },
   {
@@ -28,6 +46,8 @@ const STORES = [
       { name: 'Urban Vibes Hoodie', type: 'hoodie', price: 59.99, imageUrl: '/hoodie.jpg' },
       { name: 'Neon Nights Tee', type: 'tshirt', price: 34.99, imageUrl: '/tshirt.jpg' },
       { name: 'Tag Cap', type: 'hat', price: 27.99, imageUrl: '/hat.svg', customizable: true },
+      { name: 'Wildstyle Sticker', type: 'sticker', price: 4.5, imageUrl: '/products/sticker.svg' },
+      { name: 'Street Case', type: 'phonecase', price: 26, imageUrl: '/products/phonecase.svg', customizable: true },
     ],
   },
   {
@@ -42,6 +62,9 @@ const STORES = [
       { name: 'Barista Cap', type: 'hat', price: 24, imageUrl: '/hat.svg' },
       { name: 'Beans Tote', type: 'tote', price: 21, imageUrl: '/tote.svg' },
       { name: 'Staff Tee', type: 'tshirt', price: 28, imageUrl: '/tshirt.jpg', colors: ['#121212', '#FFFFFF'] },
+      { name: 'To-Go Cups (50-pack)', type: 'cup', price: 32, imageUrl: '/products/cup.svg', sizes: ['12oz', '16oz'] },
+      { name: 'Block Bottle', type: 'bottle', price: 29, imageUrl: '/products/bottle.svg' },
+      { name: 'Roaster Beanie', type: 'beanie', price: 22, imageUrl: '/products/beanie.svg' },
     ],
   },
 ];

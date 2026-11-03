@@ -1,7 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Calendar, Package, Share2 } from 'lucide-react'
+import { Calendar, Package, Share2, UserCheck, UserPlus } from 'lucide-react'
+import { useState } from 'react'
+import api from '@/lib/api'
+import useAuthStore from '@/store/auth-store'
 import { toast } from '@heroui/react'
 import { SocialLinks } from '@/components/shared/social-links'
 import { Button } from '@/components/ui/button'
@@ -46,10 +49,13 @@ export function StoreProfileCard({ store, productCount }: { store: Store; produc
                 <Badge variant="secondary">{STORE_KIND_LABELS[store.kind]}</Badge>
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => shareStore(`${displayName} on CHTH`)}>
-              <Share2 />
-              Share store
-            </Button>
+            <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+              <FollowButton username={username} initialFollowing={Boolean(store.isFollowing)} initialCount={store.followerCount ?? 0} />
+              <Button variant="outline" size="sm" onClick={() => shareStore(`${displayName} on CHTH`)}>
+                <Share2 />
+                Share
+              </Button>
+            </div>
           </div>
 
           <div className="flex-1 space-y-5 lg:pt-12">
@@ -81,5 +87,44 @@ export function StoreProfileCard({ store, productCount }: { store: Store; produc
         </div>
       </Card>
     </motion.div>
+  )
+}
+
+function FollowButton({ username, initialFollowing, initialCount }: { username: string; initialFollowing: boolean; initialCount: number }) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const me = useAuthStore((state) => state.user?.username)
+  const [following, setFollowing] = useState(initialFollowing)
+  const [count, setCount] = useState(initialCount)
+  const [busy, setBusy] = useState(false)
+
+  if (me === username) {
+    return (
+      <span className="self-center text-xs text-muted-foreground">
+        {count} {count === 1 ? 'follower' : 'followers'}
+      </span>
+    )
+  }
+
+  const toggle = async () => {
+    if (!isAuthenticated) {
+      toast.warning('Sign in to follow stores')
+      return
+    }
+    setBusy(true)
+    try {
+      setCount(await (following ? api.stores.unfollow(username) : api.stores.follow(username)))
+      setFollowing(!following)
+    } catch (error) {
+      toast.danger(error instanceof Error ? error.message : 'Could not update')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Button size="sm" variant={following ? 'outline' : 'default'} onClick={toggle} disabled={busy}>
+      {following ? <UserCheck /> : <UserPlus />}
+      {following ? 'Following' : 'Follow'} · {count}
+    </Button>
   )
 }

@@ -27,6 +27,7 @@ const SORT_LABELS: Record<Sort, string> = {
   'price-asc': 'Price: low to high',
   'price-desc': 'Price: high to low',
   name: 'Name (A–Z)',
+  top: 'Top rated',
 }
 
 const KIND_FILTERS: { id: StoreKind | 'all'; label: string }[] = [
@@ -49,12 +50,14 @@ export function ShopView() {
   const kind = kindParam === 'ARTIST' || kindParam === 'MERCHANT' ? kindParam : undefined
   const sort = (searchParams.get('sort') as Sort) in SORT_LABELS ? (searchParams.get('sort') as Sort) : 'newest'
   const search = searchParams.get('q') ?? ''
+  const following = searchParams.get('following') === '1' ? ('1' as const) : undefined
+  const collection = searchParams.get('collection') === 'drops' ? ('drops' as const) : undefined
 
   const [searchInput, setSearchInput] = useState(search)
   /** Results, tagged with the filters they were loaded for. */
   const [results, setResults] = useState({ key: '', products: [] as Product[], page: 1, hasNext: false, total: 0 })
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const queryKey = JSON.stringify([type, kind, sort, search])
+  const queryKey = JSON.stringify([type, kind, sort, search, following, collection])
   const { products, page, hasNext, total } = results
   const isLoading = results.key !== queryKey || isLoadingMore
   const [selected, setSelected] = useState<Product | null>(null)
@@ -78,7 +81,7 @@ export function ShopView() {
   useEffect(() => {
     let cancelled = false
     api.products
-      .list({ type, kind, sort, search: search || undefined, page: 1, limit: PAGE_SIZE })
+      .list({ type, kind, sort, search: search || undefined, following, collection, page: 1, limit: PAGE_SIZE })
       .then(({ products: items, pagination }) => {
         if (!cancelled) setResults({ key: queryKey, products: items, page: 1, hasNext: pagination.hasNext, total: pagination.total })
       })
@@ -90,12 +93,12 @@ export function ShopView() {
     return () => {
       cancelled = true
     }
-  }, [type, kind, sort, search, queryKey])
+  }, [type, kind, sort, search, following, collection, queryKey])
 
   const loadMore = async () => {
     setIsLoadingMore(true)
     try {
-      const next = await api.products.list({ type, kind, sort, search: search || undefined, page: page + 1, limit: PAGE_SIZE })
+      const next = await api.products.list({ type, kind, sort, search: search || undefined, following, collection, page: page + 1, limit: PAGE_SIZE })
       setResults((current) =>
         current.key === queryKey
           ? { ...current, products: [...current.products, ...next.products], page: page + 1, hasNext: next.pagination.hasNext }
@@ -134,6 +137,42 @@ export function ShopView() {
       />
 
       <div className="space-y-3">
+        <div className="inline-flex rounded-xl border border-border bg-muted/70 p-1" role="tablist" aria-label="Feed">
+          {(
+            [
+              { id: 'all', label: 'All', active: !following && !collection, params: { following: undefined, collection: undefined } },
+              { id: 'drops', label: 'Drops & limited', active: Boolean(collection), params: { following: undefined, collection: 'drops' } },
+              { id: 'following', label: 'Following', active: Boolean(following), params: { following: '1', collection: undefined } },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={tab.active}
+              onClick={() => {
+                if (tab.id === 'following' && !isAuthenticated) {
+                  router.push('/auth?redirect=/shop?following=1')
+                  return
+                }
+                const params = new URLSearchParams(searchParams.toString())
+                for (const [key, value] of Object.entries(tab.params)) {
+                  if (value) params.set(key, value)
+                  else params.delete(key)
+                }
+                router.replace(`/shop${params.size > 0 ? `?${params}` : ''}`, { scroll: false })
+              }}
+              className={
+                tab.active
+                  ? 'cursor-pointer rounded-lg bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs'
+                  : 'cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground'
+              }
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

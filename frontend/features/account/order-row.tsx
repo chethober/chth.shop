@@ -145,6 +145,12 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
                     <span className="text-sm font-semibold tabular-nums">{formatPrice(item.price * item.quantity)}</span>
                   </div>
                 ))}
+                {order.discount > 0 && (
+                  <div className="flex items-center justify-between p-3 text-xs text-success">
+                    <span>Welcome discount</span>
+                    <span className="tabular-nums">−{formatPrice(order.discount)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between p-3 text-sm">
                   <span className="font-semibold text-foreground">Total</span>
                   <span className="font-bold tabular-nums text-foreground">{formatPrice(order.total)}</span>
@@ -163,6 +169,11 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
                     <p className="text-[11px] text-muted-foreground">
                       Paid {formatDateTime(order.paidAt)}
                       {order.payCurrency && ` in ${order.payCurrency}`}
+                    </p>
+                  )}
+                  {order.txHash && (
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      Tx <span className="font-mono">{order.txHash}</span>
                     </p>
                   )}
                 </div>

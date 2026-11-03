@@ -19,9 +19,10 @@ import { useCatalog } from '@/hooks/use-catalog'
 import { formatPrice } from '@/lib/format'
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '@/lib/products'
 import { cn } from '@/lib/utils'
-import type { Product, ProductType } from '@/types'
+import type { Product, ProductInput, ProductType } from '@/types'
+import { ReleaseSettings, releaseFromProduct, releaseToPayload } from '@/components/shared/release-settings'
 
-export type ProductChanges = Pick<Product, 'name' | 'type' | 'price' | 'description' | 'customizable' | 'isActive'>
+export type ProductChanges = ProductInput
 
 interface ProductEditDialogProps {
   product: Product | null
@@ -33,7 +34,7 @@ interface ProductEditDialogProps {
 export function ProductEditDialog({ product, saving, onClose, onSave }: ProductEditDialogProps) {
   return (
     <Dialog open={Boolean(product)} onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         {product && <ProductEditForm key={product.id} product={product} saving={saving} onClose={onClose} onSave={onSave} />}
       </DialogContent>
     </Dialog>
@@ -47,6 +48,8 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
   const [description, setDescription] = useState(product.description ?? '')
   const [customizable, setCustomizable] = useState(product.customizable)
   const [isActive, setIsActive] = useState(product.isActive)
+  const [release, setRelease] = useState(() => releaseFromProduct(product))
+  const releaseResult = releaseToPayload(release, product.editionsSold)
   const { get: getCatalogItem } = useCatalog()
   const baseCost = getCatalogItem(type)?.baseCost ?? 0
 
@@ -61,7 +64,7 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (nameError || priceError || saving) return
+    if (nameError || priceError || releaseResult.error || saving) return
     await onSave({
       name: name.trim(),
       type,
@@ -69,6 +72,7 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
       description: description.trim() || null,
       customizable,
       isActive,
+      ...releaseResult.payload,
     })
   }
 
@@ -168,11 +172,14 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
         </label>
       </div>
 
+      <ReleaseSettings values={release} onChange={setRelease} />
+      {releaseResult.error && <p className="text-[11px] text-destructive">{releaseResult.error}</p>}
+
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" disabled={Boolean(nameError || priceError) || saving}>
+        <Button type="submit" disabled={Boolean(nameError || priceError || releaseResult.error) || saving}>
           {saving && <Spinner />}
           {saving ? 'Saving…' : 'Save changes'}
         </Button>

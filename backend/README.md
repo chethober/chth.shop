@@ -26,6 +26,32 @@ Checkout creates an order, then `POST /orders/:id/pay` returns a hosted checkout
   less than the order total is recorded as `PARTIALLY_PAID`, and paid orders never move backwards.
 - `mock` (development default, refused in production): sends the buyer to `/checkout/mock`, where a button marks
   the order paid.
+- `ton` (`POST /orders/:id/pay` with `{ "method": "ton" }`, enabled by `TON_RECEIVER_ADDRESS`): quotes the order
+  in TON (CoinGecko price or `TON_USD_PRICE`, valid `TON_QUOTE_TTL_MINUTES`) and returns a TON Connect request:
+  amount, receiving address, and a text comment `chth:<order id>`. The server finds the transfer through toncenter
+  (`POST /orders/:id/ton/check`, plus a poller every 20 s) and needs the right comment and at least the quoted
+  amount; `txHash` is unique, so one transfer can't pay two orders. USDT-on-TON (jetton) payments aren't wired yet.
+
+### NFT-backed merch
+
+Products can be `nftBacked`, limited (`editionSize`, reserved atomically at checkout and released on cancel) and
+timed (`dropStartsAt` / `dropEndsAt`). When an order is paid, each NFT-backed unit gets a `Collectible` with a
+serial for the item's tag and an edition number. Buyers claim it to a TON address (`POST /collectibles/:id/claim`),
+which mints an item in a standard TEP-62 collection from the platform wallet (`src/services/nft.js`):
+
+1. Deploy a standard NFT collection owned by the `TON_MINTER_MNEMONIC` wallet (v4), with collection content
+   `<PUBLIC_API_URL>/nft/collection.json` and common item content prefix `<PUBLIC_API_URL>/nft/`.
+2. Set `TON_NFT_COLLECTION_ADDRESS` and fund the wallet (each mint sends 0.05 TON).
+
+Mints run one at a time and read the next item index from the collection. Item metadata (TEP-64) is served at
+`/nft/<collectible id>.json`. Without that configuration, development records a mock mint and production refuses
+claims. **The on-chain path is untested against a live network from this environment**; try it on testnet first.
+
+### Growth
+
+Reviews (only buyers with a paid order), wishlist, store follows with a `?following=1` product feed, referrals
+(`/referrals/me`, `/referrals/claim`; discount on the first order, credit ledger for the referrer), and Telegram
+messages through the login bot when an order is paid (buyer and each seller) or shipped / delivered.
 
 A paid order becomes `CONFIRMED`; admins then mark it shipped / delivered. Each order line snapshots the catalog
 production cost and the seller's earning: `(price − production cost) × quantity × (1 − PLATFORM_FEE_PERCENT/100)`.
@@ -88,7 +114,7 @@ Controllers throw `HttpError(status, message)`; the error middleware turns it in
 | POST · PUT · DELETE | `/stores` | ✓ | Create / update / delete own store (kind, payout address, socials) |
 | POST | `/stores/contract/accept` (`{ kind }`) | ✓ | Accept the seller agreement |
 | GET | `/catalog` | – | Base products, costs, sizes, colors |
-| GET | `/products` (`?type&kind&store&search&sort&page&limit`) | – | Browse the marketplace |
+| GET | `/products` (`?type&kind&store&search&sort&collection=drops&following=1&page&limit`) | – | Browse the marketplace |
 | GET | `/products/:id` | – | Product (unlisted ones only for their owner) |
 | GET | `/products/mine` | ✓ | Own products |
 | POST · PUT · DELETE | `/products`, `/products/:id` | ✓ | Manage own products |
@@ -102,3 +128,12 @@ Controllers throw `HttpError(status, message)`; the error middleware turns it in
 | POST | `/payments/webhook/:provider` | signature | Payment provider callback |
 | POST | `/payments/mock/:orderId/confirm` | ✓ | Development only: mark paid |
 | GET · PUT | `/admin/orders`, `/admin/orders/:orderId/status` | admin | Fulfillment queue |
+| GET | `/payments/methods` | – | Which payment methods are enabled |
+| POST | `/orders/:orderId/ton/check` | ✓ | Look for the order's TON transfer now |
+| GET · PUT · DELETE | `/products/:id/reviews` | – / ✓ | Reviews / write or delete own (buyers only) |
+| GET · PUT · DELETE | `/wishlist`, `/wishlist/:productId` | ✓ | Wishlist |
+| GET · PUT · DELETE | `/stores/following`, `/stores/:username/follow` | ✓ | Follows |
+| GET · POST | `/referrals/me`, `/referrals/claim` | ✓ | Referral code and stats / use a code |
+| GET · POST | `/collectibles`, `/collectibles/:id/claim` | ✓ | Own collectibles / mint to a TON wallet |
+| GET | `/collectibles/verify/:serial` | – | Public authenticity check |
+| GET | `/nft/collection.json`, `/nft/:id.json` | – | TEP-64 metadata |

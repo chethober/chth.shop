@@ -4,10 +4,16 @@ import { API_ORIGIN } from './config'
 export const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
   tshirt: 'T-Shirt',
   hoodie: 'Hoodie',
-  pants: 'Pants',
-  mug: 'Mug',
+  pants: 'Joggers',
   hat: 'Cap',
+  beanie: 'Beanie',
+  mug: 'Mug',
+  cup: 'Takeaway Cup',
+  bottle: 'Water Bottle',
   tote: 'Tote Bag',
+  phonecase: 'Phone Case',
+  poster: 'Poster',
+  sticker: 'Sticker',
 }
 
 export const PRODUCT_TYPES = Object.keys(PRODUCT_TYPE_LABELS) as ProductType[]
@@ -20,9 +26,15 @@ const PLACEHOLDER_IMAGES: Record<ProductType, string> = {
   tshirt: '/tshirt.jpg',
   hoodie: '/hoodie.jpg',
   pants: '/pants.png',
-  mug: '/mug.svg',
   hat: '/hat.svg',
+  beanie: '/products/beanie.svg',
+  mug: '/mug.svg',
+  cup: '/products/cup.svg',
+  bottle: '/products/bottle.svg',
   tote: '/tote.svg',
+  phonecase: '/products/phonecase.svg',
+  poster: '/products/poster.svg',
+  sticker: '/products/sticker.svg',
 }
 
 /** Stock garment photo used when a product has no image of its own. */
@@ -71,6 +83,8 @@ const COLOR_NAMES: Record<string, string> = {
   '#8B5CF6': 'Purple',
   '#F472B6': 'Pink',
   '#F5F0E6': 'Natural',
+  '#C9A77C': 'Kraft',
+  '#D7DBE0': 'Steel',
 }
 
 export function colorName(hex: string): string {

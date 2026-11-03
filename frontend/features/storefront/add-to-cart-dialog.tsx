@@ -6,7 +6,7 @@ import { Minus, Palette, Plus, ShoppingBag } from 'lucide-react'
 import { toast } from '@heroui/react'
 import { ProductImage } from '@/components/shared/product-image'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { useCatalog } from '@/hooks/use-catalog'
@@ -49,37 +49,8 @@ function OptionButton({ selected, onClick, children, className }: { selected: bo
 }
 
 function AddToCartForm({ product, onClose }: { product: Product; onClose: () => void }) {
-  const addItem = useCartStore((state) => state.addItem)
   const { get: getCatalogItem } = useCatalog()
   const catalogItem = getCatalogItem(product.type)
-
-  const sizes = product.sizes.length > 0 ? product.sizes : catalogItem?.sizes ?? []
-  // A product with a saved design has its color baked in unless the seller offers several.
-  const colors = product.colors.length > 0 ? product.colors : product.design?.color ? [] : catalogItem?.colors ?? []
-
-  const [size, setSize] = useState(sizes.length === 1 ? sizes[0] : '')
-  const [color, setColor] = useState(colors[0] ?? '')
-  const [quantity, setQuantity] = useState(1)
-  const [isAdding, setIsAdding] = useState(false)
-
-  const needsSize = sizes.length > 0 && !size
-
-  const add = async () => {
-    setIsAdding(true)
-    try {
-      await addItem({
-        productId: product.id,
-        quantity,
-        options: { ...(size && { size }), ...(color && { color }) },
-      })
-      toast.success(`Added to cart: ${product.name}`)
-      onClose()
-    } catch (error) {
-      toast.danger(error instanceof Error ? error.message : 'Could not add to cart')
-    } finally {
-      setIsAdding(false)
-    }
-  }
 
   return (
     <div className="space-y-5">
@@ -101,6 +72,56 @@ function AddToCartForm({ product, onClose }: { product: Product; onClose: () => 
         </div>
       </div>
 
+      <PurchaseOptions product={product} onAdded={onClose} />
+    </div>
+  )
+}
+
+/** Size, color and quantity pickers with Add to cart / Personalize; used in the dialog and on product pages. */
+export function PurchaseOptions({ product, onAdded }: { product: Product; onAdded?: () => void }) {
+  const addItem = useCartStore((state) => state.addItem)
+  const { get: getCatalogItem } = useCatalog()
+  const catalogItem = getCatalogItem(product.type)
+
+  const sizes = product.sizes.length > 0 ? product.sizes : catalogItem?.sizes ?? []
+  // A product with a saved design has its color baked in unless the seller offers several.
+  const colors = product.colors.length > 0 ? product.colors : product.design?.color ? [] : catalogItem?.colors ?? []
+
+  const [size, setSize] = useState(sizes.length === 1 ? sizes[0] : '')
+  const [color, setColor] = useState(colors[0] ?? '')
+  const [quantity, setQuantity] = useState(1)
+  const [isAdding, setIsAdding] = useState(false)
+
+  const needsSize = sizes.length > 0 && !size
+  const remaining = product.editionsRemaining
+  const unavailable =
+    product.dropStatus === 'upcoming'
+      ? 'Coming soon'
+      : product.dropStatus === 'ended'
+        ? 'Drop ended'
+        : remaining === 0
+          ? 'Sold out'
+          : ''
+
+  const add = async () => {
+    setIsAdding(true)
+    try {
+      await addItem({
+        productId: product.id,
+        quantity,
+        options: { ...(size && { size }), ...(color && { color }) },
+      })
+      toast.success(`Added to cart: ${product.name}`)
+      onAdded?.()
+    } catch (error) {
+      toast.danger(error instanceof Error ? error.message : 'Could not add to cart')
+    } finally {
+      setIsAdding(false)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
       {sizes.length > 0 && (
         <div className="space-y-1.5">
           <Label>Size</Label>
@@ -147,13 +168,20 @@ function AddToCartForm({ product, onClose }: { product: Product; onClose: () => 
             <Minus />
           </Button>
           <span className="w-6 text-center text-xs font-bold tabular-nums">{quantity}</span>
-          <Button variant="ghost" size="icon-sm" className="size-7" onClick={() => setQuantity((q) => q + 1)} disabled={quantity >= 99} aria-label="Increase quantity">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-7"
+            onClick={() => setQuantity((q) => q + 1)}
+            disabled={quantity >= Math.min(99, remaining ?? 99)}
+            aria-label="Increase quantity"
+          >
             <Plus />
           </Button>
         </div>
       </div>
 
-      <DialogFooter className="gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {product.customizable && (
           <Button asChild variant="outline">
             <Link href={`/design?product=${product.id}`}>
@@ -162,11 +190,11 @@ function AddToCartForm({ product, onClose }: { product: Product; onClose: () => 
             </Link>
           </Button>
         )}
-        <Button onClick={add} disabled={isAdding || needsSize}>
+        <Button onClick={add} disabled={isAdding || needsSize || Boolean(unavailable)}>
           {isAdding ? <Spinner /> : <ShoppingBag />}
-          {needsSize ? 'Choose a size' : `Add to cart · ${formatPrice(product.price * quantity)}`}
+          {unavailable || (needsSize ? 'Choose a size' : `Add to cart · ${formatPrice(product.price * quantity)}`)}
         </Button>
-      </DialogFooter>
+      </div>
     </div>
   )
 }

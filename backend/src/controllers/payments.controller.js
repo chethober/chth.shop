@@ -23,4 +23,9 @@ const confirmMockPayment = asyncHandler(async (req, res) => {
   sendSuccess(res, { message: 'Payment simulated' });
 });
 
-module.exports = { webhook, confirmMockPayment };
+/** Which payment methods checkout can offer. */
+const methods = (req, res) => {
+  sendSuccess(res, { data: payments.availableMethods() });
+};
+
+module.exports = { webhook, methods, confirmMockPayment };

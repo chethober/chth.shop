@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import api, { onUnauthorized, tokenStorage } from '@/lib/api'
 import useCartStore from './cart-store'
+import useWishlistStore from './wishlist-store'
 import type { TelegramAuthData, User } from '@/types'
 
 interface AuthState {
@@ -46,6 +47,7 @@ const useAuthStore = create<AuthState>()(
       signOut: () => {
         tokenStorage.clear()
         useCartStore.getState().reset()
+        useWishlistStore.getState().reset()
         set({ user: null, isAuthenticated: false })
       },
     }),

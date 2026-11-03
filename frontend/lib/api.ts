@@ -4,17 +4,23 @@ import type {
   Cart,
   CartItem,
   CatalogItem,
+  Collectible,
   LineOptions,
   Order,
   OrderStatus,
   Pagination,
+  PaymentMethods,
+  PaymentStart,
   Product,
   ProductInput,
   ProductType,
+  ReferralInfo,
+  Review,
   SalesReport,
   Store,
   StoreInput,
   StoreKind,
+  StoreSummary,
   TelegramAuthData,
   TelegramConfig,
   User,
@@ -88,7 +94,11 @@ export interface ProductQuery {
   kind?: StoreKind
   search?: string
   store?: string
-  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name'
+  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name' | 'top'
+  /** `drops`: limited editions, NFT-backed items and timed releases. */
+  collection?: 'drops'
+  /** `1`: only stores the signed-in user follows. */
+  following?: '1'
   page?: number
   limit?: number
 }
@@ -122,6 +132,11 @@ export const api = {
     remove: () => request<void>(http.delete('/stores')),
     acceptContract: (kind: StoreKind) =>
       request<{ store: Store }>(http.post('/stores/contract/accept', { kind })).then((d) => d.store),
+    follow: (username: string) =>
+      request<{ followerCount: number }>(http.put(`/stores/${username}/follow`)).then((d) => d.followerCount),
+    unfollow: (username: string) =>
+      request<{ followerCount: number }>(http.delete(`/stores/${username}/follow`)).then((d) => d.followerCount),
+    following: () => request<{ stores: StoreSummary[] }>(http.get('/stores/following')).then((d) => d.stores),
   },
 
   catalog: () => request<{ catalog: CatalogItem[] }>(http.get('/catalog')).then((d) => d.catalog),
@@ -136,6 +151,32 @@ export const api = {
     update: (id: string, changes: ProductInput) =>
       request<{ product: Product }>(http.put(`/products/${id}`, changes)).then((d) => d.product),
     remove: (id: string) => request<void>(http.delete(`/products/${id}`)),
+    reviews: (id: string) => request<{ reviews: Review[]; canReview: boolean }>(http.get(`/products/${id}/reviews`)),
+    review: (id: string, rating: number, body: string) =>
+      request<void>(http.put(`/products/${id}/reviews`, { rating, body })),
+    deleteReview: (id: string) => request<void>(http.delete(`/products/${id}/reviews`)),
+  },
+
+  wishlist: {
+    list: () => request<{ products: Product[]; ids: string[] }>(http.get('/wishlist')),
+    add: (productId: string) => request<void>(http.put(`/wishlist/${productId}`)),
+    remove: (productId: string) => request<void>(http.delete(`/wishlist/${productId}`)),
+  },
+
+  referrals: {
+    me: () => request<ReferralInfo>(http.get('/referrals/me')),
+    claim: (code: string) =>
+      http.post<{ message: string }>('/referrals/claim', { code }).then((response) => response.data.message),
+  },
+
+  collectibles: {
+    mine: () => request<{ collectibles: Collectible[] }>(http.get('/collectibles')).then((d) => d.collectibles),
+    claim: (id: string, address: string) =>
+      request<{ collectible: Collectible }>(http.post(`/collectibles/${id}/claim`, { address })).then((d) => d.collectible),
+    verify: (serial: string) =>
+      request<{ collectible: Collectible }>(http.get(`/collectibles/verify/${encodeURIComponent(serial)}`)).then(
+        (d) => d.collectible
+      ),
   },
 
   /** Uploads an image (as a data URL) and returns its `/uploads/...` path. */
@@ -157,14 +198,18 @@ export const api = {
     get: (orderId: string) => request<{ order: Order }>(http.get(`/orders/${orderId}`)).then((d) => d.order),
     create: (shippingAddress: string) =>
       request<{ order: Order }>(http.post('/orders', { shippingAddress })).then((d) => d.order),
-    /** Starts (or resumes) the crypto payment and returns the checkout URL. */
-    pay: (orderId: string) =>
-      request<{ paymentUrl: string; provider: string }>(http.post(`/orders/${orderId}/pay`, {}, { timeout: 30_000 })),
+    /** Starts (or resumes) paying: a hosted checkout URL, or a TON Connect transaction request. */
+    pay: (orderId: string, method: 'hosted' | 'ton' = 'hosted') =>
+      request<PaymentStart>(http.post(`/orders/${orderId}/pay`, { method }, { timeout: 30_000 })),
+    /** Asks the server to look for this order's TON transfer now. */
+    checkTon: (orderId: string) =>
+      request<{ order: Order }>(http.post(`/orders/${orderId}/ton/check`, {}, { timeout: 30_000 })).then((d) => d.order),
     cancel: (orderId: string) =>
       request<{ order: Order }>(http.put(`/orders/${orderId}/cancel`)).then((d) => d.order),
   },
 
   payments: {
+    methods: () => request<PaymentMethods>(http.get('/payments/methods')),
     confirmMock: (orderId: string) => request<void>(http.post(`/payments/mock/${orderId}/confirm`)),
   },
 

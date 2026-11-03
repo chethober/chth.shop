@@ -18,7 +18,19 @@ export interface User {
 }
 
 /** Base products the platform prints on. */
-export type ProductType = 'tshirt' | 'hoodie' | 'pants' | 'mug' | 'hat' | 'tote'
+export type ProductType =
+  | 'tshirt'
+  | 'hoodie'
+  | 'pants'
+  | 'hat'
+  | 'beanie'
+  | 'mug'
+  | 'cup'
+  | 'bottle'
+  | 'tote'
+  | 'phonecase'
+  | 'poster'
+  | 'sticker'
 
 export interface CatalogItem {
   type: ProductType
@@ -73,13 +85,37 @@ export interface Product {
   customizable: boolean
   design?: Design | null
   isActive: boolean
+  nftBacked: boolean
+  editionSize: number | null
+  editionsSold: number
+  editionsRemaining: number | null
+  dropStartsAt: string | null
+  dropEndsAt: string | null
+  dropStatus: 'upcoming' | 'live' | 'ended' | null
+  ratingAvg: number
+  ratingCount: number
   store?: StoreSummary | null
   createdAt?: string
   updatedAt?: string
 }
 
 export type ProductInput = Partial<
-  Pick<Product, 'name' | 'description' | 'type' | 'price' | 'imageUrl' | 'colors' | 'sizes' | 'customizable' | 'isActive'>
+  Pick<
+    Product,
+    | 'name'
+    | 'description'
+    | 'type'
+    | 'price'
+    | 'imageUrl'
+    | 'colors'
+    | 'sizes'
+    | 'customizable'
+    | 'isActive'
+    | 'nftBacked'
+    | 'editionSize'
+    | 'dropStartsAt'
+    | 'dropEndsAt'
+  >
 > & { design?: Design | null }
 
 export interface Pagination {
@@ -113,6 +149,8 @@ export interface Store extends SocialHandles {
   updatedAt?: string
   user?: Pick<User, 'username' | 'email'>
   products?: Product[]
+  followerCount?: number
+  isFollowing?: boolean
 }
 
 export type StoreInput = SocialHandles & {
@@ -178,12 +216,15 @@ export interface OrderItem {
 export interface Order {
   id: string
   status: OrderStatus
+  subtotal: number
+  discount: number
   total: number
   currency: string
   shippingAddress?: string | null
   paymentStatus: PaymentStatus
   paymentUrl?: string | null
   payCurrency?: string | null
+  txHash?: string | null
   paidAt?: string | null
   createdAt: string
   items: OrderItem[]
@@ -221,4 +262,68 @@ export interface TelegramAuthData {
 export interface TelegramConfig {
   botUsername: string
   isConfigured: boolean
+}
+
+export interface PaymentMethods {
+  hosted: boolean
+  ton: boolean
+  hostedProvider: string
+  tonNetwork: 'mainnet' | 'testnet'
+}
+
+/** What POST /orders/:id/pay returns for each method. */
+export type PaymentStart =
+  | { method: 'hosted'; paymentUrl: string; provider: string }
+  | {
+      method: 'ton'
+      address: string
+      /** Nanotons. */
+      amount: string
+      amountTon: string
+      /** Base64 BOC of the comment that identifies the order. */
+      payload: string
+      validUntil: number
+      network: 'mainnet' | 'testnet'
+    }
+
+export type CollectibleStatus = 'UNCLAIMED' | 'MINTING' | 'MINTED' | 'FAILED'
+
+export interface Collectible {
+  id: string
+  serial: string
+  name: string
+  imageUrl: string | null
+  productId: string | null
+  productType: string | null
+  store: { storeName: string | null; username: string } | null
+  edition: number | null
+  editionSize: number | null
+  status: CollectibleStatus
+  ownerAddress: string | null
+  nftIndex: number | null
+  nftAddress: string | null
+  mintError: string | null
+  claimedAt: string | null
+  createdAt: string
+  ownerUsername?: string
+}
+
+export interface Review {
+  id: string
+  rating: number
+  body: string | null
+  username: string
+  isMine: boolean
+  createdAt: string
+}
+
+export interface ReferralInfo {
+  code: string
+  invited: number
+  converted: number
+  earned: number
+  discountPercent: number
+  rewardPercent: number
+  referredBy: string | null
+  hasWelcomeDiscount: boolean
 }

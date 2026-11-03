@@ -2,13 +2,15 @@
 
 import { useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
+import { RoundedBox } from '@react-three/drei'
 import { easing } from 'maath'
 import * as THREE from 'three'
-import type { Garment, DesignLayer } from '../constants'
+import type { DesignLayer, Garment } from '../constants'
 import { ChestDecal, LayerDecal } from './decals'
 
-// Mugs, caps and totes have no scanned models; they are built from primitives sized to
-// sit next to the garment models (roughly 0.4 units tall).
+// Print areas (Garment.chestPosition) are in the local space of the mesh that receives decals.
+// Products with no suitable free model (cap, beanie, poster, sticker), built from primitives
+// sized to sit next to the GLB products (about 0.6 units across).
 
 const COLOR_EASING = 0.25
 
@@ -20,7 +22,7 @@ interface ProceduralModelProps {
   onSelectLayer: (id: string) => void
 }
 
-/** A material whose color eases toward `color`, like the garment models. */
+/** A material whose color eases toward `color`, like the GLB products. */
 function useTintedMaterial(color: string, params: THREE.MeshStandardMaterialParameters) {
   // Created once; the color is then eased every frame instead of recreating the material.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -49,73 +51,104 @@ function PrintDecals({ garment, logoUrl, layers, onSelectLayer }: Omit<Procedura
   )
 }
 
-export function MugModel({ color, ...rest }: ProceduralModelProps) {
-  const ceramic = useTintedMaterial(color, { roughness: 0.25, metalness: 0.05, side: THREE.DoubleSide })
-  const body = useMemo(() => new THREE.CylinderGeometry(0.16, 0.15, 0.36, 128, 8, true), [])
-  // Re-mounting on logo change refreshes the decal projection.
-  const key = `${rest.logoUrl}:${rest.layers.length}`
+const decalKey = (props: Pick<ProceduralModelProps, 'logoUrl' | 'layers'>) => `${props.logoUrl}:${props.layers.length}`
 
-  return (
-    <group dispose={null}>
-      <mesh key={key} geometry={body} material={ceramic} castShadow receiveShadow>
-        <PrintDecals {...rest} />
-      </mesh>
-      <mesh position={[0, -0.18, 0]} rotation={[-Math.PI / 2, 0, 0]} material={ceramic}>
-        <circleGeometry args={[0.15, 64]} />
-      </mesh>
-      {/* Handle on the right, curving out from the body. */}
-      <mesh position={[0.16, 0, 0]} rotation={[0, 0, -Math.PI / 2]} material={ceramic} castShadow>
-        <torusGeometry args={[0.09, 0.022, 24, 64, Math.PI]} />
-      </mesh>
-    </group>
-  )
-}
-
-export function HatModel({ color, ...rest }: ProceduralModelProps) {
-  const fabric = useTintedMaterial(color, { roughness: 0.9, side: THREE.DoubleSide })
-  // Upper half of a slightly flattened sphere for the crown.
+/** Six-panel cap, tilted toward the camera so the curved brim reads from the front. */
+export function CapModel({ color, ...rest }: ProceduralModelProps) {
+  const twill = useTintedMaterial(color, { roughness: 0.85, side: THREE.DoubleSide })
   const crown = useMemo(() => {
-    const geometry = new THREE.SphereGeometry(0.18, 96, 48, 0, Math.PI * 2, 0, Math.PI / 2)
-    geometry.scale(1, 0.85, 1.05)
+    // Upper half of a sphere, a little taller at the front like a structured cap.
+    const geometry = new THREE.SphereGeometry(0.2, 96, 48, 0, Math.PI * 2, 0, Math.PI / 2)
+    geometry.scale(1, 0.82, 1.08)
     return geometry
   }, [])
-  // Half disc in front of the crown (+z), stretched forward into a brim.
   const brim = useMemo(() => {
-    const geometry = new THREE.CylinderGeometry(0.19, 0.19, 0.01, 64, 1, false, -Math.PI / 2, Math.PI)
-    geometry.scale(1, 1, 1.25)
+    // Half-disc in front of the crown, curved down at the sides.
+    const geometry = new THREE.CylinderGeometry(0.205, 0.205, 0.012, 64, 1, false, -Math.PI / 2, Math.PI)
+    geometry.scale(1, 1, 1.35)
+    const position = geometry.attributes.position
+    for (let i = 0; i < position.count; i++) {
+      const x = position.getX(i)
+      position.setY(i, position.getY(i) - 0.9 * x * x)
+    }
+    geometry.computeVertexNormals()
     return geometry
   }, [])
-  const key = `${rest.logoUrl}:${rest.layers.length}`
+  const seams = useMemo(() => {
+    const geometry = new THREE.TorusGeometry(0.2, 0.0025, 6, 96, Math.PI)
+    geometry.scale(1, 0.82, 1.08)
+    return geometry
+  }, [])
 
   return (
-    <group dispose={null} position={[0, -0.05, 0]}>
-      <mesh key={key} geometry={crown} material={fabric} castShadow receiveShadow>
+    <group dispose={null} rotation={[0.35, -0.35, 0]} position={[0, -0.05, 0]}>
+      <mesh key={decalKey(rest)} geometry={crown} material={twill} castShadow receiveShadow>
         <PrintDecals {...rest} />
       </mesh>
-      <mesh geometry={brim} material={fabric} position={[0, 0.005, 0.02]} rotation={[0.12, 0, 0]} castShadow />
-      <mesh position={[0, 0.153, 0]} material={fabric}>
-        <sphereGeometry args={[0.012, 16, 16]} />
+      {[0, Math.PI / 3, -Math.PI / 3].map((angle) => (
+        <mesh key={angle} geometry={seams} material={twill} rotation={[0, angle + Math.PI / 2, 0]} />
+      ))}
+      <mesh geometry={brim} material={twill} position={[0, 0.004, 0.07]} rotation={[-0.08, 0, 0]} castShadow />
+      <mesh position={[0, 0.165, 0]} material={twill}>
+        <sphereGeometry args={[0.014, 16, 16]} />
       </mesh>
     </group>
   )
 }
 
-export function ToteModel({ color, ...rest }: ProceduralModelProps) {
-  const canvas = useTintedMaterial(color, { roughness: 1 })
-  const strap = useTintedMaterial(color, { roughness: 1, side: THREE.DoubleSide })
-  const body = useMemo(() => new THREE.BoxGeometry(0.36, 0.4, 0.06, 16, 16, 2), [])
-  const key = `${rest.logoUrl}:${rest.layers.length}`
+/** Knit beanie: a dome over a folded cuff, with a ribbed look from the segment count. */
+export function BeanieModel({ color, ...rest }: ProceduralModelProps) {
+  const knit = useTintedMaterial(color, { roughness: 1, flatShading: false })
+  const crown = useMemo(() => {
+    const geometry = new THREE.SphereGeometry(0.2, 48, 32, 0, Math.PI * 2, 0, Math.PI / 2)
+    geometry.scale(1, 1.15, 1)
+    return geometry
+  }, [])
+  const cuff = useMemo(() => new THREE.CylinderGeometry(0.205, 0.205, 0.11, 96, 4, true), [])
 
   return (
     <group dispose={null}>
-      <mesh key={key} geometry={body} material={canvas} castShadow receiveShadow>
+      <mesh geometry={crown} material={knit} castShadow />
+      <mesh key={decalKey(rest)} geometry={cuff} material={knit} position={[0, -0.055, 0]} castShadow receiveShadow>
         <PrintDecals {...rest} />
       </mesh>
-      {[0.022, -0.022].map((z) => (
-        <mesh key={z} position={[0, 0.2, z]} material={strap} castShadow>
-          <torusGeometry args={[0.08, 0.008, 12, 48, Math.PI]} />
-        </mesh>
-      ))}
+      <mesh position={[0, 0.25, 0]} material={knit}>
+        <sphereGeometry args={[0.045, 24, 24]} />
+      </mesh>
+    </group>
+  )
+}
+
+/** Framed poster: the product color is the frame, prints go on the paper. */
+export function PosterModel({ color, ...rest }: ProceduralModelProps) {
+  const frame = useTintedMaterial(color, { roughness: 0.6 })
+  const paper = useMemo(() => new THREE.MeshStandardMaterial({ color: '#FAFAF7', roughness: 0.95 }), [])
+
+  return (
+    <group dispose={null}>
+      <RoundedBox args={[0.44, 0.6, 0.03]} radius={0.006} material={frame} castShadow />
+      <mesh key={decalKey(rest)} position={[0, 0, 0.0155]} material={paper}>
+        <boxGeometry args={[0.39, 0.55, 0.002]} />
+        <PrintDecals {...rest} />
+      </mesh>
+    </group>
+  )
+}
+
+/** Die-cut vinyl sticker: a thin rounded slab with a white border. */
+export function StickerModel({ color, ...rest }: ProceduralModelProps) {
+  const vinyl = useTintedMaterial(color, { roughness: 0.35, metalness: 0 })
+  const shape = useMemo(() => {
+    const geometry = new THREE.CylinderGeometry(0.25, 0.25, 0.008, 96)
+    geometry.rotateX(Math.PI / 2)
+    return geometry
+  }, [])
+
+  return (
+    <group dispose={null} rotation={[-0.15, 0.25, 0]}>
+      <mesh key={decalKey(rest)} geometry={shape} material={vinyl} castShadow receiveShadow>
+        <PrintDecals {...rest} />
+      </mesh>
     </group>
   )
 }

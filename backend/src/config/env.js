@@ -56,6 +56,27 @@ const env = {
     },
   },
 
+  /** TON: direct wallet payments via TON Connect and NFT certificates for NFT-backed merch. */
+  ton: {
+    network: process.env.TON_NETWORK === 'testnet' ? 'testnet' : 'mainnet',
+    /** Wallet that receives TON payments. */
+    receiverAddress: process.env.TON_RECEIVER_ADDRESS || '',
+    toncenterApiKey: process.env.TONCENTER_API_KEY || '',
+    /** Fixed TON price in USD; when unset the live price is fetched from CoinGecko. */
+    usdPrice: Number(process.env.TON_USD_PRICE) || null,
+    quoteTtlMinutes: Number(process.env.TON_QUOTE_TTL_MINUTES) || 20,
+    /** 24-word mnemonic of the wallet that owns the NFT collection (it pays for mints). */
+    minterMnemonic: process.env.TON_MINTER_MNEMONIC || '',
+    collectionAddress: process.env.TON_NFT_COLLECTION_ADDRESS || '',
+  },
+
+  referral: {
+    /** Discount on a referred user's first order. */
+    discountPercent: Number(process.env.REFERRAL_DISCOUNT_PERCENT ?? 10),
+    /** Credit the referrer earns from that order's subtotal. */
+    rewardPercent: Number(process.env.REFERRAL_REWARD_PERCENT ?? 5),
+  },
+
   /** Public base URL of this API as seen by payment providers (for webhooks). Defaults to the first FRONTEND_URL, which proxies /api. */
   publicApiUrl: (process.env.PUBLIC_API_URL || '').replace(/\/+$/, ''),
 };
@@ -66,6 +87,13 @@ env.payments.nowpayments.isConfigured = Boolean(
   env.payments.nowpayments.apiKey && env.payments.nowpayments.ipnSecret
 );
 if (!env.publicApiUrl) env.publicApiUrl = `${env.frontendUrls[0]}/api`;
+
+env.ton.apiUrl = (
+  process.env.TONCENTER_API_URL ||
+  (env.ton.network === 'testnet' ? 'https://testnet.toncenter.com/api/v2' : 'https://toncenter.com/api/v2')
+).replace(/\/+$/, '');
+env.ton.isConfigured = Boolean(env.ton.receiverAddress);
+env.ton.canMint = Boolean(env.ton.minterMnemonic && env.ton.collectionAddress);
 
 if (env.isProduction && env.payments.provider === 'mock') {
   throw new Error('PAYMENT_PROVIDER=mock is not allowed in production');

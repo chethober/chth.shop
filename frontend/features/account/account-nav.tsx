@@ -157,7 +157,7 @@ export function AccountNav({ activeTab, onChange, counts, onSignOut }: AccountNa
 
         <p className="px-3 pt-2 text-[11px] text-muted-foreground/70">
           Tip: press <kbd className="rounded border border-border px-1">1</kbd>–
-          <kbd className="rounded border border-border px-1">5</kbd> to switch sections
+          <kbd className="rounded border border-border px-1">{ACCOUNT_TABS.length}</kbd> to switch sections
         </p>
       </nav>
 

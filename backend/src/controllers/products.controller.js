@@ -15,7 +15,15 @@ const SORT_ORDERS = {
   'price-asc': { price: 'asc' },
   'price-desc': { price: 'desc' },
   name: { name: 'asc' },
+  top: [{ ratingAvg: 'desc' }, { ratingCount: 'desc' }],
 };
+
+function parseDate(value, label) {
+  if (value === null || value === '') return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw new HttpError(400, `${label} must be a date`);
+  return date;
+}
 
 /** Loads a product the current user is allowed to modify. */
 async function findOwnedProduct(userId, productId) {
@@ -81,6 +89,18 @@ function productFields(body, type) {
   }
   if (body.design !== undefined) data.design = normalizeDesign(body.design);
   if (body.isActive !== undefined) data.isActive = Boolean(body.isActive);
+  if (body.nftBacked !== undefined) data.nftBacked = Boolean(body.nftBacked);
+  if (body.editionSize !== undefined) {
+    if (body.editionSize === null || body.editionSize === '') {
+      data.editionSize = null;
+    } else {
+      const size = Number(body.editionSize);
+      if (!Number.isInteger(size) || size < 1 || size > 100000) throw new HttpError(400, 'Edition size must be a whole number from 1 to 100000');
+      data.editionSize = size;
+    }
+  }
+  if (body.dropStartsAt !== undefined) data.dropStartsAt = parseDate(body.dropStartsAt, 'Drop start');
+  if (body.dropEndsAt !== undefined) data.dropEndsAt = parseDate(body.dropEndsAt, 'Drop end');
 
   return data;
 }
@@ -90,7 +110,7 @@ const getCatalog = (req, res) => {
 };
 
 const listProducts = asyncHandler(async (req, res) => {
-  const { type, store, kind, search } = req.query;
+  const { type, store, kind, search, collection } = req.query;
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
   const skip = (page - 1) * limit;
@@ -100,10 +120,22 @@ const listProducts = asyncHandler(async (req, res) => {
     ...(store && { user: { username: String(store) } }),
     ...(STORE_KINDS.includes(kind) && { kind }),
   };
+  if (req.query.following === '1') {
+    if (!req.userId) throw new HttpError(401, 'Sign in to see stores you follow');
+    storeFilter.followers = { some: { userId: req.userId } };
+  }
+  const now = new Date();
   const where = {
     isActive: true,
     ...(type && { type: String(type) }),
     ...(Object.keys(storeFilter).length > 0 && { store: storeFilter }),
+    // Drops: limited editions, NFT-backed items and timed releases that haven't ended.
+    ...(collection === 'drops' && {
+      AND: [
+        { OR: [{ editionSize: { not: null } }, { nftBacked: true }, { dropStartsAt: { not: null } }, { dropEndsAt: { not: null } }] },
+        { OR: [{ dropEndsAt: null }, { dropEndsAt: { gt: now } }] },
+      ],
+    }),
     ...(search && {
       OR: [
         { name: { contains: String(search), mode: 'insensitive' } },
@@ -166,8 +198,12 @@ const createProduct = asyncHandler(async (req, res) => {
   const store = await prisma.store.findUnique({ where: { userId: req.userId } });
   if (!store) throw new HttpError(403, 'Only sellers can create products');
 
+  const fields = productFields(req.body, String(type));
+  if (fields.dropStartsAt && fields.dropEndsAt && fields.dropEndsAt <= fields.dropStartsAt) {
+    throw new HttpError(400, 'The drop must end after it starts');
+  }
   const product = await prisma.product.create({
-    data: { ...productFields(req.body, String(type)), storeId: store.id },
+    data: { ...fields, storeId: store.id },
     include: productWithStore,
   });
 
@@ -178,6 +214,13 @@ const updateProduct = asyncHandler(async (req, res) => {
   const product = await findOwnedProduct(req.userId, req.params.id);
   const type = req.body.type !== undefined ? String(req.body.type) : product.type;
   const data = productFields(req.body, type);
+
+  if (data.editionSize !== undefined && data.editionSize !== null && data.editionSize < product.editionsSold) {
+    throw new HttpError(400, `${product.editionsSold} are already sold; the edition can't be smaller`);
+  }
+  const startsAt = data.dropStartsAt !== undefined ? data.dropStartsAt : product.dropStartsAt;
+  const endsAt = data.dropEndsAt !== undefined ? data.dropEndsAt : product.dropEndsAt;
+  if (startsAt && endsAt && endsAt <= startsAt) throw new HttpError(400, 'The drop must end after it starts');
 
   // Changing the base product must keep the price above its production cost.
   if (type !== product.type && data.price === undefined && product.price < getCatalogItem(type).baseCost) {

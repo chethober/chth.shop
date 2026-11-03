@@ -15,6 +15,8 @@ const { isValidTelegramPayload, telegramIdentity } = require('../services/telegr
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/;
 const USERNAME_MIN_LENGTH = 5;
+/** Top-level frontend routes; a store at /<username> with these names would be unreachable. */
+const RESERVED_USERNAMES = new Set(['account', 'admin', 'auth', 'cart', 'checkout', 'collab', 'design', 'login', 'register', 'shop', 'terms', 'verify']);
 
 /* ---------- Google ---------- */
 
@@ -119,6 +121,9 @@ const updateUsername = asyncHandler(async (req, res) => {
   }
   if (!USERNAME_PATTERN.test(newUsername)) {
     throw new HttpError(400, 'Username can only contain letters, numbers, and underscores');
+  }
+  if (RESERVED_USERNAMES.has(newUsername.toLowerCase())) {
+    throw new HttpError(400, 'That username is reserved');
   }
 
   const owner = await prisma.user.findUnique({ where: { username: newUsername } });

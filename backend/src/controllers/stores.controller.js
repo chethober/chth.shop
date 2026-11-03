@@ -69,7 +69,16 @@ const getStoreByUsername = asyncHandler(async (req, res) => {
   });
   if (!user || !user.store) throw new HttpError(404, 'Store not found');
 
-  sendSuccess(res, { data: { store: publicStore(user.store) } });
+  const [followerCount, following] = await Promise.all([
+    prisma.follow.count({ where: { storeId: user.store.id } }),
+    req.userId
+      ? prisma.follow.findUnique({ where: { userId_storeId: { userId: req.userId, storeId: user.store.id } } })
+      : null,
+  ]);
+
+  sendSuccess(res, {
+    data: { store: { ...publicStore(user.store), followerCount, isFollowing: Boolean(following) } },
+  });
 });
 
 const getMyStore = asyncHandler(async (req, res) => {

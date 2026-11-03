@@ -16,7 +16,10 @@ import type { Order, Product, Store } from '@/types'
 import { AccountNav } from './account-nav'
 import { AccountSkeleton } from './account-skeleton'
 import { ACCOUNT_TABS, isAccountTab, type AccountTab } from './account-tabs'
+import { CollectiblesPanel } from './collectibles-panel'
 import { DesignsPanel } from './designs-panel'
+import { InvitePanel } from './invite-panel'
+import { SavedPanel } from './saved-panel'
 import { OrdersPanel } from './orders-panel'
 import { OverviewPanel } from './overview-panel'
 import { ProductEditDialog, type ProductChanges } from './product-edit-dialog'
@@ -73,7 +76,7 @@ export function AccountView() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
-  // Number keys 1–5 switch sections (ignored while typing or in dialogs).
+  // Number keys 1–8 switch sections (ignored while typing or in dialogs).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
@@ -346,6 +349,9 @@ export function AccountView() {
               {activeTab === 'orders' && (
                 <OrdersPanel orders={orders} isLoading={isLoadingOrders} onRefresh={refreshOrders} onCancel={cancelOrder} />
               )}
+              {activeTab === 'collectibles' && <CollectiblesPanel />}
+              {activeTab === 'saved' && <SavedPanel />}
+              {activeTab === 'invite' && <InvitePanel />}
               {activeTab === 'designs' && <DesignsPanel />}
               {activeTab === 'profile' && <ProfilePanel onDeleteAccount={deleteAccount} />}
             </motion.div>

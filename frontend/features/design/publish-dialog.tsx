@@ -10,12 +10,17 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import { formatPrice } from '@/lib/format'
 import type { CatalogItem } from '@/types'
+import { EMPTY_RELEASE, ReleaseSettings, releaseToPayload } from '@/components/shared/release-settings'
 
 export interface PublishDetails {
   name: string
   price: number
   description: string
   customizable: boolean
+  nftBacked: boolean
+  editionSize: number | null
+  dropStartsAt: string | null
+  dropEndsAt: string | null
 }
 
 interface PublishDialogProps {
@@ -32,6 +37,8 @@ export function PublishDialog({ open, catalogItem, publishing, onClose, onPublis
   const [price, setPrice] = useState(String(catalogItem.retailPrice))
   const [description, setDescription] = useState('')
   const [customizable, setCustomizable] = useState(false)
+  const [release, setRelease] = useState(EMPTY_RELEASE)
+  const releaseResult = releaseToPayload(release)
 
   const priceValue = Number(price)
   const priceError = !Number.isFinite(priceValue) || priceValue < catalogItem.baseCost ? `At least ${formatPrice(catalogItem.baseCost)} (production cost)` : ''
@@ -39,13 +46,19 @@ export function PublishDialog({ open, catalogItem, publishing, onClose, onPublis
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!name.trim() || priceError || publishing) return
-    await onPublish({ name: name.trim(), price: Math.round(priceValue * 100) / 100, description: description.trim(), customizable })
+    if (!name.trim() || priceError || releaseResult.error || publishing) return
+    await onPublish({
+      name: name.trim(),
+      price: Math.round(priceValue * 100) / 100,
+      description: description.trim(),
+      customizable,
+      ...releaseResult.payload,
+    })
   }
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && !publishing && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <form onSubmit={submit} className="space-y-5">
           <DialogHeader>
             <DialogTitle>Publish to your store</DialogTitle>
@@ -98,11 +111,14 @@ export function PublishDialog({ open, catalogItem, publishing, onClose, onPublis
             </span>
           </label>
 
+          <ReleaseSettings values={release} onChange={setRelease} />
+          {releaseResult.error && <p className="text-[11px] text-destructive">{releaseResult.error}</p>}
+
           <DialogFooter>
             <Button variant="outline" onClick={onClose} disabled={publishing}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!name.trim() || Boolean(priceError) || publishing}>
+            <Button type="submit" disabled={!name.trim() || Boolean(priceError || releaseResult.error) || publishing}>
               {publishing ? <Spinner /> : <Rocket />}
               {publishing ? 'Publishing…' : 'Publish'}
             </Button>

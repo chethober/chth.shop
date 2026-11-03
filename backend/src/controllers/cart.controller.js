@@ -4,6 +4,7 @@ const { cartWithItems, cartItemWithProduct } = require('../lib/queries');
 const { serializeCart, serializeCartItem } = require('../lib/serializers');
 const { getCatalogItem } = require('../lib/catalog');
 const { normalizeOptions, optionsKey } = require('../lib/options');
+const { assertPurchasable } = require('../lib/availability');
 
 const MAX_QUANTITY = 99;
 
@@ -26,10 +27,11 @@ async function findOwnedCartItem(userId, itemId) {
  * Works out what is being added: a store listing (`productId`) or the buyer's own
  * design on a catalog blank (`type` + `options.design`). Returns the validated line.
  */
-async function resolveLine({ productId, type, options }) {
+async function resolveLine({ productId, type, options }, quantity) {
   if (productId) {
     const product = await prisma.product.findUnique({ where: { id: String(productId) } });
     if (!product || !product.isActive) throw new HttpError(404, 'Product not found');
+    assertPurchasable(product, quantity);
     const catalogItem = getCatalogItem(product.type);
     const normalized = normalizeOptions(options, {
       sizes: product.sizes.length > 0 ? product.sizes : catalogItem?.sizes ?? [],
@@ -64,7 +66,7 @@ const getCart = asyncHandler(async (req, res) => {
 
 const addItem = asyncHandler(async (req, res) => {
   const quantity = parseQuantity(req.body.quantity ?? 1, `Quantity must be between 1 and ${MAX_QUANTITY}`);
-  const line = await resolveLine(req.body);
+  const line = await resolveLine(req.body, quantity);
   const key = optionsKey(line.options);
 
   const cart = await prisma.cart.upsert({
