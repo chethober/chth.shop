@@ -1,6 +1,6 @@
 # Build from the repo root: docker build -f backend/Dockerfile .
 
-FROM node:22-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 # Prisma's query engine needs OpenSSL.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
