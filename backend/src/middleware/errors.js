@@ -1,4 +1,5 @@
 const env = require('../config/env');
+const { track } = require('../services/hub.service');
 
 function notFound(req, res) {
   res.status(404).json({ success: false, message: 'API endpoint not found' });
@@ -23,6 +24,7 @@ function errorHandler(error, req, res, next) {
   }
 
   console.error(`${req.method} ${req.originalUrl} failed:`, error);
+  track('error', { where: `${req.method} ${req.baseUrl || ''}${req.route ? req.route.path : req.path}`, message: String(error.message || error).slice(0, 300) });
   res.status(500).json({
     success: false,
     message: 'Internal server error',

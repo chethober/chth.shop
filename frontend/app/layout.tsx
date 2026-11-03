@@ -5,6 +5,10 @@ import { SiteHeader } from '@/components/layout/site-header'
 import { ToastProvider } from '@/components/layout/toast-provider'
 import { themeInitScript } from '@/lib/theme'
 import './globals.css'
+import '@/chth-kit/brand.css'
+import { dirOf } from '@/chth-kit/locales.js'
+import { LocaleProvider } from '@/lib/i18n'
+import { requestLocale } from '@/lib/i18n/server'
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
 const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' })
@@ -22,17 +26,23 @@ export const viewport: Viewport = {
   themeColor: '#0f172a',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { locale, hasCookie } = await requestLocale()
   return (
-    <html lang="en" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang={locale} dir={dirOf(locale)} data-chth-product="shop" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* Persian and Arabic text uses Vazirmatn (see .chth-* rules in globals.css). */}
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300..800&display=swap" />
       </head>
       <body suppressHydrationWarning className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
-        <SiteHeader />
-        <main className="flex flex-1 flex-col">{children}</main>
-        <SiteFooter />
-        <ToastProvider />
+        <LocaleProvider initial={locale} hasCookie={hasCookie}>
+          <SiteHeader />
+          <main className="flex flex-1 flex-col">{children}</main>
+          <SiteFooter />
+          <ToastProvider />
+        </LocaleProvider>
       </body>
     </html>
   )

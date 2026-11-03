@@ -13,6 +13,7 @@ import useAuthStore from '@/store/auth-store'
 import { describeAuthError } from './auth-errors'
 import { GoogleIcon, TelegramIcon, XIcon } from './provider-icons'
 import { rememberRedirect, safeRedirectPath } from './redirect'
+import { useT } from '@/lib/i18n'
 
 type Provider = 'google' | 'x' | 'telegram'
 
@@ -20,6 +21,7 @@ const providerButtonStyles =
   'group flex items-center gap-2.5 rounded-xl border border-border/80 bg-background/70 px-4 py-3 text-xs font-medium text-foreground shadow-xs backdrop-blur-md transition-all duration-200 ease-out cursor-pointer hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-secondary/80 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-75 sm:text-sm'
 
 export function SignInView() {
+  const t = useT()
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = safeRedirectPath(searchParams.get('redirect'))
@@ -72,8 +74,8 @@ export function SignInView() {
           transition={{ duration: 0.3 }}
           className="space-y-1.5 text-center"
         >
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Sign in</h1>
-          <p className="text-sm text-muted-foreground">Continue with your preferred account</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t("Sign in")}</h1>
+          <p className="text-sm text-muted-foreground">{t("Continue with your preferred account")}</p>
         </motion.div>
 
         <motion.div
@@ -96,7 +98,7 @@ export function SignInView() {
                 <button
                   type="button"
                   onClick={() => setDismissedError(true)}
-                  aria-label="Dismiss error"
+                  aria-label={t("Dismiss error")}
                   className="cursor-pointer text-destructive/70 transition-colors hover:text-destructive"
                 >
                   <X className="size-4" />
@@ -165,7 +167,7 @@ export function SignInView() {
             </span>
             <span className="flex items-center gap-1.5 rounded-full border border-border/80 bg-secondary/80 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
               <span className="size-1.5 rounded-full bg-[#24A1DE]" />
-              Management Bot
+              {t("Management Bot")}
             </span>
           </button>
         </motion.div>
@@ -173,7 +175,7 @@ export function SignInView() {
         <p className="px-4 text-center text-[11px] leading-relaxed text-muted-foreground">
           By signing in, you agree to our{' '}
           <Link href="/terms" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
-            Terms of Service
+            {t("Terms of Service")}
           </Link>
           .
         </p>

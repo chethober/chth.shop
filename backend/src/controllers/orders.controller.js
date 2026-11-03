@@ -3,6 +3,8 @@ const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
 const { orderWithItems } = require('../lib/queries');
 const { roundCurrency, serializeOrder } = require('../lib/serializers');
 const { notifyOrderPlacedInBackground } = require('../services/telegram-notify.service');
+const { track } = require('../services/hub.service');
+const { summary } = require('./internal.controller');
 
 /** Turns the user's cart into order lines, pricing each item at its current price. */
 async function cartToOrderLines(userId) {
@@ -47,6 +49,7 @@ const createOrder = asyncHandler(async (req, res) => {
     await tx.cartItem.deleteMany({ where: { cartId } });
     return created;
   });
+  track('order.created', summary(order), req.userId);
 
   notifyOrderPlacedInBackground(order.id);
 

@@ -15,6 +15,7 @@ import useCartStore from '@/store/cart-store'
 import type { Artist, Product, ProductType } from '@/types'
 import { ArtistProfileCard } from './artist-profile-card'
 import { StorefrontProductCard } from './storefront-product-card'
+import { useT } from '@/lib/i18n'
 
 type SortKey = 'newest' | 'price-asc' | 'price-desc' | 'name'
 
@@ -31,6 +32,7 @@ const SORTERS: Record<SortKey, { label: string; compare: (a: Product, b: Product
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; artist: Artist }
 
 export function StorefrontView({ username }: { username: string }) {
+  const t = useT()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const addToCart = useCartStore((state) => state.addItem)
 
@@ -61,7 +63,7 @@ export function StorefrontView({ username }: { username: string }) {
 
   const handleAddToCart = async (product: Product) => {
     if (!isAuthenticated) {
-      toast.warning('Please sign in to add items to your cart')
+      toast.warning(t("Please sign in to add items to your cart"))
       return
     }
     setAddingId(product.id)
@@ -75,17 +77,17 @@ export function StorefrontView({ username }: { username: string }) {
     }
   }
 
-  if (state.status === 'loading') return <LoadingState label="Loading store…" />
+  if (state.status === 'loading') return <LoadingState label={t("Loading store…")} />
 
   if (state.status === 'error') {
     return (
       <EmptyState
         icon={User}
-        title="Artist not found"
-        description="This store doesn't exist or may have been removed."
+        title={t("Artist not found")}
+        description={t("This store doesn't exist or may have been removed.")}
         action={
           <Button asChild>
-            <Link href="/">Back to home</Link>
+            <Link href="/">{t("Back to home")}</Link>
           </Button>
         }
         className="my-auto"
@@ -100,25 +102,25 @@ export function StorefrontView({ username }: { username: string }) {
       <section className="space-y-5">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <h2 className="text-xl font-extrabold tracking-tight text-foreground">
-            Shop <span className="text-sm font-normal text-muted-foreground">({visibleProducts.length})</span>
+            {t("Shop")} <span className="text-sm font-normal text-muted-foreground">({visibleProducts.length})</span>
           </h2>
           <div className="flex items-center gap-2">
             <Select
-              aria-label="Filter by product type"
+              aria-label={t("Filter by product type")}
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value as ProductType | 'all')}
             >
-              <option value="all">All items</option>
+              <option value="all">{t("All items")}</option>
               {PRODUCT_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {PRODUCT_TYPE_LABELS[type]}
                 </option>
               ))}
             </Select>
-            <Select aria-label="Sort products" value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
+            <Select aria-label={t("Sort products")} value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
               {Object.entries(SORTERS).map(([key, { label }]) => (
                 <option key={key} value={key}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </Select>
@@ -126,7 +128,7 @@ export function StorefrontView({ username }: { username: string }) {
         </div>
 
         {visibleProducts.length === 0 ? (
-          <EmptyState icon={Package} title="No designs published yet" />
+          <EmptyState icon={Package} title={t("No designs published yet")} />
         ) : (
           <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {visibleProducts.map((product, index) => (

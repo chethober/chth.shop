@@ -116,6 +116,25 @@ yarn workspace chth-backend dev        # http://localhost:5000/api
 yarn workspace chth-frontend dev       # http://localhost:3000
 ```
 
+## Languages
+
+The storefront (home page, artist stores, cart and checkout, sign-in and the design studio)
+comes in English, Persian, Arabic, Russian and Spanish, with right-to-left layout for Persian and
+Arabic. Strings live in `frontend/lib/i18n/strings.ts`, keyed by their English text, so a missing
+translation shows English; components use `useT()` from `frontend/lib/i18n`. The language comes
+from `?lang=`, the `chth_lang` cookie shared by every CHTH site, or the browser, and visitors
+switch it in the footer. Product and artist names are shown as written. The account pages are
+English for now.
+
+## CHTH kit and hub
+
+`frontend/chth-kit/` and `backend/src/chth-kit/` are generated from the shared CHTH kit (brand
+tokens, logo, languages, product links, the "Part of CHTH" footer, signed hub client): don't edit
+them here. With `HUB_URL` and `HUB_SECRET` set, the backend reports new orders, sign-ups and
+server errors to the CHTH hub, and answers the hub's signed calls at `GET /api/internal/stats`
+and `POST /api/internal/orders/status` (the admin bot's order buttons). Without them nothing is
+sent and `/api/internal` refuses every call. `cd backend && npm test` checks the signing.
+
 ### Configuration
 
 All settings come from environment variables. The annotated templates are
@@ -127,7 +146,10 @@ All settings come from environment variables. The annotated templates are
 | `FRONTEND_URL` | | Public URL(s) of the site, comma-separated |
 | `GOOGLE_CLIENT_ID` / `_SECRET` | | Google sign-in |
 | `TWITTER_CLIENT_ID` / `_SECRET` | | X sign-in |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | | Telegram Login widget |
+| `TELEGRAM_CLIENT_ID` / `_SECRET` | | Telegram sign-in (OpenID Connect) |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ADMIN_IDS` | | Bot sign-in and order alerts |
+| `OUTBOUND_PROXY` | | HTTP proxy for reaching X/Telegram |
+| `HUB_URL`, `HUB_SECRET`, `SHOP_CURRENCY` | | CHTH hub reporting |
 
 Every sign-in provider is optional; providers without keys are simply unavailable. OAuth
 callback setup is described in [backend/README.md](backend/README.md#oauth-and-other-devices).

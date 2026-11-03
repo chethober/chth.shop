@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma');
 const { signToken } = require('../lib/tokens');
 const { serializeAuthUser } = require('../lib/serializers');
+const { track } = require('./hub.service');
 
 const PROVIDER_ID_FIELD = {
   google: 'googleId',
@@ -42,7 +43,7 @@ async function findOrCreateOAuthUser({ provider, providerId, email, preferredUse
     });
   }
 
-  return prisma.user.create({
+  const created = await prisma.user.create({
     data: {
       username: await uniqueUsername(preferredUsername, `${provider}_${providerId}`),
       email: email || `${providerId}@${provider}.local`,
@@ -52,6 +53,8 @@ async function findOrCreateOAuthUser({ provider, providerId, email, preferredUse
       ...(provider === 'google' && { isGoogleUser: true }),
     },
   });
+  track('signup', { provider }, created.id);
+  return created;
 }
 
 /** Issues a session for `user` and returns the auth payload the frontend stores. */
