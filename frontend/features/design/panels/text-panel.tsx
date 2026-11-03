@@ -44,7 +44,7 @@ export function TextPanel() {
     const text = content.trim()
     if (!text) return
     const placement = getGarment(garmentId).placements[0]
-    addLayer({ type: 'text', name: text, content: text, font, color, bold, italic, outline: null }, { ...placement, size: Math.max(placement.size, 0.2) })
+    addLayer({ type: 'text', name: text, content: text, font, color, bold, italic, outline: null }, { ...placement, size: Math.min(placement.size * 1.35, 0.3) })
     setContent('')
   }
 

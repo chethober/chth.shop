@@ -8,8 +8,10 @@ import {
   type DesignDoc,
   type DesignLayer,
   type Placement,
+  type PrintSide,
+  type Vec3,
 } from './constants'
-import { surfacePoint } from './scene-bridge'
+import { sceneBridge, surfacePoint } from './scene-bridge'
 
 let storageFull = false
 
@@ -87,6 +89,8 @@ interface StudioState {
   load: (doc: DesignDoc) => void
 
   setGarment: (id: ProductType) => void
+  /** Re-projects every print onto the current product's surface (after a product switch); not an undo step. */
+  snapToSurface: () => void
   setColor: (color: string, key?: string) => void
   setFabric: (id: string) => void
   rename: (name: string) => void
@@ -105,6 +109,27 @@ interface StudioState {
   setBackdrop: (backdrop: BackdropId) => void
   addAsset: (asset: Omit<Asset, 'id'>) => Asset
   removeAsset: (id: string) => void
+}
+
+/**
+ * Moves prints onto another product: each keeps its offset from the first placement on its side, scaled by how the
+ * two products' placements compare, so a chest print lands on the mug's front rather than in mid-air. Products
+ * without a back put everything on the front. `snapToSurface` then refines depth once the new model is drawn.
+ */
+function remapLayers(doc: DesignDoc, garmentId: ProductType): DesignLayer[] {
+  const from = getGarment(doc.garmentId)
+  const to = getGarment(garmentId)
+  if (from.id === to.id) return doc.layers
+  const anchor = (placements: Placement[], side: PrintSide) => placements.find((p) => p.side === side) ?? placements[0]
+  return doc.layers.map((layer) => {
+    const source = anchor(from.placements, layer.side)
+    const target = anchor(to.placements, layer.side)
+    const ratio = target.size / source.size
+    const x = target.x + (layer.position[0] - source.x) * ratio
+    const y = target.y + (layer.position[1] - source.y) * ratio
+    const z = target.side === 'front' ? to.chestPosition[2] : -to.chestPosition[2]
+    return { ...layer, side: target.side, position: [x, y, z] as Vec3, size: layer.size * ratio }
+  })
 }
 
 function placementPosition(doc: DesignDoc, placement: Placement) {
@@ -173,7 +198,20 @@ export const useStudio = create<StudioState>()(
           set({ selectedId: null })
         },
 
-        setGarment: (garmentId) => get().edit((doc) => ({ ...doc, garmentId })),
+        setGarment: (garmentId) => get().edit((doc) => ({ ...doc, garmentId, layers: remapLayers(doc, garmentId) })),
+        snapToSurface: () => {
+          const project = sceneBridge.projectToSurface
+          if (!project) return
+          set((state) => ({
+            doc: {
+              ...state.doc,
+              layers: state.doc.layers.map((layer) => {
+                const point = project(layer.position[0], layer.position[1], layer.side)
+                return point ? { ...layer, position: point } : layer
+              }),
+            },
+          }))
+        },
         setColor: (color, key) => get().edit((doc) => ({ ...doc, color }), key),
         setFabric: (fabric) => get().edit((doc) => ({ ...doc, fabric })),
         rename: (name) => get().edit((doc) => ({ ...doc, name }), 'rename'),

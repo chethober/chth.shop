@@ -89,7 +89,7 @@ export async function composeTechSheet(doc: DesignDoc): Promise<string | null> {
   ctx.font = `400 24px ${font}`
   ctx.fillStyle = '#52525B'
   ctx.fillText(
-    `${garment.name} · ${getFabric(doc.fabric).name} · ${doc.color} · ${prints.length} print${prints.length === 1 ? '' : 's'} ` +
+    `${garment.name}${garment.fabric ? ` · ${getFabric(doc.fabric).name}` : ''} · ${doc.color} · ${prints.length} print${prints.length === 1 ? '' : 's'} ` +
       `(${prints.filter((l) => l.side === 'front').length} front, ${prints.filter((l) => l.side === 'back').length} back)`,
     pad,
     top + 44

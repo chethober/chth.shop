@@ -223,8 +223,8 @@ function DesignSummary() {
   const back = doc.layers.length - front
 
   const rows: [string, React.ReactNode][] = [
-    ['Garment', garment.name],
-    ['Fabric', getFabric(doc.fabric).name],
+    ['Product', garment.name],
+    ...(garment.fabric ? [['Fabric', getFabric(doc.fabric).name] as [string, React.ReactNode]] : []),
     [
       'Color',
       <span key="color" className="flex items-center gap-1.5">

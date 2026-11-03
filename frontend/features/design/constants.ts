@@ -1,4 +1,4 @@
-import { Scissors, Shirt, type LucideIcon } from 'lucide-react'
+import { Coffee, CupSoda, HardHat, Image, Milk, Scissors, Shirt, ShoppingBag, Smartphone, Sticker, type LucideIcon } from 'lucide-react'
 import type { ProductType } from '@/types'
 
 export type Vec3 = [number, number, number]
@@ -16,61 +16,216 @@ export interface Placement {
   size: number
 }
 
+/** How a product is drawn: the baked t-shirt, a normalized GLB, or geometry built in code. */
+export type GarmentRender = 'baked' | 'gltf' | 'cap' | 'beanie' | 'poster' | 'sticker'
+
+/** How a GLB product is loaded (see scene/garment-model.tsx). */
+export interface GltfModel {
+  path: string
+  /**
+   * Largest side after normalization, in scene units. Normalized models are centred at the origin with their
+   * print side facing +z, so placements below are in that shared space.
+   */
+  targetSize?: number
+  /** Mesh names that take the product color; all when omitted. */
+  tintParts?: string[]
+  /** Drop baked colour textures on tinted parts so the color shows. */
+  dropColorTextures?: boolean
+  /** Mesh that receives prints; the largest when omitted. */
+  printPart?: string
+}
+
 export interface Garment {
   id: ProductType
   name: string
   icon: LucideIcon
-  modelPath: string
-  /** Where the chest logo sits on the model's surface. */
+  render: GarmentRender
+  model?: GltfModel
+  /** Apparel takes the fabric options; rigid products (mugs, cases…) keep their own finish. */
+  fabric: boolean
+  /**
+   * How deep prints project along the surface normal. Deep enough to wrap curved fabric, shallow enough that rigid
+   * products don't print through to their other side.
+   */
+  decalDepth: number
+  /**
+   * Project prints straight along the front/back axis instead of along the surface normal. For models whose
+   * normals are too coarse to orient a print (the low-poly joggers).
+   */
+  axisPrints?: boolean
+  /** Where the first print lands (z is the fallback when projection misses). */
   chestPosition: Vec3
   chestScale: Vec3
   placements: Placement[]
 }
 
+const front = (id: string, label: string, x: number, y: number, size: number): Placement => ({ id, label, side: 'front', x, y, size })
+const back = (id: string, label: string, x: number, y: number, size: number): Placement => ({ id, label, side: 'back', x, y, size })
+
+// Model sources and licenses: public/models/LICENSES.md
 export const GARMENTS: Garment[] = [
   {
     id: 'tshirt',
     name: 'T-Shirt',
     icon: Shirt,
-    modelPath: '/models/shirt_baked.glb',
+    render: 'baked',
+    model: { path: '/models/shirt_baked.glb' },
+    fabric: true,
+    decalDepth: 0.28,
     chestPosition: [0, 0.04, 0.15],
     chestScale: [0.15, 0.15, 0.15],
     placements: [
-      { id: 'center-chest', label: 'Center chest', side: 'front', x: 0, y: 0.04, size: 0.15 },
-      { id: 'left-chest', label: 'Left chest', side: 'front', x: 0.07, y: 0.1, size: 0.07 },
-      { id: 'full-front', label: 'Full front', side: 'front', x: 0, y: -0.02, size: 0.27 },
-      { id: 'upper-back', label: 'Upper back', side: 'back', x: 0, y: 0.13, size: 0.12 },
-      { id: 'full-back', label: 'Full back', side: 'back', x: 0, y: -0.01, size: 0.27 },
+      front('center-chest', 'Center chest', 0, 0.04, 0.15),
+      front('left-chest', 'Left chest', 0.07, 0.1, 0.07),
+      front('full-front', 'Full front', 0, -0.02, 0.27),
+      back('upper-back', 'Upper back', 0, 0.13, 0.12),
+      back('full-back', 'Full back', 0, -0.01, 0.27),
     ],
   },
   {
     id: 'hoodie',
     name: 'Hoodie',
     icon: Shirt,
-    modelPath: '/models/hoodie.glb',
-    chestPosition: [0, 0.06, 0.18],
-    chestScale: [0.18, 0.18, 0.18],
+    render: 'gltf',
+    model: { path: '/models/hoodie.glb', targetSize: 0.75, dropColorTextures: true },
+    fabric: true,
+    decalDepth: 0.25,
+    chestPosition: [0, 0.07, 0.15],
+    chestScale: [0.15, 0.15, 0.15],
     placements: [
-      { id: 'center-chest', label: 'Center chest', side: 'front', x: 0, y: 0.06, size: 0.18 },
-      { id: 'left-chest', label: 'Left chest', side: 'front', x: 0.08, y: 0.12, size: 0.08 },
-      { id: 'full-front', label: 'Full front', side: 'front', x: 0, y: 0.02, size: 0.28 },
-      { id: 'upper-back', label: 'Upper back', side: 'back', x: 0, y: 0.12, size: 0.14 },
-      { id: 'full-back', label: 'Full back', side: 'back', x: 0, y: 0.02, size: 0.3 },
+      front('center-chest', 'Center chest', 0, 0.07, 0.14),
+      front('left-chest', 'Left chest', 0.06, 0.1, 0.07),
+      front('full-front', 'Full front', 0, 0.02, 0.22),
+      back('upper-back', 'Upper back', 0, 0.1, 0.12),
+      back('full-back', 'Full back', 0, 0.03, 0.24),
     ],
   },
   {
     id: 'pants',
-    name: 'Pants',
+    name: 'Joggers',
     icon: Scissors,
-    modelPath: '/models/pants.glb',
-    chestPosition: [0.08, -0.15, 0.14],
-    chestScale: [0.14, 0.14, 0.14],
+    render: 'gltf',
+    model: { path: '/models/joggers.glb', targetSize: 0.62, dropColorTextures: true },
+    fabric: true,
+    decalDepth: 0.15,
+    axisPrints: true,
+    chestPosition: [0.06, 0.13, 0.08],
+    chestScale: [0.08, 0.08, 0.08],
     placements: [
-      { id: 'left-thigh', label: 'Left thigh', side: 'front', x: 0.08, y: -0.15, size: 0.14 },
-      { id: 'right-thigh', label: 'Right thigh', side: 'front', x: -0.08, y: -0.15, size: 0.14 },
-      { id: 'back-thigh', label: 'Back thigh', side: 'back', x: 0.08, y: -0.15, size: 0.14 },
-      { id: 'back-pocket', label: 'Back pocket', side: 'back', x: 0.08, y: 0.05, size: 0.08 },
+      front('left-thigh', 'Left thigh', 0.06, 0.13, 0.08),
+      front('right-thigh', 'Right thigh', -0.06, 0.13, 0.08),
+      front('left-shin', 'Left shin', 0.06, -0.15, 0.06),
+      back('back-thigh', 'Back thigh', 0.06, 0.1, 0.08),
+      back('back-pocket', 'Back pocket', 0.06, 0.24, 0.05),
     ],
+  },
+  {
+    id: 'hat',
+    name: 'Cap',
+    icon: HardHat,
+    render: 'cap',
+    fabric: true,
+    decalDepth: 0.12,
+    chestPosition: [0, 0.085, 0.17],
+    chestScale: [0.13, 0.13, 0.13],
+    placements: [front('front-panel', 'Front panel', 0, 0.085, 0.13), back('back-panel', 'Back', 0, 0.06, 0.08)],
+  },
+  {
+    id: 'beanie',
+    name: 'Beanie',
+    icon: HardHat,
+    render: 'beanie',
+    fabric: true,
+    decalDepth: 0.1,
+    chestPosition: [0, 0, 0.205],
+    chestScale: [0.1, 0.1, 0.1],
+    placements: [front('cuff', 'Cuff patch', 0, 0, 0.1), back('back-cuff', 'Back cuff', 0, 0, 0.08)],
+  },
+  {
+    id: 'mug',
+    name: 'Mug',
+    icon: Coffee,
+    render: 'gltf',
+    model: { path: '/models/mug.glb', targetSize: 0.5, tintParts: ['Body', 'Handle'], printPart: 'Body' },
+    fabric: false,
+    decalDepth: 0.16,
+    chestPosition: [-0.08, 0, 0.17],
+    chestScale: [0.2, 0.2, 0.2],
+    placements: [front('front', 'Front', -0.08, 0, 0.2), back('back', 'Back', -0.08, 0, 0.2)],
+  },
+  {
+    id: 'cup',
+    name: 'Takeaway Cup',
+    icon: CupSoda,
+    render: 'gltf',
+    model: { path: '/models/coffee-cup.glb', targetSize: 0.5, tintParts: ['Cup'], printPart: 'Sleeve' },
+    fabric: false,
+    decalDepth: 0.15,
+    chestPosition: [0, -0.036, 0.18],
+    chestScale: [0.15, 0.15, 0.15],
+    placements: [front('sleeve-front', 'Sleeve front', 0, -0.036, 0.14), back('sleeve-back', 'Sleeve back', 0, -0.036, 0.14)],
+  },
+  {
+    id: 'bottle',
+    name: 'Water Bottle',
+    icon: Milk,
+    render: 'gltf',
+    model: { path: '/models/water-bottle.glb', targetSize: 0.6, tintParts: ['Body'], printPart: 'Body' },
+    fabric: false,
+    decalDepth: 0.08,
+    chestPosition: [0, -0.035, 0.085],
+    chestScale: [0.12, 0.12, 0.12],
+    placements: [front('front', 'Front', 0, -0.035, 0.12), back('back', 'Back', 0, -0.035, 0.12)],
+  },
+  {
+    id: 'tote',
+    name: 'Tote Bag',
+    icon: ShoppingBag,
+    render: 'gltf',
+    model: { path: '/models/tote-bag.glb', targetSize: 0.6, printPart: 'Bag' },
+    fabric: false,
+    decalDepth: 0.04,
+    chestPosition: [0, -0.08, 0.008],
+    chestScale: [0.24, 0.24, 0.24],
+    placements: [
+      front('front', 'Front', 0, -0.08, 0.24),
+      front('front-small', 'Front pocket', 0, -0.16, 0.1),
+      back('back', 'Back', 0, -0.08, 0.24),
+    ],
+  },
+  {
+    id: 'phonecase',
+    name: 'Phone Case',
+    icon: Smartphone,
+    render: 'gltf',
+    model: { path: '/models/phone-case.glb', targetSize: 0.55, tintParts: ['Case'], printPart: 'Case' },
+    fabric: false,
+    decalDepth: 0.03,
+    chestPosition: [0, -0.055, 0.012],
+    chestScale: [0.2, 0.2, 0.2],
+    placements: [front('case', 'Case', 0, -0.055, 0.2), front('case-full', 'Full case', 0, 0, 0.26)],
+  },
+  {
+    id: 'poster',
+    name: 'Poster',
+    icon: Image,
+    render: 'poster',
+    fabric: false,
+    decalDepth: 0.02,
+    chestPosition: [0, 0, 0.001],
+    chestScale: [0.3, 0.3, 0.3],
+    placements: [front('full', 'Full print', 0, 0, 0.36), front('center', 'Centered', 0, 0.03, 0.22)],
+  },
+  {
+    id: 'sticker',
+    name: 'Sticker',
+    icon: Sticker,
+    render: 'sticker',
+    fabric: false,
+    decalDepth: 0.02,
+    chestPosition: [0, 0, 0.004],
+    chestScale: [0.3, 0.3, 0.3],
+    placements: [front('full', 'Full sticker', 0, 0, 0.4), front('center', 'Centered', 0, 0, 0.26)],
   },
 ]
 
@@ -94,6 +249,9 @@ export const COLOR_PALETTE = [
   { name: 'Navy', value: '#1E293B' },
   { name: 'Sand', value: '#D6C7A1' },
   { name: 'Olive', value: '#5B6236' },
+  { name: 'Natural Canvas', value: '#F5F0E6' },
+  { name: 'Kraft', value: '#C9A77C' },
+  { name: 'Brushed Steel', value: '#D7DBE0' },
 ]
 
 /** `roughness` and `sheen` drive the garment material so fabrics read differently under the studio lights. */

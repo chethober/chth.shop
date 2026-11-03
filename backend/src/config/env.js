@@ -140,8 +140,9 @@ env.ton.canMint = Boolean(env.ton.walletMnemonic && env.ton.collectionAddress);
 env.ton.canPayout = Boolean(env.ton.walletMnemonic && env.ton.usdtMaster);
 if (!env.telegram.miniAppUrl) env.telegram.miniAppUrl = env.frontendUrls[0];
 
-if (env.isProduction && env.payments.provider === 'mock') {
-  throw new Error('PAYMENT_PROVIDER=mock is not allowed in production');
+// ALLOW_MOCK_PAYMENTS=true opts a local production build (docker compose) into the mock provider.
+if (env.isProduction && env.payments.provider === 'mock' && process.env.ALLOW_MOCK_PAYMENTS !== 'true') {
+  throw new Error('PAYMENT_PROVIDER=mock is not allowed in production (set ALLOW_MOCK_PAYMENTS=true for a local stack)');
 }
 
 module.exports = env;

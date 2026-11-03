@@ -22,8 +22,9 @@ cart and orders, OAuth sign-in, and a Telegram bot for managing stock and sales.
 
 ## Features
 
-- **3D design studio**: pick a garment (tee, hoodie, pants), colourway and artwork, and preview it
-  live in a React Three Fiber scene.
+- **3D design studio**: pick one of 12 products (tee, hoodie, joggers, cap, beanie, mug, takeaway cup,
+  water bottle, tote, phone case, poster, sticker), a colourway and artwork, and preview it live in a
+  React Three Fiber scene.
 - **Artist storefronts**: every artist gets a page at `/<username>` with their bio, social links
   and products (filter by type, sort), editable from the account dashboard.
 - **Shop flow**: cart, checkout and order history with cancellation, backed by a products API

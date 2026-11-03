@@ -2,7 +2,7 @@
 
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { FABRICS, GARMENTS } from '../constants'
+import { FABRICS, GARMENTS, getGarment } from '../constants'
 import { useStudio } from '../store'
 import { PanelShell, Section } from './controls'
 
@@ -11,11 +11,12 @@ export function ProductPanel() {
   const fabric = useStudio((state) => state.doc.fabric)
   const setGarment = useStudio((state) => state.setGarment)
   const setFabric = useStudio((state) => state.setFabric)
+  const hasFabric = getGarment(garmentId).fabric
 
   return (
-    <PanelShell title="Product" description="Pick the base garment and what it's made of.">
-      <Section title="Garment">
-        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Garment">
+    <PanelShell title="Product" description="Pick the base product and, for apparel, what it's made of.">
+      <Section title="Product">
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Product">
           {GARMENTS.map(({ id, name, icon: Icon }) => (
             <button
               key={id}
@@ -29,35 +30,37 @@ export function ProductPanel() {
               )}
             >
               <Icon className="size-5" />
-              {name}
+              <span className="text-center leading-tight">{name}</span>
             </button>
           ))}
         </div>
       </Section>
 
-      <Section title="Fabric">
-        <div className="space-y-1.5" role="radiogroup" aria-label="Fabric">
-          {FABRICS.map(({ id, name, description }) => (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={fabric === id}
-              onClick={() => setFabric(id)}
-              className={cn(
-                'flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-[border-color,background-color] duration-150 ease-out',
-                fabric === id ? 'border-foreground bg-muted' : 'border-border hover:border-foreground/30'
-              )}
-            >
-              <span>
-                <span className="block text-xs font-semibold text-foreground">{name}</span>
-                <span className="block text-[11px] text-muted-foreground">{description}</span>
-              </span>
-              {fabric === id && <Check className="size-4 shrink-0 text-foreground" />}
-            </button>
-          ))}
-        </div>
-      </Section>
+      {hasFabric && (
+        <Section title="Fabric">
+          <div className="space-y-1.5" role="radiogroup" aria-label="Fabric">
+            {FABRICS.map(({ id, name, description }) => (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={fabric === id}
+                onClick={() => setFabric(id)}
+                className={cn(
+                  'flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition-[border-color,background-color] duration-150 ease-out',
+                  fabric === id ? 'border-foreground bg-muted' : 'border-border hover:border-foreground/30'
+                )}
+              >
+                <span>
+                  <span className="block text-xs font-semibold text-foreground">{name}</span>
+                  <span className="block text-[11px] text-muted-foreground">{description}</span>
+                </span>
+                {fabric === id && <Check className="size-4 shrink-0 text-foreground" />}
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
     </PanelShell>
   )
 }
