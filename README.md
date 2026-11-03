@@ -8,7 +8,11 @@ Sign-in is Google or Telegram.
   type and seller kind, sort by top rated. `/p/<id>`: product page with options, reviews and wishlist.
 - 12 products: tee, hoodie, joggers, cap, beanie, mug, takeaway cup, water bottle, tote, phone case, poster,
   sticker. Models and their licenses: [frontend/public/models/LICENSES.md](frontend/public/models/LICENSES.md).
-- Payments: pay from a TON wallet through TON Connect, or any coin through NOWPayments.
+- Payments: TON or USDT on TON from the buyer's wallet (TON Connect), or any coin through NOWPayments.
+- Seller payouts: sales earnings (and referral credit) become payable after shipping + a hold period and are
+  paid monthly in USDT, automatically to TON addresses (`npm run payouts`, or Admin → Payouts).
+- Telegram Mini App: the shop runs inside Telegram with automatic sign-in, Telegram's theme and back button,
+  and `t.me/<bot>/<app>?startapp=…` deep links; the bot answers `/start`, `/shop`, `/orders`… (setup below).
 - NFT-backed merch: sellers mark listings as NFT-backed and/or limited editions with timed drops. Each unit sold
   gets a numbered collectible the buyer claims to their TON wallet; `/verify/<serial>` checks authenticity.
 - Growth: verified-buyer reviews, wishlist, follow stores, referral links (`?ref=CODE`: 10% off the first
@@ -64,3 +68,22 @@ yarn workspace chth-backend prisma db push
 yarn workspace chth-backend dev        # http://localhost:5000/api
 yarn workspace chth-frontend dev       # http://localhost:3000
 ```
+
+## Telegram Mini App
+
+1. In @BotFather: `/setdomain` (Login Widget) and `/newapp` pointing at `https://<your-domain>/shop`; note the
+   app short name.
+2. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET` (any random string),
+   `TELEGRAM_MINI_APP_NAME`, and `TELEGRAM_MINI_APP_LINK=https://t.me/<bot>/<app name>` (frontend build arg).
+3. Run `docker compose exec backend npm run telegram:setup` once: it registers the webhook
+   (`/api/telegram/webhook`), the chat menu button that opens the shop, and the command list.
+
+Inside Telegram the site signs users in from the Mini App's `initData` (verified with the bot token), so there's
+no login screen. Share links use `startapp=ref_<CODE>` (referral) and `startapp=p_<product id>`.
+
+## Payouts
+
+`npm run payouts -- --dry-run` lists balances; `npm run payouts` (cron, e.g. monthly) creates payouts and sends
+the USDT-on-TON ones from the platform wallet (`TON_WALLET_MNEMONIC`, funded with USDT plus ~0.05 TON per
+payout for fees). Payouts to other networks stay *Scheduled* until an admin sends them and records the
+transaction under Admin → Payouts.

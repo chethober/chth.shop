@@ -8,6 +8,7 @@ import { FilterChip } from '@/components/shared/filter-chip'
 import { LoadingState } from '@/components/shared/loading-state'
 import { ORDER_STATUS, OrderStatusBadge, PaymentStatusBadge } from '@/components/shared/order-status-badge'
 import { PageHeader } from '@/components/shared/page-header'
+import { AdminPayoutsView } from './admin-payouts-view'
 import { ProductImage } from '@/components/shared/product-image'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -28,6 +29,7 @@ export function AdminOrdersView() {
   const isAdmin = useAuthStore((state) => state.user?.role === 'ADMIN')
   const [filter, setFilter] = useState<OrderStatus | undefined>('CONFIRMED')
   const [reloadKey, setReloadKey] = useState(0)
+  const [section, setSection] = useState<'orders' | 'payouts'>('orders')
   /** Orders, tagged with the filter + reload they were loaded for. */
   const [loaded, setLoaded] = useState<{ key: string; orders: Order[] }>({ key: '', orders: [] })
   const queryKey = `${filter ?? 'all'}:${reloadKey}`
@@ -61,8 +63,35 @@ export function AdminOrdersView() {
     }
   }
 
+  const sectionTabs = (
+    <div className="inline-flex rounded-lg border border-border bg-muted/70 p-0.5">
+      {(['orders', 'payouts'] as const).map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => setSection(option)}
+          className={cn(
+            'cursor-pointer rounded-md px-3 py-1 text-xs font-semibold capitalize',
+            section === option ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  )
+
   if (!isSignedIn) return null
   if (!isAdmin) return <EmptyState icon={ShieldAlert} title="Admins only" description="Ask an admin to run `npm run make-admin -- <username>`." />
+
+  if (section === 'payouts') {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Payouts" description="Seller earnings and referral credit, paid in USDT." actions={sectionTabs} />
+        <AdminPayoutsView />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -70,10 +99,13 @@ export function AdminOrdersView() {
         title="Fulfillment"
         description="Paid orders are confirmed automatically. Print, then mark them shipped and delivered."
         actions={
+          <>
+          {sectionTabs}
           <Button variant="outline" size="sm" onClick={() => setReloadKey((key) => key + 1)}>
             <RefreshCw />
             Refresh
           </Button>
+          </>
         }
       />
 

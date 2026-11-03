@@ -24,6 +24,8 @@ model User {
   referralCode String?  @unique
   referredById String?
   referredBy   User?    @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  /// TON address for referral credit when the user has no store payout address (paid in USDT on TON).
+  rewardAddress String?
   referrals    User[]   @relation("Referrals")
   store        Store?
   cart         Cart?
@@ -33,6 +35,7 @@ model User {
   follows      Follow[]
   collectibles Collectible[]
   referralRewards ReferralReward[]
+  payouts      Payout[]
 
   @@map("users")
 }
@@ -164,14 +167,18 @@ model OrderItem {
   baseCost      Float    @default(0)
   /// Total the seller earns for this line (after production cost and platform fee).
   sellerEarning Float    @default(0)
+  /// The payout that settled this line's seller earning.
+  payoutId      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   store         Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
   collectibles  Collectible[]
+  payout        Payout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
 
   @@index([storeId])
+  @@index([payoutId])
   @@map("order_items")
 }
 
@@ -315,9 +322,40 @@ model ReferralReward {
   userId    String
   orderId   String   @unique
   amount    Float
+  payoutId  String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payout    Payout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
 
   @@map("referral_rewards")
+}
+
+/// A transfer of earnings (store sales + referral credit) to one user.
+model Payout {
+  id          String       @id @default(uuid())
+  userId      String
+  /// USD value; paid 1:1 in USDT.
+  amount      Float
+  network     String
+  address     String
+  status      PayoutStatus @default(PENDING)
+  /// On-chain transaction (or a reference for manual transfers).
+  txHash      String?
+  error       String?
+  createdAt   DateTime     @default(now())
+  sentAt      DateTime?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  referralRewards ReferralReward[]
+
+  @@index([userId])
+  @@map("payouts")
+}
+
+enum PayoutStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
 }

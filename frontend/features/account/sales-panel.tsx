@@ -9,11 +9,12 @@ import api from '@/lib/api'
 import { formatPrice, formatRelativeTime } from '@/lib/format'
 import { describeOptions } from '@/lib/products'
 import type { SalesReport } from '@/types'
+import { PayoutsCard } from './payouts-card'
 
 type LoadState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; report: SalesReport }
 
 /** Paid sales of the seller's products and what they earned from them. */
-export function SalesPanel() {
+export function SalesPanel({ onEditPayoutSettings }: { onEditPayoutSettings?: () => void }) {
   const [state, setState] = useState<LoadState>({ status: 'loading' })
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function SalesPanel() {
 
   return (
     <div className="space-y-4">
+      <PayoutsCard onEditSettings={onEditPayoutSettings} />
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map(({ label, value, icon: Icon }) => (
           <Card key={label} className="p-4">
@@ -59,7 +61,7 @@ export function SalesPanel() {
         <CardHeader>
           <div>
             <CardTitle>Sales</CardTitle>
-            <CardDescription>Paid orders containing your products. Earnings are paid out monthly in crypto.</CardDescription>
+            <CardDescription>Paid orders containing your products.</CardDescription>
           </div>
         </CardHeader>
         <CardContent>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { X } from 'lucide-react'
+import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react'
 import { InlineConfirm } from '@/components/custom/inline-confirm'
 import { SlideToConfirm } from '@/components/custom/slide-to-confirm'
 import { getSocialIcon } from '@/components/shared/social-icons'
@@ -37,6 +38,8 @@ export function StorefrontSettings({
   onActivate,
   onDeleteStore,
 }: StorefrontSettingsProps) {
+  const walletAddress = useTonAddress()
+  const [tonConnectUI] = useTonConnectUI()
   const connectedCount = SOCIAL_PLATFORMS.filter(({ id }) => form[id].trim()).length
   const bioTooLong = form.bio.length > BIO_SOFT_LIMIT
 
@@ -147,7 +150,19 @@ export function StorefrontSettings({
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Earnings are paid out monthly to this address. Double-check the network: transfers can&apos;t be reversed.
+                {form.payoutNetwork === 'USDT-TON'
+                  ? 'USDT on TON is paid automatically every month. '
+                  : 'This network is paid by hand every month. '}
+                Double-check the address: transfers can&apos;t be reversed.
+                {form.payoutNetwork === 'USDT-TON' && (
+                  <button
+                    type="button"
+                    onClick={() => (walletAddress ? onFormChange({ payoutAddress: walletAddress }) : tonConnectUI.openModal())}
+                    className="ml-1 cursor-pointer font-semibold text-foreground underline underline-offset-2"
+                  >
+                    {walletAddress ? 'Use my connected wallet' : 'Connect a TON wallet'}
+                  </button>
+                )}
               </p>
             </div>
           </CardContent>

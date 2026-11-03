@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Gem, Package, ShieldCheck } from 'lucide-react'
+import { Gem, Package, Send, ShieldCheck } from 'lucide-react'
+import { TELEGRAM_MINI_APP_LINK } from '@/lib/config'
 import { EmptyState } from '@/components/shared/empty-state'
 import { LoadingState } from '@/components/shared/loading-state'
 import { ProductBadges, Stars, WishlistButton } from '@/components/shared/product-badges'
@@ -18,6 +19,16 @@ import { getProductTypeLabel, STORE_KIND_LABELS } from '@/lib/products'
 import useAuthStore from '@/store/auth-store'
 import type { Product } from '@/types'
 import { ReviewsSection } from './reviews-section'
+
+/** Shares the product; with a Mini App configured, the link opens it inside Telegram. */
+function telegramShareUrl(product: Product) {
+  const url = TELEGRAM_MINI_APP_LINK
+    ? `${TELEGRAM_MINI_APP_LINK}?startapp=p_${product.id}`
+    : typeof window === 'undefined'
+      ? `/p/${product.id}`
+      : `${window.location.origin}/p/${product.id}`
+  return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(product.name)}`
+}
 
 type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; product: Product }
 
@@ -121,10 +132,18 @@ export function ProductView({ id }: { id: string }) {
             </div>
           )}
 
-          <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <ShieldCheck className="size-3.5" />
-            Printed on demand · pay with TON or any major coin
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <ShieldCheck className="size-3.5" />
+              Printed on demand · pay with TON, USDT or any major coin
+            </p>
+            <Button asChild variant="ghost" size="sm">
+              <a href={telegramShareUrl(product)} target="_blank" rel="noreferrer">
+                <Send />
+                Share on Telegram
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
 

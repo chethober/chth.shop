@@ -10,7 +10,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "node scripts/seed.js",
-    "make-admin": "node scripts/make-admin.js"
+    "make-admin": "node scripts/make-admin.js",
+    "payouts": "node scripts/run-payouts.js",
+    "telegram:setup": "node scripts/telegram-setup.js"
   },
   "keywords": [
     "merch",

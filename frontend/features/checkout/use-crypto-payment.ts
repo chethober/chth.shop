@@ -6,7 +6,7 @@ import { useTonConnectUI } from '@tonconnect/ui-react'
 import api from '@/lib/api'
 import type { PaymentMethods } from '@/types'
 
-export type PayMethod = 'hosted' | 'ton'
+export type PayMethod = 'hosted' | 'ton' | 'usdt'
 
 const TON_CHECK_INTERVAL_MS = 5000
 const TON_CHECK_ATTEMPTS = 24 // ~2 minutes; the server keeps watching after that
@@ -21,7 +21,7 @@ export function usePaymentMethods() {
     api.payments
       .methods()
       .then((loaded) => setMethods((cachedMethods = loaded)))
-      .catch(() => setMethods({ hosted: true, ton: false, hostedProvider: 'nowpayments', tonNetwork: 'mainnet' }))
+      .catch(() => setMethods({ hosted: true, ton: false, usdt: false, hostedProvider: 'nowpayments', tonNetwork: 'mainnet' }))
   }, [])
   return methods
 }
@@ -33,6 +33,8 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
  * - `hosted`: redirects to the hosted crypto checkout (NOWPayments / dev mock).
  * - `ton`: asks the connected wallet (TON Connect) to send the quoted amount with the order's
  *   comment, then checks the chain until the server sees it.
+ * - `usdt`: same, as a USDT jetton transfer. The server needs the wallet address first to find
+ *   the buyer's USDT wallet, so the wallet is connected before the payment is started.
  */
 export function useCryptoPayment() {
   const router = useRouter()
@@ -64,7 +66,8 @@ export function useCryptoPayment() {
     async (orderId: string, method: PayMethod) => {
       setStage('starting')
       try {
-        const payment = await api.orders.pay(orderId, method)
+        if (method === 'usdt') await waitForWallet()
+        const payment = await api.orders.pay(orderId, method, tonConnectUI.account?.address)
         if (payment.method === 'hosted') {
           window.location.href = payment.paymentUrl
           return

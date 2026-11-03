@@ -36,4 +36,39 @@ function telegramIdentity(data) {
   };
 }
 
-module.exports = { isValidTelegramPayload, telegramIdentity };
+/**
+ * Verifies Mini App `initData` (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app):
+ * the hash is HMAC-SHA256 of the sorted fields, keyed by HMAC-SHA256("WebAppData", bot token).
+ * Returns the Telegram user and start parameter, or null when invalid or older than a day.
+ */
+function parseWebAppInitData(initData) {
+  const { botToken } = env.telegram;
+  if (!botToken || typeof initData !== 'string' || !initData) return null;
+
+  const params = new URLSearchParams(initData);
+  const hash = params.get('hash');
+  if (!hash) return null;
+  params.delete('hash');
+
+  const checkString = [...params.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const expected = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+  if (expected.length !== hash.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hash))) return null;
+
+  const ageSeconds = Date.now() / 1000 - Number(params.get('auth_date'));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > MAX_AUTH_AGE_SECONDS) return null;
+
+  let user;
+  try {
+    user = JSON.parse(params.get('user') || 'null');
+  } catch {
+    return null;
+  }
+  if (!user || !user.id) return null;
+  return { user, startParam: params.get('start_param') || null };
+}
+
+module.exports = { isValidTelegramPayload, telegramIdentity, parseWebAppInitData };

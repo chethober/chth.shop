@@ -18,7 +18,8 @@ export interface StoreForm {
   website: string
 }
 
-export const PAYOUT_NETWORKS = ['USDT-TRC20', 'USDT-ERC20', 'USDC-BASE', 'TON', 'BTC', 'ETH'] as const
+/** USDT-TON is paid automatically; the others are sent by hand. */
+export const PAYOUT_NETWORKS = ['USDT-TON', 'USDT-TRC20', 'USDT-ERC20', 'USDC-BASE', 'TON', 'BTC', 'ETH'] as const
 
 export const STORE_FORM_FIELDS = [
   'kind',

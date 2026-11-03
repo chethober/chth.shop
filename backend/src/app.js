@@ -21,7 +21,10 @@ app.use(
     windowMs: env.rateLimit.windowMs,
     max: env.rateLimit.max,
     skip: (req) =>
-      !env.isProduction || req.path === '/health' || req.path.startsWith('/payments/webhook/'),
+      !env.isProduction ||
+      req.path === '/health' ||
+      req.path.startsWith('/payments/webhook/') ||
+      req.path === '/telegram/webhook',
     message: { success: false, message: 'Too many requests from this IP, please try again later.' },
   })
 );

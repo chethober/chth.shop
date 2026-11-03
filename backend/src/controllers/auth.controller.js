@@ -11,7 +11,7 @@ const {
   frontendCallbackUrl,
   frontendErrorUrl,
 } = require('../services/identity.service');
-const { isValidTelegramPayload, telegramIdentity } = require('../services/telegram.service');
+const { isValidTelegramPayload, telegramIdentity, parseWebAppInitData } = require('../services/telegram.service');
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/;
 const USERNAME_MIN_LENGTH = 5;
@@ -56,6 +56,7 @@ function telegramConfig(req, res) {
     data: {
       botUsername: env.telegram.botUsername,
       isConfigured: env.telegram.isConfigured,
+      miniAppName: env.telegram.miniAppName,
     },
   });
 }
@@ -96,6 +97,16 @@ const telegramLogin = asyncHandler(async (req, res) => {
 
   const user = await findOrCreateOAuthUser(telegramIdentity(data));
   sendSuccess(res, { data: createSession(user, 'telegram') });
+});
+
+/** Telegram Mini App: signs in with the `initData` Telegram hands the app. */
+const telegramWebApp = asyncHandler(async (req, res) => {
+  if (!env.telegram.botToken) throw new HttpError(503, 'Telegram authentication is not configured on the server');
+  const parsed = parseWebAppInitData(req.body?.initData);
+  if (!parsed) throw new HttpError(401, 'Telegram Mini App data could not be verified');
+
+  const user = await findOrCreateOAuthUser(telegramIdentity(parsed.user));
+  sendSuccess(res, { data: { ...createSession(user, 'telegram'), startParam: parsed.startParam } });
 });
 
 /* ---------- Current user ---------- */
@@ -148,6 +159,7 @@ module.exports = {
   telegramConfig,
   telegramCallback,
   telegramLogin,
+  telegramWebApp,
   getMe,
   updateUsername,
 };

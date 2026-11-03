@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Bitcoin, Gem } from 'lucide-react'
+import { Bitcoin, CircleDollarSign, Gem } from 'lucide-react'
 import { toast } from '@heroui/react'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,12 @@ export function PaymentOptions({ orderId, className }: { orderId: string; classN
   if (!methods) return <Spinner className="mx-auto" />
 
   const options = [
+    methods.usdt && {
+      id: 'usdt' as const,
+      icon: CircleDollarSign,
+      title: 'USDT on TON',
+      hint: 'Pay the exact dollar amount in USDT from your TON wallet',
+    },
     methods.ton && {
       id: 'ton' as const,
       icon: Gem,
@@ -63,7 +69,12 @@ export function PaymentOptions({ orderId, className }: { orderId: string; classN
           onClick={() => start(id)}
           className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-foreground/30 hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', id === 'ton' ? 'bg-[#0098EA]/15 text-[#0098EA]' : 'bg-brand/15 text-brand')}>
+          <span
+            className={cn(
+              'flex size-9 shrink-0 items-center justify-center rounded-lg',
+              id === 'ton' ? 'bg-[#0098EA]/15 text-[#0098EA]' : id === 'usdt' ? 'bg-[#26A17B]/15 text-[#26A17B]' : 'bg-brand/15 text-brand'
+            )}
+          >
             {busy && chosen === id ? <Spinner /> : <Icon className="size-4" />}
           </span>
           <span className="min-w-0">

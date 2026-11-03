@@ -7,8 +7,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
+import { TELEGRAM_MINI_APP_LINK } from '@/lib/config'
 import { formatPrice } from '@/lib/format'
 import type { ReferralInfo } from '@/types'
+import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react'
+import { toast } from '@heroui/react'
+import { Input } from '@/components/ui/input'
 
 /** The user's referral link, and what it has earned. */
 export function InvitePanel() {
@@ -27,7 +31,9 @@ export function InvitePanel() {
 
   const link = typeof window === 'undefined' ? `/?ref=${info.code}` : `${window.location.origin}/?ref=${info.code}`
   const shareText = `Get ${info.discountPercent}% off your first CHTH order`
-  const telegramShare = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText)}`
+  // Inside Telegram, a Mini App link opens the shop right in the chat.
+  const shareLink = TELEGRAM_MINI_APP_LINK ? `${TELEGRAM_MINI_APP_LINK}?startapp=ref_${info.code}` : link
+  const telegramShare = `https://t.me/share/url?url=${encodeURIComponent(shareLink)}&text=${encodeURIComponent(shareText)}`
 
   const stats = [
     { label: 'Signed up', value: String(info.invited) },
@@ -74,6 +80,7 @@ export function InvitePanel() {
               </div>
             ))}
           </dl>
+          <RewardWallet />
           {info.hasWelcomeDiscount && (
             <p className="rounded-xl bg-success/10 p-3 text-xs font-medium text-success">
               You were invited by @{info.referredBy}: {info.discountPercent}% off is applied to your first order.
@@ -81,6 +88,60 @@ export function InvitePanel() {
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+/** Where referral credit is paid (USDT on TON) when the user has no store payout address. */
+function RewardWallet() {
+  const walletAddress = useTonAddress()
+  const [tonConnectUI] = useTonConnectUI()
+  const [address, setAddress] = useState<string | null>(null)
+  const [destination, setDestination] = useState<{ address: string; network: string } | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    api.payouts
+      .me()
+      .then((summary) => {
+        setAddress(summary.rewardAddress ?? '')
+        setDestination(summary.destination)
+      })
+      .catch(() => setAddress(''))
+  }, [])
+
+  if (address === null) return null
+
+  const save = async (value: string) => {
+    setSaving(true)
+    try {
+      await api.referrals.setRewardAddress(value.trim() || null)
+      setAddress(value.trim())
+      toast.success('Reward wallet saved')
+    } catch (error) {
+      toast.danger(error instanceof Error ? error.message : 'Could not save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border p-3">
+      <p className="text-xs font-semibold text-foreground">Reward wallet (USDT on TON)</p>
+      <p className="text-[11px] text-muted-foreground">
+        {destination && destination.address !== address
+          ? `Rewards go to your store payout address (${destination.network}). Set one here only if you don't sell.`
+          : 'Rewards are paid out monthly in USDT to this TON address.'}
+      </p>
+      <div className="flex gap-2">
+        <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="UQ… / EQ…" spellCheck={false} className="flex-1 font-mono text-xs" />
+        <Button size="sm" variant="outline" disabled={saving} onClick={() => (walletAddress ? save(walletAddress) : tonConnectUI.openModal())}>
+          {walletAddress ? 'Use connected' : 'Connect wallet'}
+        </Button>
+        <Button size="sm" disabled={saving} onClick={() => save(address)}>
+          Save
+        </Button>
+      </div>
     </div>
   )
 }

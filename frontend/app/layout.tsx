@@ -4,6 +4,7 @@ import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
 import { ToastProvider } from '@/components/layout/toast-provider'
 import { ReferralCapture } from '@/components/providers/referral-capture'
+import { TelegramMiniApp } from '@/components/providers/telegram-mini-app'
 import { TonProvider } from '@/components/providers/ton-provider'
 import { Suspense } from 'react'
 import { themeInitScript } from '@/lib/theme'
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense>
             <ReferralCapture />
           </Suspense>
+          <TelegramMiniApp />
         </TonProvider>
       </body>
     </html>

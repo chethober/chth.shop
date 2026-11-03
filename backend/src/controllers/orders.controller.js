@@ -111,8 +111,12 @@ const createOrder = asyncHandler(async (req, res) => {
  */
 const payOrder = asyncHandler(async (req, res) => {
   const order = await findOwnedOrder(req.userId, req.params.orderId);
-  const method = req.body?.method === 'ton' ? 'ton' : 'hosted';
-  const payment = await payments.startPayment(order, { frontendOrigin: frontendOrigin(req), method });
+  const method = ['ton', 'usdt'].includes(req.body?.method) ? req.body.method : 'hosted';
+  const payment = await payments.startPayment(order, {
+    frontendOrigin: frontendOrigin(req),
+    method,
+    walletAddress: req.body?.walletAddress,
+  });
 
   sendSuccess(res, { data: payment });
 });
@@ -120,7 +124,7 @@ const payOrder = asyncHandler(async (req, res) => {
 /** Checks the chain for this order's TON payment right away (the poller also does this). */
 const checkTonPayment = asyncHandler(async (req, res) => {
   const order = await findOwnedOrder(req.userId, req.params.orderId);
-  if (order.paymentProvider === 'ton' && order.paymentStatus === 'WAITING') {
+  if (['ton', 'ton-usdt'].includes(order.paymentProvider) && order.paymentStatus === 'WAITING') {
     await payments.reconcileTonPayments([order]);
   }
   const updated = await prisma.order.findUnique({ where: { id: order.id }, include: orderWithItems });

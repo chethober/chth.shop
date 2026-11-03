@@ -11,6 +11,8 @@ const uploads = require('../controllers/uploads.controller');
 const admin = require('../controllers/admin.controller');
 const collectibles = require('../controllers/collectibles.controller');
 const growth = require('../controllers/growth.controller');
+const payoutsController = require('../controllers/payouts.controller');
+const telegramBot = require('../controllers/telegram-bot.controller');
 
 const router = express.Router();
 
@@ -32,6 +34,8 @@ router.get('/auth/google/callback', auth.googleCallback);
 router.get('/auth/telegram/config', auth.telegramConfig);
 router.get('/auth/telegram/callback', auth.telegramCallback);
 router.post('/auth/telegram', auth.telegramLogin);
+router.post('/auth/telegram/webapp', auth.telegramWebApp);
+router.post('/telegram/webhook', telegramBot.webhook);
 router.get('/auth/me', requireAuth, auth.getMe);
 router.put('/auth/username', requireAuth, auth.updateUsername);
 
@@ -71,6 +75,10 @@ router.put('/wishlist/:productId', requireAuth, growth.addToWishlist);
 router.delete('/wishlist/:productId', requireAuth, growth.removeFromWishlist);
 router.get('/referrals/me', requireAuth, growth.getMyReferrals);
 router.post('/referrals/claim', requireAuth, growth.claimReferral);
+router.put('/referrals/address', requireAuth, payoutsController.setRewardAddress);
+
+/* ---------- Payouts ---------- */
+router.get('/payouts/me', requireAuth, payoutsController.getMine);
 
 /* ---------- Uploads ---------- */
 router.post('/uploads', requireAuth, uploads.uploadImage);
@@ -104,5 +112,10 @@ router.get('/nft/:file', collectibles.itemMetadata);
 /* ---------- Admin (fulfillment) ---------- */
 router.get('/admin/orders', requireAuth, requireAdmin, admin.listOrders);
 router.put('/admin/orders/:orderId/status', requireAuth, requireAdmin, admin.updateOrderStatus);
+router.get('/admin/payouts', requireAuth, requireAdmin, payoutsController.adminOverview);
+router.post('/admin/payouts/run', requireAuth, requireAdmin, payoutsController.adminRun);
+router.post('/admin/payouts/:id/send', requireAuth, requireAdmin, payoutsController.adminSend);
+router.put('/admin/payouts/:id/sent', requireAuth, requireAdmin, payoutsController.adminMarkSent);
+router.delete('/admin/payouts/:id', requireAuth, requireAdmin, payoutsController.adminCancel);
 
 module.exports = router;

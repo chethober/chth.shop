@@ -143,3 +143,8 @@
     touch-action: none;
   }
 }
+
+/* Inside the Telegram Mini App: Telegram provides the chrome, so drop the site footer. */
+html[data-telegram='mini-app'] footer {
+  display: none;
+}

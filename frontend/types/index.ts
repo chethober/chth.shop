@@ -262,11 +262,14 @@ export interface TelegramAuthData {
 export interface TelegramConfig {
   botUsername: string
   isConfigured: boolean
+  /** Mini App short name for t.me/<bot>/<name> links; empty when not registered. */
+  miniAppName?: string
 }
 
 export interface PaymentMethods {
   hosted: boolean
   ton: boolean
+  usdt: boolean
   hostedProvider: string
   tonNetwork: 'mainnet' | 'testnet'
 }
@@ -275,12 +278,14 @@ export interface PaymentMethods {
 export type PaymentStart =
   | { method: 'hosted'; paymentUrl: string; provider: string }
   | {
-      method: 'ton'
+      method: 'ton' | 'usdt'
+      /** Receiver (TON) or the buyer's own USDT jetton wallet (USDT). */
       address: string
-      /** Nanotons. */
+      /** Nanotons attached to the message (the price for TON, gas for USDT). */
       amount: string
-      amountTon: string
-      /** Base64 BOC of the comment that identifies the order. */
+      amountTon?: string
+      amountUsdt?: string
+      /** Base64 BOC: the order comment (TON) or the jetton transfer (USDT). */
       payload: string
       validUntil: number
       network: 'mainnet' | 'testnet'
@@ -326,4 +331,39 @@ export interface ReferralInfo {
   rewardPercent: number
   referredBy: string | null
   hasWelcomeDiscount: boolean
+}
+
+export type PayoutStatus = 'PENDING' | 'SENDING' | 'SENT' | 'FAILED'
+
+export interface Payout {
+  id: string
+  amount: number
+  network: string
+  address: string
+  status: PayoutStatus
+  txHash: string | null
+  error: string | null
+  createdAt: string
+  sentAt: string | null
+  username?: string
+}
+
+export interface PayoutSummary {
+  available: number
+  onHold: number
+  paidOut: number
+  destination: { address: string; network: string } | null
+  rewardAddress: string | null
+  minAmount: number
+  holdDays: number
+  automatic: boolean
+  payouts: Payout[]
+}
+
+export interface PayoutBalance {
+  userId: string
+  username: string
+  available: number
+  onHold: number
+  destination: { address: string; network: string } | null
 }

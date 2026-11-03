@@ -1,7 +1,9 @@
 // Direct TON payments through TON Connect: the buyer's wallet sends the quoted amount to our
 // receiving address with the order's memo as comment; we find that transfer on-chain.
 
-const { Address, beginCell } = require('@ton/core');
+const { Address, beginCell, toNano } = require('@ton/core');
+const tonWallet = require('../ton-wallet');
+const { jettonTransferBody, readComment, usdToUsdtUnits, formatUsdt } = tonWallet;
 const env = require('../../config/env');
 const { HttpError } = require('../../lib/http');
 
@@ -90,6 +92,82 @@ function transactionRequest(order) {
   };
 }
 
+/* ---------- USDT on TON (jetton transfers) ---------- */
+
+/** TON attached to the jetton transfer for gas; the excess comes back to the buyer. */
+const JETTON_GAS = toNano('0.05');
+
+/**
+ * Builds the TON Connect request for paying `order` in USDT from `buyerAddress`: a jetton
+ * transfer sent to the buyer's own USDT wallet, forwarding the order comment to us.
+ */
+async function createUsdtRequest(order, buyerAddress) {
+  const { receiverAddress, usdtMaster, quoteTtlMinutes } = env.ton;
+  if (!env.ton.usdtEnabled) throw new HttpError(503, 'USDT payments are not configured (TON_RECEIVER_ADDRESS / TON_USDT_MASTER)');
+  if (!isValidAddress(buyerAddress)) throw new HttpError(400, 'Connect a TON wallet first');
+
+  const units = usdToUsdtUnits(order.total);
+  const memo = orderMemo(order.id);
+  let buyerJettonWallet;
+  try {
+    buyerJettonWallet = await tonWallet.jettonWalletAddress(buyerAddress, usdtMaster);
+  } catch (error) {
+    console.error('USDT wallet lookup failed:', error.message);
+    throw new HttpError(502, 'Could not look up your USDT wallet. Please try again.');
+  }
+  const body = jettonTransferBody({
+    amount: units,
+    destination: receiverAddress,
+    responseDestination: buyerAddress,
+    forwardTonAmount: 1n,
+    comment: memo,
+  });
+
+  const quote = {
+    payAmount: units.toString(),
+    payAddress: Address.parse(receiverAddress).toString({ bounceable: false, testOnly: env.ton.network === 'testnet' }),
+    payMemo: memo,
+    payExpiresAt: new Date(Date.now() + quoteTtlMinutes * 60 * 1000),
+  };
+  const request = {
+    method: 'usdt',
+    address: buyerJettonWallet.toString({ bounceable: true, testOnly: env.ton.network === 'testnet' }),
+    amount: JETTON_GAS.toString(),
+    payload: body.toBoc().toString('base64'),
+    amountUsdt: formatUsdt(units),
+    validUntil: Math.floor(quote.payExpiresAt.getTime() / 1000),
+    network: env.ton.network,
+  };
+  return { quote, request };
+}
+
+/** Latest incoming USDT transfers to the receiving address (toncenter v3 jetton index). */
+async function recentUsdtTransfers({ limit = 100, fetchImpl = fetch } = {}) {
+  const { receiverAddress, usdtMaster, v3Url, toncenterApiKey } = env.ton;
+  const params = new URLSearchParams({
+    owner_address: receiverAddress,
+    jetton_master: usdtMaster,
+    direction: 'in',
+    limit: String(limit),
+    sort: 'desc',
+  });
+  const response = await fetchImpl(`${v3Url}/jetton/transfers?${params}`, {
+    headers: toncenterApiKey ? { 'X-API-Key': toncenterApiKey } : {},
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(data.jetton_transfers)) {
+    throw new HttpError(502, `Could not read USDT transfers (${data.error || response.status})`);
+  }
+  return data.jetton_transfers
+    .filter((transfer) => !transfer.transaction_aborted)
+    .map((transfer) => ({
+      hash: transfer.transaction_hash,
+      value: BigInt(transfer.amount || 0),
+      comment: readComment(transfer.forward_payload).trim(),
+      source: transfer.source,
+    }));
+}
+
 /** Reads a transaction's incoming comment from a toncenter v2 response. */
 function incomingComment(inMsg) {
   if (!inMsg) return '';
@@ -136,6 +214,8 @@ function findUnderpayment(order, transfers) {
 
 module.exports = {
   name: 'ton',
+  createUsdtRequest,
+  recentUsdtTransfers,
   createQuote,
   transactionRequest,
   recentTransfers,

@@ -2,6 +2,7 @@
 //
 // - "hosted": the configured hosted checkout (NOWPayments, or the mock page in development).
 // - "ton": a direct TON transfer from the buyer's wallet through TON Connect.
+// - "usdt": a USDT (jetton) transfer from the buyer's wallet through TON Connect.
 
 const env = require('../../config/env');
 const prisma = require('../../lib/prisma');
@@ -31,6 +32,7 @@ function availableMethods() {
   return {
     hosted: env.payments.provider === 'mock' || env.payments.nowpayments.isConfigured,
     ton: env.ton.isConfigured,
+    usdt: env.ton.usdtEnabled,
     hostedProvider: env.payments.provider,
     tonNetwork: env.ton.network,
   };
@@ -43,10 +45,19 @@ const STARTABLE = ['UNPAID', 'WAITING', 'EXPIRED', 'FAILED'];
  * Starts (or resumes) paying an order. Returns what the frontend needs: a redirect URL for the
  * hosted checkout, or a TON Connect transaction request.
  */
-async function startPayment(order, { frontendOrigin, method = 'hosted' }) {
+async function startPayment(order, { frontendOrigin, method = 'hosted', walletAddress }) {
   if (order.status === 'CANCELLED') throw new HttpError(400, 'This order was cancelled');
   if (!STARTABLE.includes(order.paymentStatus)) {
     throw new HttpError(400, `Payment is already ${order.paymentStatus.toLowerCase().replace('_', ' ')}`);
+  }
+
+  if (method === 'usdt') {
+    const { quote, request } = await ton.createUsdtRequest(order, walletAddress);
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { ...quote, paymentProvider: 'ton-usdt', paymentUrl: null, paymentStatus: 'WAITING' },
+    });
+    return request;
   }
 
   if (method === 'ton') {
@@ -128,16 +139,29 @@ async function applyPaymentUpdate({ orderId, status, payCurrency, paidAmount, pa
  * Looks for on-chain TON payments for the given orders (one toncenter call for all of them)
  * and marks the ones it finds as paid. Returns the ids of orders that were paid.
  */
-async function reconcileTonPayments(orders, { fetchImpl } = {}) {
-  const waiting = orders.filter((order) => order.paymentProvider === 'ton' && order.paymentStatus === 'WAITING');
-  if (waiting.length === 0 || !env.ton.isConfigured) return [];
+const ON_CHAIN = {
+  ton: { currency: 'TON', transfers: (options) => ton.recentTransfers(options) },
+  'ton-usdt': { currency: 'USDT', transfers: (options) => ton.recentUsdtTransfers(options) },
+};
 
-  const transfers = await ton.recentTransfers({ fetchImpl });
+async function reconcileTonPayments(orders, { fetchImpl } = {}) {
+  if (!env.ton.isConfigured) return [];
+  const paid = [];
+  for (const [provider, { currency, transfers: load }] of Object.entries(ON_CHAIN)) {
+    const waiting = orders.filter((order) => order.paymentProvider === provider && order.paymentStatus === 'WAITING');
+    if (waiting.length === 0) continue;
+    paid.push(...(await reconcile(waiting, currency, await load({ fetchImpl }))));
+  }
+  return paid;
+}
+
+/** Matches waiting orders against on-chain transfers (comment + at least the quoted amount). */
+async function reconcile(waiting, currency, transfers) {
   const paid = [];
   for (const order of waiting) {
     const transfer = ton.findPayment(order, transfers);
     if (transfer) {
-      await applyPaymentUpdate({ orderId: order.id, status: 'PAID', payCurrency: 'TON', txHash: transfer.hash });
+      await applyPaymentUpdate({ orderId: order.id, status: 'PAID', payCurrency: currency, txHash: transfer.hash });
       paid.push(order.id);
     } else if (ton.findUnderpayment(order, transfers)) {
       await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'PARTIALLY_PAID' } });
@@ -159,7 +183,7 @@ function startTonPoller() {
     try {
       const orders = await prisma.order.findMany({
         where: {
-          paymentProvider: 'ton',
+          paymentProvider: { in: Object.keys(ON_CHAIN) },
           paymentStatus: 'WAITING',
           createdAt: { gt: new Date(Date.now() - TON_LOOKBACK_MS) },
         },

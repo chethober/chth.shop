@@ -89,7 +89,7 @@ export function StorePanel(props: StorePanelProps) {
               onSetUpStore={() => setView('storefront')}
             />
           ) : view === 'sales' ? (
-            <SalesPanel />
+            <SalesPanel onEditPayoutSettings={() => setView('storefront')} />
           ) : (
             <StorefrontSettings
               username={username}

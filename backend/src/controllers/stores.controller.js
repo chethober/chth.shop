@@ -2,6 +2,7 @@ const prisma = require('../lib/prisma');
 const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
 const { storeWithUser } = require('../lib/queries');
 const { roundCurrency, serializeProduct } = require('../lib/serializers');
+const { isValidAddress } = require('../services/payments/ton');
 
 const STORE_KINDS = ['ARTIST', 'MERCHANT'];
 
@@ -28,6 +29,11 @@ function pickProfileFields(body) {
       body[field] === null ? null : String(body[field]).trim().slice(0, 500),
     ])
   );
+  // TON-based payout addresses are checked here; other networks are free-form.
+  const network = fields.payoutNetwork ?? body.payoutNetwork;
+  if (fields.payoutAddress && ['USDT-TON', 'TON'].includes(network) && !isValidAddress(fields.payoutAddress)) {
+    throw new HttpError(400, 'Enter a valid TON payout address');
+  }
   if (body.kind !== undefined) {
     if (!STORE_KINDS.includes(body.kind)) throw new HttpError(400, 'Store kind must be ARTIST or MERCHANT');
     fields.kind = body.kind;

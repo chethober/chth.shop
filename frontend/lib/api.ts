@@ -11,6 +11,9 @@ import type {
   Pagination,
   PaymentMethods,
   PaymentStart,
+  Payout,
+  PayoutBalance,
+  PayoutSummary,
   Product,
   ProductInput,
   ProductType,
@@ -109,6 +112,9 @@ export const api = {
     telegramConfig: () => request<TelegramConfig>(http.get('/auth/telegram/config')),
     telegram: (data: TelegramAuthData) =>
       request<{ user: User; token: string }>(http.post('/auth/telegram', data)),
+    /** Telegram Mini App sign-in with `Telegram.WebApp.initData`. */
+    telegramWebApp: (initData: string) =>
+      request<{ user: User; token: string; startParam: string | null }>(http.post('/auth/telegram/webapp', { initData })),
     me: () => request<{ user: User }>(http.get('/auth/me')).then((d) => d.user),
     updateUsername: (newUsername: string) =>
       request<{ user: User; token: string }>(http.put('/auth/username', { newUsername })),
@@ -167,6 +173,11 @@ export const api = {
     me: () => request<ReferralInfo>(http.get('/referrals/me')),
     claim: (code: string) =>
       http.post<{ message: string }>('/referrals/claim', { code }).then((response) => response.data.message),
+    setRewardAddress: (address: string | null) => request<void>(http.put('/referrals/address', { address })),
+  },
+
+  payouts: {
+    me: () => request<PayoutSummary>(http.get('/payouts/me')),
   },
 
   collectibles: {
@@ -199,8 +210,8 @@ export const api = {
     create: (shippingAddress: string) =>
       request<{ order: Order }>(http.post('/orders', { shippingAddress })).then((d) => d.order),
     /** Starts (or resumes) paying: a hosted checkout URL, or a TON Connect transaction request. */
-    pay: (orderId: string, method: 'hosted' | 'ton' = 'hosted') =>
-      request<PaymentStart>(http.post(`/orders/${orderId}/pay`, { method }, { timeout: 30_000 })),
+    pay: (orderId: string, method: 'hosted' | 'ton' | 'usdt' = 'hosted', walletAddress?: string) =>
+      request<PaymentStart>(http.post(`/orders/${orderId}/pay`, { method, walletAddress }, { timeout: 30_000 })),
     /** Asks the server to look for this order's TON transfer now. */
     checkTon: (orderId: string) =>
       request<{ order: Order }>(http.post(`/orders/${orderId}/ton/check`, {}, { timeout: 30_000 })).then((d) => d.order),
@@ -218,6 +229,19 @@ export const api = {
       request<{ orders: Order[] }>(http.get('/admin/orders', { params: { status } })).then((d) => d.orders),
     setOrderStatus: (orderId: string, status: OrderStatus) =>
       request<{ order: Order }>(http.put(`/admin/orders/${orderId}/status`, { status })).then((d) => d.order),
+    payouts: () =>
+      request<{ balances: PayoutBalance[]; payouts: Payout[]; minAmount: number; holdDays: number; automatic: boolean }>(
+        http.get('/admin/payouts')
+      ),
+    runPayouts: () =>
+      request<{ payouts: Payout[]; skipped: { username: string; amount: number; reason: string }[] }>(
+        http.post('/admin/payouts/run', {}, { timeout: 120_000 })
+      ),
+    sendPayout: (id: string) =>
+      request<{ payout: Payout }>(http.post(`/admin/payouts/${id}/send`, {}, { timeout: 120_000 })).then((d) => d.payout),
+    markPayoutSent: (id: string, txHash: string) =>
+      request<{ payout: Payout }>(http.put(`/admin/payouts/${id}/sent`, { txHash })).then((d) => d.payout),
+    cancelPayout: (id: string) => request<void>(http.delete(`/admin/payouts/${id}`)),
   },
 }
 

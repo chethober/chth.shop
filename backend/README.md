@@ -30,7 +30,29 @@ Checkout creates an order, then `POST /orders/:id/pay` returns a hosted checkout
   in TON (CoinGecko price or `TON_USD_PRICE`, valid `TON_QUOTE_TTL_MINUTES`) and returns a TON Connect request:
   amount, receiving address, and a text comment `chth:<order id>`. The server finds the transfer through toncenter
   (`POST /orders/:id/ton/check`, plus a poller every 20 s) and needs the right comment and at least the quoted
-  amount; `txHash` is unique, so one transfer can't pay two orders. USDT-on-TON (jetton) payments aren't wired yet.
+  amount; `txHash` is unique, so one transfer can't pay two orders.
+- `usdt` (`{ "method": "usdt", "walletAddress": "<buyer>" }`, needs `TON_RECEIVER_ADDRESS` and a USDT jetton
+  master): charges the exact USD amount in USDT (6 decimals). The server looks up the buyer's USDT jetton wallet
+  and returns a TEP-74 jetton transfer for TON Connect (0.05 TON gas, excess returned to the buyer) whose forward
+  payload is the order comment. Payments are found through toncenter's v3 jetton transfer index (incoming
+  transfers of that jetton to the receiver, not aborted, matching comment and amount).
+
+### Payouts
+
+Earnings are the per-line `sellerEarning` snapshots plus `ReferralReward` credit. A line is payable when its
+order is paid, shipped or delivered, and paid more than `PAYOUT_HOLD_DAYS` ago. A run (`npm run payouts`,
+`POST /admin/payouts/run`) creates one `Payout` per user at or above `PAYOUT_MIN_USD` and links the lines to it,
+so nothing is paid twice; cancelling an unsent payout unlinks them again. The destination is the store's payout
+address, else the user's `rewardAddress`. `USDT-TON` payouts are sent from the platform wallet
+(`TON_WALLET_MNEMONIC`) as jetton transfers, one at a time through the same queue as NFT mints; other networks
+wait for an admin to send them and record the transaction (`PUT /admin/payouts/:id/sent`).
+
+### Telegram
+
+`POST /auth/telegram/webapp` signs in with Mini App `initData` (HMAC-verified with the bot token, max 24 h old).
+`POST /telegram/webhook` (checked against `TELEGRAM_WEBHOOK_SECRET`) answers `/start [ref_X|p_ID]`, `/shop`,
+`/design`, `/orders`, `/sell` and `/help` with buttons that open the Mini App. `npm run telegram:setup` registers
+the webhook, menu button and commands.
 
 ### NFT-backed merch
 
@@ -39,13 +61,14 @@ timed (`dropStartsAt` / `dropEndsAt`). When an order is paid, each NFT-backed un
 serial for the item's tag and an edition number. Buyers claim it to a TON address (`POST /collectibles/:id/claim`),
 which mints an item in a standard TEP-62 collection from the platform wallet (`src/services/nft.js`):
 
-1. Deploy a standard NFT collection owned by the `TON_MINTER_MNEMONIC` wallet (v4), with collection content
+1. Deploy a standard NFT collection owned by the `TON_WALLET_MNEMONIC` wallet (v4), with collection content
    `<PUBLIC_API_URL>/nft/collection.json` and common item content prefix `<PUBLIC_API_URL>/nft/`.
 2. Set `TON_NFT_COLLECTION_ADDRESS` and fund the wallet (each mint sends 0.05 TON).
 
 Mints run one at a time and read the next item index from the collection. Item metadata (TEP-64) is served at
 `/nft/<collectible id>.json`. Without that configuration, development records a mock mint and production refuses
-claims. **The on-chain path is untested against a live network from this environment**; try it on testnet first.
+claims. **The on-chain paths (TON / USDT payments, mints, payouts) were tested against mocked chain responses, not a
+live network**; try them on testnet first.
 
 ### Growth
 
@@ -137,3 +160,9 @@ Controllers throw `HttpError(status, message)`; the error middleware turns it in
 | GET · POST | `/collectibles`, `/collectibles/:id/claim` | ✓ | Own collectibles / mint to a TON wallet |
 | GET | `/collectibles/verify/:serial` | – | Public authenticity check |
 | GET | `/nft/collection.json`, `/nft/:id.json` | – | TEP-64 metadata |
+| GET | `/payouts/me` | ✓ | Balance, payout destination and history |
+| PUT | `/referrals/address` | ✓ | TON address for referral credit |
+| GET · POST | `/admin/payouts`, `/admin/payouts/run` | admin | Balances + payouts / run payouts |
+| POST · PUT · DELETE | `/admin/payouts/:id/send`, `/admin/payouts/:id/sent`, `/admin/payouts/:id` | admin | Send / record manual / cancel |
+| POST | `/auth/telegram/webapp` | – | Telegram Mini App sign-in |
+| POST | `/telegram/webhook` | secret | Bot updates |
