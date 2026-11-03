@@ -59,7 +59,7 @@ export function CollabSection() {
       </Reveal>
       <Reveal>
         <p className="max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Put your work on the back of a premium tee and sell it from your own store. No inventory, no upfront cost.
+          Put your art or your brand on tees, hoodies, mugs and caps and sell them from your own store. No inventory, no upfront cost, crypto payouts.
         </p>
       </Reveal>
 
@@ -85,7 +85,7 @@ export function CollabSection() {
       <Reveal>
         <Button asChild size="lg" className="group w-full sm:w-auto">
           <Link href="/collab">
-            Join as an artist
+            Open your store
             <ArrowRight className="transition-transform duration-200 ease-out-strong group-hover:translate-x-1" />
           </Link>
         </Button>

@@ -2,16 +2,18 @@
 
 import Link from 'next/link'
 import { X } from 'lucide-react'
+import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react'
 import { InlineConfirm } from '@/components/custom/inline-confirm'
 import { SlideToConfirm } from '@/components/custom/slide-to-confirm'
 import { getSocialIcon } from '@/components/shared/social-icons'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { SOCIAL_PLATFORMS } from '@/lib/social'
 import { cn } from '@/lib/utils'
-import type { StoreForm } from './store-form'
+import { PAYOUT_NETWORKS, type StoreForm } from './store-form'
 import { StorefrontPreview } from './storefront-preview'
 
 /** Advisory only: longer bios are allowed but get truncated on small screens. */
@@ -36,6 +38,8 @@ export function StorefrontSettings({
   onActivate,
   onDeleteStore,
 }: StorefrontSettingsProps) {
+  const walletAddress = useTonAddress()
+  const [tonConnectUI] = useTonConnectUI()
   const connectedCount = SOCIAL_PLATFORMS.filter(({ id }) => form[id].trim()).length
   const bioTooLong = form.bio.length > BIO_SOFT_LIMIT
 
@@ -83,6 +87,83 @@ export function StorefrontSettings({
                 className="min-h-24 resize-y"
               />
               {bioTooLong && <p className="text-[11px] text-warning">Shorter bios read better on mobile.</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Selling as</CardTitle>
+              <CardDescription>Artists sell their art; merchants sell their brand&apos;s merch.</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Store type">
+              {(
+                [
+                  { id: 'ARTIST', label: 'Artist', hint: 'Original art & designs' },
+                  { id: 'MERCHANT', label: 'Merchant', hint: 'A brand, shop, or business' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.kind === option.id}
+                  onClick={() => onFormChange({ kind: option.id })}
+                  className={cn(
+                    'cursor-pointer rounded-xl border p-3 text-left transition-colors',
+                    form.kind === option.id
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <span className="block text-xs font-semibold">{option.label}</span>
+                  <span className="block text-[11px] opacity-80">{option.hint}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="payout-address">Crypto payout address</Label>
+              <div className="flex gap-2">
+                <Select
+                  aria-label="Payout network"
+                  value={form.payoutNetwork}
+                  onChange={(event) => onFormChange({ payoutNetwork: event.target.value })}
+                >
+                  {PAYOUT_NETWORKS.map((network) => (
+                    <option key={network} value={network}>
+                      {network}
+                    </option>
+                  ))}
+                </Select>
+                <Input
+                  id="payout-address"
+                  value={form.payoutAddress}
+                  onChange={(event) => onFormChange({ payoutAddress: event.target.value })}
+                  placeholder="Wallet address"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="flex-1 font-mono text-xs"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {form.payoutNetwork === 'USDT-TON'
+                  ? 'USDT on TON is paid automatically every month. '
+                  : 'This network is paid by hand every month. '}
+                Double-check the address: transfers can&apos;t be reversed.
+                {form.payoutNetwork === 'USDT-TON' && (
+                  <button
+                    type="button"
+                    onClick={() => (walletAddress ? onFormChange({ payoutAddress: walletAddress }) : tonConnectUI.openModal())}
+                    className="ml-1 cursor-pointer font-semibold text-foreground underline underline-offset-2"
+                  >
+                    {walletAddress ? 'Use my connected wallet' : 'Connect a TON wallet'}
+                  </button>
+                )}
+              </p>
             </div>
           </CardContent>
         </Card>

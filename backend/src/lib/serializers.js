@@ -1,13 +1,17 @@
 // Shapes database records into the JSON the frontend consumes.
 
-const roundCurrency = (value) => parseFloat(value.toFixed(2));
+const { getCatalogItem } = require('./catalog');
+const { dropStatus, editionsRemaining } = require('./availability');
 
-function serializeArtistSummary(artist) {
-  if (!artist) return null;
+const roundCurrency = (value) => Math.round(value * 100) / 100;
+
+function serializeStoreSummary(store) {
+  if (!store) return null;
   return {
-    id: artist.id,
-    storeName: artist.storeName,
-    username: artist.user ? artist.user.username : '',
+    id: store.id,
+    kind: store.kind,
+    storeName: store.storeName,
+    username: store.user ? store.user.username : '',
   };
 }
 
@@ -16,15 +20,43 @@ function serializeUser(user) {
   return rest;
 }
 
+/** Public product payload. Inactive products are only ever returned to their owner. */
+function serializeProduct(product) {
+  if (!product) return null;
+  const { store, ...rest } = product;
+  return {
+    ...rest,
+    dropStatus: dropStatus(product),
+    editionsRemaining: editionsRemaining(product),
+    ...(store !== undefined && { store: serializeStoreSummary(store) }),
+  };
+}
+
 /** Minimal user payload embedded in OAuth redirects and auth responses. */
 function serializeAuthUser(user, authProvider) {
   return {
     id: user.id,
     username: user.username,
     email: user.email,
+    role: user.role,
+    isSeller: user.isSeller,
+    telegramId: user.telegramId,
     authProvider: authProvider || user.authProvider,
     ...(authProvider === 'google' ? { isGoogleUser: true } : {}),
   };
+}
+
+/** Unit price of a cart line: the listing's price, or the catalog price for a buyer's own design. */
+function cartItemUnitPrice(item) {
+  if (item.product) return item.product.price;
+  const catalogItem = getCatalogItem(item.type);
+  return catalogItem ? catalogItem.retailPrice : 0;
+}
+
+function cartItemName(item) {
+  if (item.product) return item.product.name;
+  const catalogItem = getCatalogItem(item.type);
+  return `Custom ${catalogItem ? catalogItem.name : item.type}`;
 }
 
 function serializeCartItem(item) {
@@ -32,7 +64,11 @@ function serializeCartItem(item) {
     id: item.id,
     cartId: item.cartId,
     productId: item.productId,
+    type: item.type,
+    name: cartItemName(item),
+    options: item.options || {},
     quantity: item.quantity,
+    unitPrice: cartItemUnitPrice(item),
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
     product: item.product
@@ -42,7 +78,7 @@ function serializeCartItem(item) {
           type: item.product.type,
           price: item.product.price,
           imageUrl: item.product.imageUrl,
-          artist: serializeArtistSummary(item.product.artist),
+          store: serializeStoreSummary(item.product.store),
         }
       : null,
   };
@@ -55,10 +91,7 @@ function serializeCart(cart) {
 
   const items = (cart.items || []).map(serializeCartItem);
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce(
-    (sum, item) => sum + (item.product ? item.product.price : 0) * item.quantity,
-    0
-  );
+  const totalPrice = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
 
   return { id: cart.id, items, totalItems, totalPrice: roundCurrency(totalPrice) };
 }
@@ -68,25 +101,30 @@ function serializeOrder(order) {
     id: order.id,
     userId: order.userId,
     status: order.status,
+    subtotal: order.subtotal || order.total,
+    discount: order.discount,
     total: order.total,
+    currency: order.currency,
     shippingAddress: order.shippingAddress,
+    paymentStatus: order.paymentStatus,
+    paymentProvider: order.paymentProvider,
+    paymentUrl: order.paymentUrl,
+    payCurrency: order.payCurrency,
+    txHash: order.txHash,
+    paidAt: order.paidAt,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     items: (order.items || []).map((item) => ({
       id: item.id,
       orderId: item.orderId,
       productId: item.productId,
+      type: item.type,
+      name: item.name,
+      options: item.options || {},
       quantity: item.quantity,
       price: item.price,
-      product: item.product
-        ? {
-            id: item.product.id,
-            name: item.product.name,
-            type: item.product.type,
-            imageUrl: item.product.imageUrl,
-            artist: serializeArtistSummary(item.product.artist),
-          }
-        : null,
+      imageUrl: (item.options && item.options.previewUrl) || (item.product && item.product.imageUrl) || null,
+      store: serializeStoreSummary(item.store),
     })),
   };
 }
@@ -94,8 +132,12 @@ function serializeOrder(order) {
 module.exports = {
   roundCurrency,
   serializeUser,
+  serializeProduct,
+  serializeStoreSummary,
   serializeAuthUser,
   serializeCart,
   serializeCartItem,
   serializeOrder,
+  cartItemUnitPrice,
+  cartItemName,
 };

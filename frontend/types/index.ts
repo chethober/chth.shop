@@ -1,30 +1,129 @@
 // Shapes of the data returned by the backend API.
 
-export type AuthProvider = 'google' | 'x' | 'telegram'
+export type AuthProvider = 'google' | 'telegram'
+
+export type UserRole = 'CUSTOMER' | 'ADMIN'
 
 export interface User {
   id: string
   username: string
   email: string
-  isArtist?: boolean | null
+  isSeller?: boolean | null
+  role?: UserRole
   authProvider?: AuthProvider | string | null
   googleId?: string | null
-  twitterId?: string | null
   telegramId?: string | null
   createdAt?: string
   updatedAt?: string
 }
 
-export type ProductType = 'tshirt' | 'hoodie' | 'pants'
+/** Base products the platform prints on. */
+export type ProductType =
+  | 'tshirt'
+  | 'hoodie'
+  | 'pants'
+  | 'hat'
+  | 'beanie'
+  | 'mug'
+  | 'cup'
+  | 'bottle'
+  | 'tote'
+  | 'phonecase'
+  | 'poster'
+  | 'sticker'
+
+export interface CatalogItem {
+  type: ProductType
+  name: string
+  description: string
+  baseCost: number
+  retailPrice: number
+  sizes: string[]
+  colors: string[]
+  customizable: boolean
+}
+
+type Vec3 = [number, number, number]
+
+/** A movable image or text layer placed on a product in the 3D studio. */
+export interface DesignLayer {
+  id: string
+  type: 'image' | 'text'
+  content: string
+  imageUrl?: string
+  position: Vec3
+  rotation: number
+  scale: Vec3
+  color?: string
+  fontSize?: number
+}
+
+export interface Design {
+  color: string | null
+  logoUrl: string | null
+  layers: DesignLayer[]
+}
+
+export type StoreKind = 'ARTIST' | 'MERCHANT'
+
+export interface StoreSummary {
+  id: string
+  kind: StoreKind
+  storeName: string | null
+  username: string
+}
 
 export interface Product {
   id: string
   name: string
+  description?: string | null
   type: string
   price: number
   imageUrl: string | null
+  colors: string[]
+  sizes: string[]
+  customizable: boolean
+  design?: Design | null
+  isActive: boolean
+  nftBacked: boolean
+  editionSize: number | null
+  editionsSold: number
+  editionsRemaining: number | null
+  dropStartsAt: string | null
+  dropEndsAt: string | null
+  dropStatus: 'upcoming' | 'live' | 'ended' | null
+  ratingAvg: number
+  ratingCount: number
+  store?: StoreSummary | null
   createdAt?: string
   updatedAt?: string
+}
+
+export type ProductInput = Partial<
+  Pick<
+    Product,
+    | 'name'
+    | 'description'
+    | 'type'
+    | 'price'
+    | 'imageUrl'
+    | 'colors'
+    | 'sizes'
+    | 'customizable'
+    | 'isActive'
+    | 'nftBacked'
+    | 'editionSize'
+    | 'dropStartsAt'
+    | 'dropEndsAt'
+  >
+> & { design?: Design | null }
+
+export interface Pagination {
+  total: number
+  page: number
+  pages: number
+  hasNext: boolean
+  hasPrev: boolean
 }
 
 export interface SocialHandles {
@@ -38,27 +137,49 @@ export interface SocialHandles {
   website?: string | null
 }
 
-export interface Artist extends SocialHandles {
+export interface Store extends SocialHandles {
   id: string
   userId: string
+  kind: StoreKind
   bio: string | null
   storeName: string | null
+  payoutAddress?: string | null
+  payoutNetwork?: string | null
   createdAt?: string
   updatedAt?: string
   user?: Pick<User, 'username' | 'email'>
   products?: Product[]
+  followerCount?: number
+  isFollowing?: boolean
 }
 
-export type ArtistProfileInput = SocialHandles & {
+export type StoreInput = SocialHandles & {
+  kind: StoreKind
   storeName: string
   bio: string
+  payoutAddress: string
+  payoutNetwork: string
+}
+
+/** What the buyer picked for a cart / order line. */
+export interface LineOptions {
+  size?: string
+  color?: string
+  design?: Design
+  /** On order lines: the listing's design at purchase time, when the buyer didn't personalize. */
+  sellerDesign?: Design
+  previewUrl?: string
 }
 
 export interface CartItem {
   id: string
-  productId: string
+  productId: string | null
+  type: string
+  name: string
+  options: LineOptions
   quantity: number
-  product: (Product & { artist?: { id: string; storeName: string | null; username: string } | null }) | null
+  unitPrice: number
+  product: (Pick<Product, 'id' | 'name' | 'type' | 'price' | 'imageUrl'> & { store?: StoreSummary | null }) | null
 }
 
 export interface Cart {
@@ -70,20 +191,162 @@ export interface Cart {
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
 
+export type PaymentStatus =
+  | 'UNPAID'
+  | 'WAITING'
+  | 'CONFIRMING'
+  | 'PAID'
+  | 'PARTIALLY_PAID'
+  | 'EXPIRED'
+  | 'FAILED'
+  | 'REFUNDED'
+
 export interface OrderItem {
   id: string
-  productId: string
+  productId: string | null
+  type: string
+  name: string
+  options: LineOptions
   quantity: number
   price: number
-  product?: Pick<Product, 'id' | 'name' | 'type' | 'imageUrl'> | null
+  imageUrl: string | null
+  store: StoreSummary | null
 }
 
 export interface Order {
   id: string
   status: OrderStatus
+  subtotal: number
+  discount: number
   total: number
+  currency: string
   shippingAddress?: string | null
+  paymentStatus: PaymentStatus
+  paymentUrl?: string | null
+  payCurrency?: string | null
+  txHash?: string | null
+  paidAt?: string | null
   createdAt: string
   items: OrderItem[]
+  customer?: Pick<User, 'username' | 'email'>
 }
 
+export interface Sale {
+  id: string
+  orderId: string
+  orderStatus: OrderStatus
+  paidAt: string | null
+  name: string
+  type: string
+  options: Pick<LineOptions, 'size' | 'color'>
+  quantity: number
+  price: number
+  earning: number
+}
+
+export interface SalesReport {
+  summary: { unitsSold: number; revenue: number; earnings: number }
+  sales: Sale[]
+}
+
+export interface PaymentMethods {
+  hosted: boolean
+  ton: boolean
+  usdt: boolean
+  hostedProvider: string
+  tonNetwork: 'mainnet' | 'testnet'
+}
+
+/** What POST /orders/:id/pay returns for each method. */
+export type PaymentStart =
+  | { method: 'hosted'; paymentUrl: string; provider: string }
+  | {
+      method: 'ton' | 'usdt'
+      /** Receiver (TON) or the buyer's own USDT jetton wallet (USDT). */
+      address: string
+      /** Nanotons attached to the message (the price for TON, gas for USDT). */
+      amount: string
+      amountTon?: string
+      amountUsdt?: string
+      /** Base64 BOC: the order comment (TON) or the jetton transfer (USDT). */
+      payload: string
+      validUntil: number
+      network: 'mainnet' | 'testnet'
+    }
+
+export type CollectibleStatus = 'UNCLAIMED' | 'MINTING' | 'MINTED' | 'FAILED'
+
+export interface Collectible {
+  id: string
+  serial: string
+  name: string
+  imageUrl: string | null
+  productId: string | null
+  productType: string | null
+  store: { storeName: string | null; username: string } | null
+  edition: number | null
+  editionSize: number | null
+  status: CollectibleStatus
+  ownerAddress: string | null
+  nftIndex: number | null
+  nftAddress: string | null
+  mintError: string | null
+  claimedAt: string | null
+  createdAt: string
+  ownerUsername?: string
+}
+
+export interface Review {
+  id: string
+  rating: number
+  body: string | null
+  username: string
+  isMine: boolean
+  createdAt: string
+}
+
+export interface ReferralInfo {
+  code: string
+  invited: number
+  converted: number
+  earned: number
+  discountPercent: number
+  rewardPercent: number
+  referredBy: string | null
+  hasWelcomeDiscount: boolean
+}
+
+export type PayoutStatus = 'PENDING' | 'SENDING' | 'SENT' | 'FAILED'
+
+export interface Payout {
+  id: string
+  amount: number
+  network: string
+  address: string
+  status: PayoutStatus
+  txHash: string | null
+  error: string | null
+  createdAt: string
+  sentAt: string | null
+  username?: string
+}
+
+export interface PayoutSummary {
+  available: number
+  onHold: number
+  paidOut: number
+  destination: { address: string; network: string } | null
+  rewardAddress: string | null
+  minAmount: number
+  holdDays: number
+  automatic: boolean
+  payouts: Payout[]
+}
+
+export interface PayoutBalance {
+  userId: string
+  username: string
+  available: number
+  onHold: number
+  destination: { address: string; network: string } | null
+}

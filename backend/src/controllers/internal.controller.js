@@ -29,7 +29,7 @@ async function stats(req, res, next) {
     const [users, newUsers7d, artists, products, byStatus, revenue, open] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: weekAgo } } }),
-      prisma.artist.count(),
+      prisma.store.count(),
       prisma.product.count(),
       prisma.order.groupBy({ by: ['status'], _count: { _all: true } }),
       prisma.order.aggregate({ _sum: { total: true }, where: { createdAt: { gte: monthAgo }, status: { not: 'CANCELLED' } } }),

@@ -4,7 +4,7 @@ import { SignInView } from '@/features/auth/sign-in-view'
 
 export const metadata: Metadata = {
   title: 'Sign In',
-  description: 'Sign in to CHTH with Google, X or Telegram',
+  description: 'Sign in to CHTH with Google or Telegram',
 }
 
 export default function SignInPage() {

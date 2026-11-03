@@ -8,28 +8,49 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid())
-  username     String    @unique
-  email        String    @unique
-  password     String    @default("")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  googleId     String?   @unique
-  twitterId    String?   @unique
-  telegramId   String?   @unique
-  authProvider String?   @default("google")
-  isGoogleUser Boolean   @default(false)
-  isArtist     Boolean?  @default(false)
-  artist       Artist?
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  password     String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  googleId     String?  @unique
+  twitterId    String?  @unique
+  telegramId   String?  @unique
+  authProvider String?  @default("google")
+  isGoogleUser Boolean  @default(false)
+  isSeller     Boolean  @default(false)
+  role         UserRole @default(CUSTOMER)
+  /// Shareable code: new users who sign up with it get a first-order discount.
+  referralCode String?  @unique
+  referredById String?
+  referredBy   User?    @relation("Referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  /// TON address for referral credit when the user has no store payout address (paid in USDT on TON).
+  rewardAddress String?
+  referrals    User[]   @relation("Referrals")
+  store        Store?
   cart         Cart?
   orders       Order[]
+  reviews      Review[]
+  favorites    Favorite[]
+  follows      Follow[]
+  collectibles Collectible[]
+  referralRewards ReferralReward[]
+  payouts      Payout[]
 
   @@map("users")
 }
 
-model Artist {
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+/// A seller on the marketplace: an artist selling their art, or a merchant selling their brand.
+model Store {
   id        String    @id @default(uuid())
   userId    String    @unique
+  kind      StoreKind @default(ARTIST)
   bio       String?
   storeName String?
   instagram String?
@@ -40,41 +61,84 @@ model Artist {
   telegram  String?
   discord   String?
   website   String?
+  /// Crypto address payouts are sent to.
+  payoutAddress String?
+  /// Network of `payoutAddress`, e.g. "USDT-TRC20" or "TON".
+  payoutNetwork String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   products  Product[]
+  sales     OrderItem[]
+  followers Follow[]
 
-  @@map("artists")
+  @@map("stores")
+}
+
+enum StoreKind {
+  ARTIST
+  MERCHANT
 }
 
 model Product {
-  id          String      @id @default(uuid())
-  name        String
-  type        String
-  price       Float       @default(0)
-  imageUrl    String?
-  artistId    String
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
-  artist      Artist      @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  id           String      @id @default(uuid())
+  name         String
+  description  String?
+  /// Catalog base product (tshirt, hoodie, pants, mug, hat, tote).
+  type         String
+  price        Float       @default(0)
+  imageUrl     String?
+  /// Colors (hex) and sizes the buyer can pick from; empty means the catalog defaults.
+  colors       String[]    @default([])
+  sizes        String[]    @default([])
+  /// Whether buyers may add their own text / artwork on top of the seller's design.
+  customizable Boolean     @default(false)
+  /// The seller's 3D studio design (garment color and decoration layers).
+  design       Json?
+  isActive     Boolean     @default(true)
+  /// Each unit sold comes with a numbered collectible NFT (see Collectible).
+  nftBacked    Boolean     @default(false)
+  /// Limited edition: at most this many units are ever sold. Null means unlimited.
+  editionSize  Int?
+  /// Units reserved by orders (released when an unpaid order is cancelled).
+  editionsSold Int         @default(0)
+  /// Drop window: purchasable only between these times when set.
+  dropStartsAt DateTime?
+  dropEndsAt   DateTime?
+  ratingAvg    Float       @default(0)
+  ratingCount  Int         @default(0)
+  storeId      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+  reviews      Review[]
+  favorites    Favorite[]
+  collectibles Collectible[]
+  store        Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
+  @@index([type])
   @@map("products")
 }
 
 model CartItem {
-  id        String   @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  cartId     String
+  /// Null for a buyer's own design made from a catalog blank.
+  productId  String?
+  /// Catalog base product; always set.
+  type       String
+  /// Size, color, and personalization chosen by the buyer.
+  options    Json     @default("{}")
+  /// Stable hash of `options`, so identical configurations stack.
+  optionsKey String   @default("")
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product    Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([cartId, productId])
+  @@index([cartId])
   @@map("cart_items")
 }
 
@@ -90,29 +154,66 @@ model Cart {
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
-  orderId   String
-  productId String
-  quantity  Int
-  price     Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product   Product  @relation(fields: [productId], references: [id])
+  id            String   @id @default(uuid())
+  orderId       String
+  productId     String?
+  storeId       String?
+  type          String
+  name          String
+  options       Json     @default("{}")
+  quantity      Int
+  /// Unit price charged to the buyer.
+  price         Float
+  /// Unit production cost from the catalog at order time.
+  baseCost      Float    @default(0)
+  /// Total the seller earns for this line (after production cost and platform fee).
+  sellerEarning Float    @default(0)
+  /// The payout that settled this line's seller earning.
+  payoutId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  store         Store?   @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  collectibles  Collectible[]
+  payout        Payout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
 
+  @@index([storeId])
+  @@index([payoutId])
   @@map("order_items")
 }
 
 model Order {
-  id              String      @id @default(uuid())
-  userId          String
-  status          OrderStatus @default(PENDING)
-  total           Float
-  shippingAddress String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           OrderItem[]
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String        @id @default(uuid())
+  userId            String
+  status            OrderStatus   @default(PENDING)
+  /// Sum of the lines before discounts.
+  subtotal          Float         @default(0)
+  /// Referral discount on the buyer's first order.
+  discount          Float         @default(0)
+  total             Float
+  currency          String        @default("USD")
+  shippingAddress   String?
+  paymentStatus     PaymentStatus @default(UNPAID)
+  paymentProvider   String?
+  /// Provider's invoice / payment id.
+  paymentId         String?
+  paymentUrl        String?
+  /// Crypto the buyer actually paid with, as reported by the provider.
+  payCurrency       String?
+  /// TON Connect quote: amount in nanotons, receiving address and the comment that identifies the order.
+  payAmount         String?
+  payAddress        String?
+  payMemo           String?
+  payExpiresAt      DateTime?
+  /// On-chain transaction that paid the order; unique so one transfer can't pay two orders.
+  txHash            String?       @unique
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  items             OrderItem[]
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referralReward    ReferralReward?
 
   @@map("orders")
 }
@@ -123,4 +224,139 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  WAITING
+  CONFIRMING
+  PAID
+  PARTIALLY_PAID
+  EXPIRED
+  FAILED
+  REFUNDED
+}
+
+/// A numbered certificate for one physical unit of NFT-backed merch. Created when the order is
+/// paid; the buyer claims it to a TON wallet, which mints it as an NFT item.
+model Collectible {
+  id           String          @id @default(uuid())
+  /// Short code printed on the item's tag (QR → /verify/<serial>).
+  serial       String          @unique
+  productId    String?
+  orderItemId  String
+  ownerId      String
+  name         String
+  imageUrl     String?
+  /// 1-based edition number for limited editions.
+  edition      Int?
+  editionSize  Int?
+  status       CollectibleStatus @default(UNCLAIMED)
+  ownerAddress String?
+  /// Index in the NFT collection; unique so two items never share one.
+  nftIndex     Int?            @unique
+  nftAddress   String?
+  mintTx       String?
+  mintError    String?
+  claimedAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  product      Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  orderItem    OrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  owner        User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@map("collectibles")
+}
+
+enum CollectibleStatus {
+  UNCLAIMED
+  MINTING
+  MINTED
+  FAILED
+}
+
+/// Verified-buyer review: one per user and product.
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  productId String
+  rating    Int
+  body      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([productId])
+  @@map("reviews")
+}
+
+/// Wishlist entry.
+model Favorite {
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([userId, productId])
+  @@map("favorites")
+}
+
+model Follow {
+  userId    String
+  storeId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storeId])
+  @@index([storeId])
+  @@map("follows")
+}
+
+/// Credit earned by a referrer when someone they referred pays their first order.
+model ReferralReward {
+  id        String   @id @default(uuid())
+  userId    String
+  orderId   String   @unique
+  amount    Float
+  payoutId  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payout    Payout?  @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@map("referral_rewards")
+}
+
+/// A transfer of earnings (store sales + referral credit) to one user.
+model Payout {
+  id          String       @id @default(uuid())
+  userId      String
+  /// USD value; paid 1:1 in USDT.
+  amount      Float
+  network     String
+  address     String
+  status      PayoutStatus @default(PENDING)
+  /// On-chain transaction (or a reference for manual transfers).
+  txHash      String?
+  error       String?
+  createdAt   DateTime     @default(now())
+  sentAt      DateTime?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  referralRewards ReferralReward[]
+
+  @@index([userId])
+  @@map("payouts")
+}
+
+enum PayoutStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
 }

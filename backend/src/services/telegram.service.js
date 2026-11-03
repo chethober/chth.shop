@@ -90,15 +90,55 @@ async function verifyIdToken(idToken) {
 
 /**
  * Accounts created by the old Login Widget stored Telegram's numeric user `id`,
- * which OIDC exposes as the `id` claim; fall back to `sub` if it's missing.
+ * which OIDC exposes as the `id` claim; fall back to `sub` if it's missing. Also accepts the
+ * Mini App's `initData` user (id, username, first_name).
  */
 function telegramIdentity(claims) {
   const providerId = String(claims.id ?? claims.sub);
   return {
     provider: 'telegram',
     providerId,
-    preferredUsername: claims.preferred_username || claims.name || `tg_${providerId}`,
+    preferredUsername:
+      claims.preferred_username || claims.username || claims.name || claims.first_name || `tg_${providerId}`,
   };
 }
 
-module.exports = { createAuthorization, exchangeCode, verifyIdToken, telegramIdentity };
+/** Mini App initData older than this is rejected. */
+const MAX_AUTH_AGE_SECONDS = 24 * 60 * 60;
+
+/**
+ * Verifies Mini App `initData` (https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app):
+ * the hash is HMAC-SHA256 of the sorted fields, keyed by HMAC-SHA256("WebAppData", bot token).
+ * Returns the Telegram user and start parameter, or null when invalid or older than a day.
+ */
+function parseWebAppInitData(initData) {
+  const { botToken } = env.telegram;
+  if (!botToken || typeof initData !== 'string' || !initData) return null;
+
+  const params = new URLSearchParams(initData);
+  const hash = params.get('hash');
+  if (!hash) return null;
+  params.delete('hash');
+
+  const checkString = [...params.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n');
+  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+  const expected = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+  if (expected.length !== hash.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(hash))) return null;
+
+  const ageSeconds = Date.now() / 1000 - Number(params.get('auth_date'));
+  if (!Number.isFinite(ageSeconds) || ageSeconds > MAX_AUTH_AGE_SECONDS) return null;
+
+  let user;
+  try {
+    user = JSON.parse(params.get('user') || 'null');
+  } catch {
+    return null;
+  }
+  if (!user || !user.id) return null;
+  return { user, startParam: params.get('start_param') || null };
+}
+
+module.exports = { createAuthorization, exchangeCode, verifyIdToken, telegramIdentity, parseWebAppInitData };

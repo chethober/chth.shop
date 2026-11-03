@@ -7,7 +7,7 @@ const USERNAME_PATTERN = /^[a-zA-Z0-9_]{5,}$/;
 const getMe = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId },
-    include: { artist: true },
+    include: { store: true },
   });
   if (!user) throw new HttpError(404, 'User not found');
 
@@ -25,7 +25,7 @@ const checkUsername = asyncHandler(async (req, res) => {
   sendSuccess(res, { data: { available: !owner || owner.id === req.userId } });
 });
 
-/** Deletes the account; artist, products, cart and orders cascade in the database. */
+/** Deletes the account; store, products, cart and orders cascade in the database. */
 const deleteMe = asyncHandler(async (req, res) => {
   await prisma.user.delete({ where: { id: req.userId } });
   sendSuccess(res, { message: 'Account deleted successfully' });

@@ -21,7 +21,7 @@ const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/
 
 type Availability = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
 
-const PROVIDER_LABELS: Record<string, string> = { google: 'Google', x: 'X (Twitter)', telegram: 'Telegram' }
+const PROVIDER_LABELS: Record<string, string> = { google: 'Google', telegram: 'Telegram' }
 
 function validateUsername(value: string) {
   if (value.length < USERNAME_MIN_LENGTH) return `At least ${USERNAME_MIN_LENGTH} characters`
@@ -112,7 +112,7 @@ export function ProfilePanel({ onDeleteAccount }: { onDeleteAccount: () => Promi
     }
   }
 
-  const provider = user?.authProvider ?? (user?.googleId ? 'google' : user?.telegramId ? 'telegram' : user?.twitterId ? 'x' : '')
+  const provider = user?.authProvider ?? (user?.googleId ? 'google' : user?.telegramId ? 'telegram' : '')
   const invalid = availability === 'taken' || availability === 'invalid' || Boolean(error)
 
   return (

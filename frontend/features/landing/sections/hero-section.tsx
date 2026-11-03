@@ -20,7 +20,7 @@ export function HeroSection({ onDesign, onMeetArtists }: { onDesign: () => void;
 
       <Reveal>
         <p className="max-w-md text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-          Premium heavyweight tees, designed by you or by independent artists — and made only when someone orders one.
+          Tees, hoodies, mugs, caps and more, designed by you or by independent artists and merchants. Paid in crypto, made only when someone orders one.
         </p>
       </Reveal>
 
@@ -30,7 +30,7 @@ export function HeroSection({ onDesign, onMeetArtists }: { onDesign: () => void;
           <ArrowRight className="transition-transform duration-200 ease-out-strong group-hover:translate-x-1" />
         </Button>
         <Button size="lg" variant="outline" onClick={onMeetArtists} className="bg-background/60 backdrop-blur-md">
-          I&apos;m an artist
+          Sell with us
         </Button>
       </Reveal>
 

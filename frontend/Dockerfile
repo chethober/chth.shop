@@ -12,8 +12,10 @@ COPY frontend/ frontend/
 # Rewrites in next.config.js are resolved at build time, so the backend address is a build arg.
 ARG BACKEND_URL=http://backend:5000
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_TELEGRAM_MINI_APP_LINK
 ENV BACKEND_URL=${BACKEND_URL} \
   NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+  NEXT_PUBLIC_TELEGRAM_MINI_APP_LINK=${NEXT_PUBLIC_TELEGRAM_MINI_APP_LINK} \
   NEXT_STANDALONE=true \
   NEXT_TELEMETRY_DISABLED=1
 RUN yarn --cwd frontend build

@@ -51,4 +51,10 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, optionalAuth };
+/** Use after `requireAuth`: only platform admins may continue. */
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== 'ADMIN') return next(new HttpError(403, 'Admins only'));
+  next();
+}
+
+module.exports = { requireAuth, optionalAuth, requireAdmin };

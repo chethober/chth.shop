@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, CreditCard, MapPin } from 'lucide-react'
+import { Bitcoin, CheckCircle2, MapPin } from 'lucide-react'
 import { toast } from '@heroui/react'
 import { CopyButton } from '@/components/shared/copy-button'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import api from '@/lib/api'
 import type { Cart, Order } from '@/types'
+import { PaymentOptions } from '@/features/checkout/payment-options'
+import { formatPrice } from '@/lib/format'
 import { OrderSummary } from './order-summary'
 import { useT } from '@/lib/i18n'
 
@@ -46,10 +48,10 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
 
     setIsPlacing(true)
     try {
-      setOrder(await api.orders.create(shippingAddress.trim()))
+      const created = await api.orders.create(shippingAddress.trim())
+      setOrder(created)
       setShippingAddress('')
       onOrderPlaced()
-      toast.success(t("Order placed!"))
     } catch (error) {
       toast.danger(error instanceof Error ? error.message : 'Could not place your order')
     } finally {
@@ -66,15 +68,21 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
               <CheckCircle2 className="size-9" />
             </div>
             <div className="space-y-1.5">
-              <DialogTitle className="text-xl">{t("Order placed")}</DialogTitle>
-              <DialogDescription>{t('We’re preparing it for printing and delivery.')}</DialogDescription>
+              <DialogTitle className="text-xl">{t("Order created")}</DialogTitle>
+              <DialogDescription>{t("Pay now and we'll start printing.")}</DialogDescription>
               <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 {t("Order ID:")} <code className="font-semibold text-foreground">{order.id.slice(0, 8).toUpperCase()}</code>
                 <CopyButton value={order.id} label={t("Copy order ID")} />
               </p>
             </div>
+            {order.discount > 0 && (
+              <p className="text-xs font-medium text-success">
+                Welcome discount: −{formatPrice(order.discount)} · you pay {formatPrice(order.total)}
+              </p>
+            )}
+            <PaymentOptions orderId={order.id} className="text-left" />
             <div className="flex flex-col justify-center gap-2 sm:flex-row">
-              <Button asChild>
+              <Button asChild variant="outline">
                 <Link href="/account?tab=orders" onClick={close}>
                   {t("View orders")}
                 </Link>
@@ -88,10 +96,12 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
           <form onSubmit={placeOrder} className="space-y-5">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CreditCard className="size-5" />
+                <Bitcoin className="size-5" />
                 {t("Checkout")}
               </DialogTitle>
-              <DialogDescription>{t("Enter your shipping details to place the order.")}</DialogDescription>
+              <DialogDescription>
+                {t("Enter your shipping details, then pay from your TON wallet or with any major coin.")}
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-1.5">
@@ -116,8 +126,8 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
                 {t("Cancel")}
               </Button>
               <Button type="submit" disabled={isPlacing || !shippingAddress.trim()}>
-                {isPlacing ? <Spinner /> : <CheckCircle2 />}
-                {isPlacing ? 'Placing order…' : 'Place order'}
+                {isPlacing ? <Spinner /> : <Bitcoin />}
+                {isPlacing ? 'Creating order…' : 'Continue to payment'}
               </Button>
             </DialogFooter>
           </form>

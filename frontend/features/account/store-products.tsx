@@ -76,6 +76,11 @@ function ProductTile({
       <span className="absolute left-2 top-2 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
         {getProductTypeLabel(product.type)}
       </span>
+      {!product.isActive && (
+        <span className="absolute bottom-[4.25rem] left-2 rounded-full bg-foreground px-2 py-0.5 text-[10px] font-semibold text-background">
+          Unlisted
+        </span>
+      )}
 
       <div className="absolute right-2 top-2 flex gap-1 transition-opacity sm:opacity-0 sm:focus-within:opacity-100 sm:group-hover:opacity-100">
         <Button variant="outline" size="icon-sm" onClick={onEdit} aria-label="Edit" className="bg-background/90 backdrop-blur-sm">

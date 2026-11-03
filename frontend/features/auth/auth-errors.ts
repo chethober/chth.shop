@@ -1,13 +1,7 @@
 /** Human-readable messages for the `?error=` codes the backend redirects with. */
 const AUTH_ERROR_MESSAGES: Record<string, string> = {
   google_not_configured: 'Google sign-in is not configured on the server yet.',
-  x_not_configured: 'X (Twitter) sign-in is not configured on the server yet.',
   telegram_not_configured: 'Telegram sign-in is not configured on the server yet.',
-  x_missing_code: 'X authentication was cancelled or returned no code.',
-  x_invalid_state: 'Security verification failed for X authentication.',
-  x_token_failed: 'Unable to exchange the authorization token with X.',
-  x_profile_failed: 'Unable to retrieve your X profile.',
-  x_oauth_failed: 'X authentication failed. Please try again.',
   access_denied: 'You declined the authorization request.',
   telegram_missing_code: 'Telegram authentication was cancelled or returned no code.',
   telegram_invalid_state: 'Security verification failed for Telegram authentication.',

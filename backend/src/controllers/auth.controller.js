@@ -6,17 +6,21 @@ const { frontendOrigin } = require('../lib/origin');
 const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
 const { serializeUser } = require('../lib/serializers');
 const {
+  createSession,
   findOrCreateOAuthUser,
   frontendCallbackUrl,
   frontendErrorUrl,
 } = require('../services/identity.service');
 const { saveOAuthState, takeOAuthState } = require('../lib/oauth');
 const telegramService = require('../services/telegram.service');
+const { telegramIdentity, parseWebAppInitData } = telegramService;
 const telegramBotLogin = require('../services/telegram-bot-login.service');
 const xService = require('../services/x.service');
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/;
 const USERNAME_MIN_LENGTH = 5;
+/** Top-level frontend routes; a store at /<username> with these names would be unreachable. */
+const RESERVED_USERNAMES = new Set(['account', 'admin', 'auth', 'cart', 'checkout', 'collab', 'design', 'login', 'register', 'shop', 'terms', 'verify']);
 
 /* ---------- Google ---------- */
 
@@ -147,12 +151,22 @@ async function telegramBotCallback(req, res) {
   }
 }
 
+/** Telegram Mini App: signs in with the `initData` Telegram hands the app. */
+const telegramWebApp = asyncHandler(async (req, res) => {
+  if (!env.telegram.botToken) throw new HttpError(503, 'Telegram authentication is not configured on the server');
+  const parsed = parseWebAppInitData(req.body?.initData);
+  if (!parsed) throw new HttpError(401, 'Telegram Mini App data could not be verified');
+
+  const user = await findOrCreateOAuthUser(telegramIdentity(parsed.user));
+  sendSuccess(res, { data: { ...createSession(user, 'telegram'), startParam: parsed.startParam } });
+});
+
 /* ---------- Current user ---------- */
 
 const getMe = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId },
-    include: { artist: true },
+    include: { store: true },
   });
   if (!user) throw new HttpError(404, 'User not found');
 
@@ -170,6 +184,9 @@ const updateUsername = asyncHandler(async (req, res) => {
   }
   if (!USERNAME_PATTERN.test(newUsername)) {
     throw new HttpError(400, 'Username can only contain letters, numbers, and underscores');
+  }
+  if (RESERVED_USERNAMES.has(newUsername.toLowerCase())) {
+    throw new HttpError(400, 'That username is reserved');
   }
 
   const owner = await prisma.user.findUnique({ where: { username: newUsername } });
@@ -197,6 +214,7 @@ module.exports = {
   telegramCallback: telegramFlow.callback,
   startTelegramBot,
   telegramBotCallback,
+  telegramWebApp,
   getMe,
   updateUsername,
 };

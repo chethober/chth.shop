@@ -178,3 +178,7 @@ html[dir='rtl'] .landing-grid { direction: ltr; }
 html[dir='rtl'] .landing-grid > * { direction: rtl; }
 /* Arrows that mean "forward" point the reading direction. */
 html[dir='rtl'] :is(.lucide-arrow-right, .lucide-chevron-right) { transform: scaleX(-1); }
+/* Inside the Telegram Mini App: Telegram provides the chrome, so drop the site footer. */
+html[data-telegram='mini-app'] footer {
+  display: none;
+}

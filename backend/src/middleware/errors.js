@@ -1,5 +1,6 @@
 const env = require('../config/env');
 const { track } = require('../services/hub.service');
+const { HttpError } = require('../lib/http');
 
 function notFound(req, res) {
   res.status(404).json({ success: false, message: 'API endpoint not found' });
@@ -13,7 +14,8 @@ const PRISMA_CLIENT_ERRORS = {
 
 // eslint-disable-next-line no-unused-vars
 function errorHandler(error, req, res, next) {
-  if (error.status && error.status < 500) {
+  // HttpErrors are written for users (including 502/503 from payment providers).
+  if (error instanceof HttpError || (error.status && error.status < 500)) {
     return res.status(error.status).json({ success: false, message: error.message });
   }
 

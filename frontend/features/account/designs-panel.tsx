@@ -25,15 +25,15 @@ export function DesignsPanel() {
           <div className="mx-auto max-w-sm text-center">
             <h3 className="text-base font-semibold text-foreground">Start your first design</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Pick a base garment, add colors and artwork in 3D, then publish it to your store.
+              Pick a tee, hoodie, pants, mug, cap or tote, add artwork in 3D, then order it or publish it to your store.
             </p>
           </div>
 
-          <div className="mx-auto mt-6 grid max-w-lg grid-cols-3 gap-3">
+          <div className="mx-auto mt-6 grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-3">
             {GARMENTS.map((garment) => (
               <Link
                 key={garment.id}
-                href="/design"
+                href={`/design?type=${garment.id}`}
                 className="group overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-sm"
               >
                 <div className="aspect-square overflow-hidden bg-muted">

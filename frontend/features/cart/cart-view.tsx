@@ -44,11 +44,11 @@ export function CartView() {
         <EmptyState
           icon={ShoppingBag}
           title={t("Your cart is empty")}
-          description={t("Discover custom pieces made by independent artists.")}
+          description={t("Discover merch from independent artists and merchants.")}
           action={
             <>
               <Button asChild>
-                <Link href="/">{t("Explore items")}</Link>
+                <Link href="/shop">{t("Explore the shop")}</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/design">{t("Start designing")}</Link>
@@ -103,9 +103,11 @@ export function CartView() {
             </Card>
           </motion.div>
 
-          <CheckoutDialog cart={cart} open={checkoutOpen} onOpenChange={setCheckoutOpen} onOrderPlaced={fetchCart} />
         </div>
       )}
+
+      {/* Outside the branch above: placing the order empties the cart, and the dialog must stay for payment. */}
+      {cart && <CheckoutDialog cart={cart} open={checkoutOpen} onOpenChange={setCheckoutOpen} onOrderPlaced={fetchCart} />}
     </>
   )
 }

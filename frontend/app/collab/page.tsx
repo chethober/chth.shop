@@ -4,8 +4,8 @@ import { Eyebrow } from '@/components/shared/eyebrow'
 import { CollabBento } from '@/features/collab/collab-bento'
 
 export const metadata: Metadata = {
-  title: 'Artist Collaboration',
-  description: 'Join the CHTH artist program: 25% royalties, zero upfront cost, full IP ownership.',
+  title: 'Sell on CHTH',
+  description: 'Open a CHTH store as an artist or merchant: 75% of the margin, zero upfront cost, crypto payouts.',
 }
 
 export default function CollabPage() {

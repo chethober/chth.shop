@@ -1,7 +1,7 @@
 {
   "name": "chth-backend",
   "version": "1.0.0",
-  "description": "REST API for the CHTH merchandise platform",
+  "description": "REST API for the CHTH crypto merch marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,7 +10,10 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:seed": "node scripts/seed.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "make-admin": "node scripts/make-admin.js",
+    "payouts": "node scripts/run-payouts.js",
+    "telegram:setup": "node scripts/telegram-setup.js"
   },
   "keywords": [
     "merch",
@@ -23,6 +26,9 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^6.14.0",
+    "@ton/core": "0.63.1",
+    "@ton/crypto": "3.3.0",
+    "@ton/ton": "16.3.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

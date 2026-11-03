@@ -60,12 +60,88 @@ const env = {
       .split(',')
       .map((id) => id.trim())
       .filter(Boolean),
+    /** HTTPS URL of the site that the bot opens as a Mini App (defaults to the first FRONTEND_URL). */
+    miniAppUrl: (process.env.TELEGRAM_MINI_APP_URL || '').replace(/\/+$/, ''),
+    /** Short name of the Mini App registered with BotFather (/newapp), for t.me/<bot>/<name> links. */
+    miniAppName: process.env.TELEGRAM_MINI_APP_NAME || '',
+    /** Secret path segment + header token for the bot webhook. */
+    webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
   },
+
+  /** Share of each sale's margin (price minus production cost) the platform keeps. */
+  platformFeePercent: Number(process.env.PLATFORM_FEE_PERCENT ?? 25),
+
+  payments: {
+    /** `nowpayments` in production; `mock` lets you mark orders paid by hand in development. */
+    provider: process.env.PAYMENT_PROVIDER || (isProduction ? 'nowpayments' : 'mock'),
+    nowpayments: {
+      apiKey: process.env.NOWPAYMENTS_API_KEY,
+      ipnSecret: process.env.NOWPAYMENTS_IPN_SECRET,
+      apiUrl: (process.env.NOWPAYMENTS_API_URL || 'https://api.nowpayments.io/v1').replace(/\/+$/, ''),
+    },
+  },
+
+  /** TON: direct wallet payments via TON Connect and NFT certificates for NFT-backed merch. */
+  ton: {
+    network: process.env.TON_NETWORK === 'testnet' ? 'testnet' : 'mainnet',
+    /** Wallet that receives TON payments. */
+    receiverAddress: process.env.TON_RECEIVER_ADDRESS || '',
+    toncenterApiKey: process.env.TONCENTER_API_KEY || '',
+    /** Fixed TON price in USD; when unset the live price is fetched from CoinGecko. */
+    usdPrice: Number(process.env.TON_USD_PRICE) || null,
+    quoteTtlMinutes: Number(process.env.TON_QUOTE_TTL_MINUTES) || 20,
+    /**
+     * 24-word mnemonic of the platform's v4 hot wallet. It owns the NFT collection (pays for mints)
+     * and sends USDT payouts. TON_MINTER_MNEMONIC is the older name.
+     */
+    walletMnemonic: process.env.TON_WALLET_MNEMONIC || process.env.TON_MINTER_MNEMONIC || '',
+    /** USDT jetton master. Defaults to Tether's mainnet USDT; testnet needs a test jetton set here. */
+    usdtMaster:
+      process.env.TON_USDT_MASTER ||
+      (process.env.TON_NETWORK === 'testnet' ? '' : 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs'),
+    collectionAddress: process.env.TON_NFT_COLLECTION_ADDRESS || '',
+  },
+
+  payouts: {
+    /** Days after payment before earnings can be paid out (room for returns and disputes). */
+    holdDays: Number(process.env.PAYOUT_HOLD_DAYS ?? 14),
+    /** Balances below this (USD) roll over to the next run. */
+    minAmount: Number(process.env.PAYOUT_MIN_USD ?? 10),
+  },
+
+  referral: {
+    /** Discount on a referred user's first order. */
+    discountPercent: Number(process.env.REFERRAL_DISCOUNT_PERCENT ?? 10),
+    /** Credit the referrer earns from that order's subtotal. */
+    rewardPercent: Number(process.env.REFERRAL_REWARD_PERCENT ?? 5),
+  },
+
+  /** Public base URL of this API as seen by payment providers (for webhooks). Defaults to the first FRONTEND_URL, which proxies /api. */
+  publicApiUrl: (process.env.PUBLIC_API_URL || '').replace(/\/+$/, ''),
 };
 
 env.google.isConfigured = Boolean(env.google.clientId && env.google.clientSecret);
 env.x.isConfigured = Boolean(env.x.clientId && env.x.clientSecret);
 env.telegram.isConfigured = Boolean(env.telegram.clientId && env.telegram.clientSecret);
 env.telegram.isBotLoginConfigured = Boolean(env.telegram.botToken);
+env.payments.nowpayments.isConfigured = Boolean(
+  env.payments.nowpayments.apiKey && env.payments.nowpayments.ipnSecret
+);
+if (!env.publicApiUrl) env.publicApiUrl = `${env.frontendUrls[0]}/api`;
+
+env.ton.apiUrl = (
+  process.env.TONCENTER_API_URL ||
+  (env.ton.network === 'testnet' ? 'https://testnet.toncenter.com/api/v2' : 'https://toncenter.com/api/v2')
+).replace(/\/+$/, '');
+env.ton.v3Url = env.ton.apiUrl.replace(/\/api\/v2$/, '/api/v3');
+env.ton.isConfigured = Boolean(env.ton.receiverAddress);
+env.ton.usdtEnabled = Boolean(env.ton.receiverAddress && env.ton.usdtMaster);
+env.ton.canMint = Boolean(env.ton.walletMnemonic && env.ton.collectionAddress);
+env.ton.canPayout = Boolean(env.ton.walletMnemonic && env.ton.usdtMaster);
+if (!env.telegram.miniAppUrl) env.telegram.miniAppUrl = env.frontendUrls[0];
+
+if (env.isProduction && env.payments.provider === 'mock') {
+  throw new Error('PAYMENT_PROVIDER=mock is not allowed in production');
+}
 
 module.exports = env;

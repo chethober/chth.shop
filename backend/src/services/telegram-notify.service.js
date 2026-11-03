@@ -21,7 +21,7 @@ async function sendMessage(chatId, text) {
   }
 }
 
-/** Notifies each artist in the order about their lines, and admins about the whole order. */
+/** Notifies each store in the order about their lines, and admins about the whole order. */
 async function notifyOrderPlaced(orderId) {
   if (!env.telegram.botToken) return;
 
@@ -30,29 +30,25 @@ async function notifyOrderPlaced(orderId) {
     include: {
       user: { select: { username: true } },
       items: {
-        include: {
-          product: {
-            include: { artist: { include: { user: { select: { telegramId: true, username: true } } } } },
-          },
-        },
+        include: { store: { include: { user: { select: { telegramId: true, username: true } } } } },
       },
     },
   });
   if (!order) return;
 
-  const byArtist = new Map();
+  const byStore = new Map();
   for (const item of order.items) {
-    const artist = item.product?.artist;
-    if (!artist) continue;
-    if (!byArtist.has(artist.id)) byArtist.set(artist.id, { artist, lines: [] });
-    byArtist.get(artist.id).lines.push(item);
+    const { store } = item;
+    if (!store) continue;
+    if (!byStore.has(store.id)) byStore.set(store.id, { store, lines: [] });
+    byStore.get(store.id).lines.push(item);
   }
 
-  const line = (item) => `${item.quantity} × ${esc(item.product.name)} @ ${usd(item.price)}`;
+  const line = (item) => `${item.quantity} × ${esc(item.name)} @ ${usd(item.price)}`;
   const shortId = order.id.slice(0, 8);
 
-  for (const { artist, lines } of byArtist.values()) {
-    const chatId = artist.user?.telegramId;
+  for (const { store, lines } of byStore.values()) {
+    const chatId = store.user?.telegramId;
     if (!chatId) continue;
     const total = lines.reduce((sum, item) => sum + item.price * item.quantity, 0);
     await sendMessage(chatId, [
@@ -64,7 +60,7 @@ async function notifyOrderPlaced(orderId) {
 
   const adminText = [
     `🛒 <b>New website order</b> <code>${shortId}</code> by @${esc(order.user?.username)}`,
-    ...order.items.map((item) => `${line(item)} — ${esc(item.product.artist?.storeName || item.product.artist?.user?.username || '?')}`),
+    ...order.items.map((item) => `${line(item)} — ${esc(item.store?.storeName || item.store?.user?.username || 'own design')}`),
     `Total: <b>${usd(order.total)}</b>`,
   ].join('\n');
   for (const adminId of env.telegram.adminIds) await sendMessage(adminId, adminText);

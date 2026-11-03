@@ -9,7 +9,7 @@ export function FilterChip({
   children,
 }: {
   active: boolean
-  count: number
+  count?: number
   disabled?: boolean
   onClick: () => void
   children: React.ReactNode
@@ -27,7 +27,7 @@ export function FilterChip({
       )}
     >
       {children}
-      <span className="ml-1.5 tabular-nums opacity-70">{count}</span>
+      {count !== undefined && <span className="ml-1.5 tabular-nums opacity-70">{count}</span>}
     </button>
   )
 }

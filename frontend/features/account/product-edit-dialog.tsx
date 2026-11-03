@@ -14,11 +14,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { Textarea } from '@/components/ui/textarea'
+import { useCatalog } from '@/hooks/use-catalog'
+import { formatPrice } from '@/lib/format'
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '@/lib/products'
 import { cn } from '@/lib/utils'
-import type { Product, ProductType } from '@/types'
+import type { Product, ProductInput, ProductType } from '@/types'
+import { ReleaseSettings, releaseFromProduct, releaseToPayload } from '@/components/shared/release-settings'
 
-export type ProductChanges = Pick<Product, 'name' | 'type' | 'price'>
+export type ProductChanges = ProductInput
 
 interface ProductEditDialogProps {
   product: Product | null
@@ -30,7 +34,7 @@ interface ProductEditDialogProps {
 export function ProductEditDialog({ product, saving, onClose, onSave }: ProductEditDialogProps) {
   return (
     <Dialog open={Boolean(product)} onOpenChange={(open) => !open && !saving && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         {product && <ProductEditForm key={product.id} product={product} saving={saving} onClose={onClose} onSave={onSave} />}
       </DialogContent>
     </Dialog>
@@ -41,15 +45,35 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
   const [name, setName] = useState(product.name)
   const [type, setType] = useState(product.type as ProductType)
   const [price, setPrice] = useState(String(product.price))
+  const [description, setDescription] = useState(product.description ?? '')
+  const [customizable, setCustomizable] = useState(product.customizable)
+  const [isActive, setIsActive] = useState(product.isActive)
+  const [release, setRelease] = useState(() => releaseFromProduct(product))
+  const releaseResult = releaseToPayload(release, product.editionsSold)
+  const { get: getCatalogItem } = useCatalog()
+  const baseCost = getCatalogItem(type)?.baseCost ?? 0
 
   const priceValue = Number(price)
   const nameError = name.trim() ? '' : 'Name is required'
-  const priceError = price === '' || !Number.isFinite(priceValue) || priceValue < 0 ? 'Enter a valid price' : ''
+  const priceError =
+    price === '' || !Number.isFinite(priceValue) || priceValue < 0
+      ? 'Enter a valid price'
+      : priceValue < baseCost
+        ? `Must be at least the production cost (${formatPrice(baseCost)})`
+        : ''
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (nameError || priceError || saving) return
-    await onSave({ name: name.trim(), type, price: Math.round(priceValue * 100) / 100 })
+    if (nameError || priceError || releaseResult.error || saving) return
+    await onSave({
+      name: name.trim(),
+      type,
+      price: Math.round(priceValue * 100) / 100,
+      description: description.trim() || null,
+      customizable,
+      isActive,
+      ...releaseResult.payload,
+    })
   }
 
   return (
@@ -107,14 +131,55 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
             className="pl-7 tabular-nums"
           />
         </div>
-        {priceError && <p className="text-[11px] text-destructive">{priceError}</p>}
+        {priceError ? (
+          <p className="text-[11px] text-destructive">{priceError}</p>
+        ) : (
+          baseCost > 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              Production cost {formatPrice(baseCost)} · you earn about{' '}
+              <span className="font-semibold text-foreground">{formatPrice(Math.max(priceValue - baseCost, 0) * 0.75)}</span>{' '}
+              per sale
+            </p>
+          )
+        )}
       </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="product-description">Description</Label>
+        <Textarea
+          id="product-description"
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Materials, fit, the story behind the design…"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+          <input type="checkbox" checked={customizable} onChange={(e) => setCustomizable(e.target.checked)} className="mt-0.5" />
+          <span>
+            <span className="font-semibold text-foreground">Let buyers personalize</span>
+            <span className="block text-muted-foreground">Buyers can add their own text or image in the 3D studio.</span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="mt-0.5" />
+          <span>
+            <span className="font-semibold text-foreground">Listed in the shop</span>
+            <span className="block text-muted-foreground">Unlisted products stay in your dashboard only.</span>
+          </span>
+        </label>
+      </div>
+
+      <ReleaseSettings values={release} onChange={setRelease} />
+      {releaseResult.error && <p className="text-[11px] text-destructive">{releaseResult.error}</p>}
 
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" disabled={Boolean(nameError || priceError) || saving}>
+        <Button type="submit" disabled={Boolean(nameError || priceError || releaseResult.error) || saving}>
           {saving && <Spinner />}
           {saving ? 'Saving…' : 'Save changes'}
         </Button>
