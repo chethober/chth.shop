@@ -1,7 +1,7 @@
 {
   "name": "chth-backend",
   "version": "1.0.0",
-  "description": "REST API for the CHTH merchandise platform",
+  "description": "REST API for the CHTH crypto merch marketplace",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "make-admin": "node scripts/make-admin.js"
   },
   "keywords": [
     "merch",

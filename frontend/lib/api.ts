@@ -1,12 +1,20 @@
 import axios, { type AxiosError } from 'axios'
 import { API_URL } from './config'
 import type {
-  Artist,
-  ArtistProfileInput,
   Cart,
   CartItem,
+  CatalogItem,
+  LineOptions,
   Order,
+  OrderStatus,
+  Pagination,
   Product,
+  ProductInput,
+  ProductType,
+  SalesReport,
+  Store,
+  StoreInput,
+  StoreKind,
   TelegramAuthData,
   TelegramConfig,
   User,
@@ -75,10 +83,19 @@ async function request<T>(promise: Promise<{ data: Envelope<T> }>): Promise<T> {
 
 /* ---------- Endpoints ---------- */
 
+export interface ProductQuery {
+  type?: string
+  kind?: StoreKind
+  search?: string
+  store?: string
+  sort?: 'newest' | 'price-asc' | 'price-desc' | 'name'
+  page?: number
+  limit?: number
+}
+
 export const api = {
   auth: {
     googleUrl: `${API_URL}/auth/google`,
-    xUrl: `${API_URL}/auth/x`,
     telegramConfig: () => request<TelegramConfig>(http.get('/auth/telegram/config')),
     telegram: (data: TelegramAuthData) =>
       request<{ user: User; token: string }>(http.post('/auth/telegram', data)),
@@ -95,29 +112,40 @@ export const api = {
     deleteAccount: () => request<void>(http.delete('/users/me')),
   },
 
-  artists: {
-    get: (username: string) => request<{ artist: Artist }>(http.get(`/artists/${username}`)).then((d) => d.artist),
-    me: () => request<{ artist: Artist }>(http.get('/artists/profile/me')).then((d) => d.artist),
-    create: (profile: ArtistProfileInput) =>
-      request<{ artist: Artist }>(http.post('/artists', profile)).then((d) => d.artist),
-    update: (profile: ArtistProfileInput) =>
-      request<{ artist: Artist }>(http.put('/artists', profile)).then((d) => d.artist),
-    remove: () => request<void>(http.delete('/artists')),
-    acceptContract: () =>
-      request<{ artist: Artist }>(http.post('/artists/contract/accept')).then((d) => d.artist),
+  stores: {
+    get: (username: string) => request<{ store: Store }>(http.get(`/stores/${username}`)).then((d) => d.store),
+    me: () => request<{ store: Store }>(http.get('/stores/me')).then((d) => d.store),
+    sales: () => request<SalesReport>(http.get('/stores/me/sales')),
+    create: (profile: StoreInput) => request<{ store: Store }>(http.post('/stores', profile)).then((d) => d.store),
+    update: (profile: Partial<StoreInput>) =>
+      request<{ store: Store }>(http.put('/stores', profile)).then((d) => d.store),
+    remove: () => request<void>(http.delete('/stores')),
+    acceptContract: (kind: StoreKind) =>
+      request<{ store: Store }>(http.post('/stores/contract/accept', { kind })).then((d) => d.store),
   },
 
+  catalog: () => request<{ catalog: CatalogItem[] }>(http.get('/catalog')).then((d) => d.catalog),
+
   products: {
-    mine: () => request<{ products: Product[] }>(http.get('/products/user/me')).then((d) => d.products),
-    update: (id: string, changes: Partial<Pick<Product, 'name' | 'type' | 'price'>>) =>
+    list: (query: ProductQuery = {}) =>
+      request<{ products: Product[]; pagination: Pagination }>(http.get('/products', { params: query })),
+    get: (id: string) => request<{ product: Product }>(http.get(`/products/${id}`)).then((d) => d.product),
+    mine: () => request<{ products: Product[] }>(http.get('/products/mine')).then((d) => d.products),
+    create: (product: ProductInput) =>
+      request<{ product: Product }>(http.post('/products', product)).then((d) => d.product),
+    update: (id: string, changes: ProductInput) =>
       request<{ product: Product }>(http.put(`/products/${id}`, changes)).then((d) => d.product),
     remove: (id: string) => request<void>(http.delete(`/products/${id}`)),
   },
 
+  /** Uploads an image (as a data URL) and returns its `/uploads/...` path. */
+  uploadImage: (dataUrl: string) =>
+    request<{ url: string }>(http.post('/uploads', { dataUrl }, { timeout: 30_000 })).then((d) => d.url),
+
   cart: {
     get: () => request<{ cart: Cart }>(http.get('/cart')).then((d) => d.cart),
-    add: (productId: string, quantity = 1) =>
-      request<{ cartItem: CartItem }>(http.post('/cart', { productId, quantity })).then((d) => d.cartItem),
+    add: (line: CartLineInput) =>
+      request<{ cartItem: CartItem }>(http.post('/cart', line)).then((d) => d.cartItem),
     updateItem: (itemId: string, quantity: number) =>
       request<{ cartItem: CartItem }>(http.put(`/cart/items/${itemId}`, { quantity })).then((d) => d.cartItem),
     removeItem: (itemId: string) => request<void>(http.delete(`/cart/items/${itemId}`)),
@@ -126,11 +154,32 @@ export const api = {
 
   orders: {
     list: () => request<{ orders: Order[] }>(http.get('/orders')).then((d) => d.orders),
+    get: (orderId: string) => request<{ order: Order }>(http.get(`/orders/${orderId}`)).then((d) => d.order),
     create: (shippingAddress: string) =>
       request<{ order: Order }>(http.post('/orders', { shippingAddress })).then((d) => d.order),
+    /** Starts (or resumes) the crypto payment and returns the checkout URL. */
+    pay: (orderId: string) =>
+      request<{ paymentUrl: string; provider: string }>(http.post(`/orders/${orderId}/pay`, {}, { timeout: 30_000 })),
     cancel: (orderId: string) =>
       request<{ order: Order }>(http.put(`/orders/${orderId}/cancel`)).then((d) => d.order),
   },
+
+  payments: {
+    confirmMock: (orderId: string) => request<void>(http.post(`/payments/mock/${orderId}/confirm`)),
+  },
+
+  admin: {
+    orders: (status?: OrderStatus) =>
+      request<{ orders: Order[] }>(http.get('/admin/orders', { params: { status } })).then((d) => d.orders),
+    setOrderStatus: (orderId: string, status: OrderStatus) =>
+      request<{ order: Order }>(http.put(`/admin/orders/${orderId}/status`, { status })).then((d) => d.order),
+  },
 }
+
+/** A store listing (`productId`) or the buyer's own design on a catalog blank (`type`). */
+export type CartLineInput = { quantity?: number; options?: LineOptions } & (
+  | { productId: string; type?: never }
+  | { type: ProductType; productId?: never }
+)
 
 export default api

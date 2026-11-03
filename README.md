@@ -1,6 +1,14 @@
 # chth.shop
 
-Monorepo for CHTH: a 3D merchandise designer and artist storefront.
+Monorepo for CHTH: a centralized print-on-demand marketplace where artists and merchants sell merch
+(tees, hoodies, pants, mugs, caps, totes) that buyers can personalize in a 3D studio and pay for in crypto.
+Sign-in is Google or Telegram.
+
+- `/shop`: every listing from every store, filterable by product type and seller kind.
+- `/design`: 3D studio. Buyers order their own designs; sellers publish them to their store; `?product=<id>`
+  personalizes a listing the seller marked customizable.
+- `/collab`: open a store as an artist or merchant. `/account`: products, sales, payout address, orders.
+- `/admin`: fulfillment queue for admins (`npm run make-admin -- <username>` in the backend).
 
 ## Structure
 
@@ -23,11 +31,15 @@ docker compose up -d --build
 
 The site is served at http://localhost:3000 (change with `FRONTEND_PORT`); the browser
 only talks to Next.js, which proxies `/api` and `/uploads` to the backend container. On start
-the backend syncs the database schema with `prisma db push`. Data and uploaded images live
+the backend upgrades older data (`prisma/upgrade.sql`) and syncs the schema with `prisma db push`.
+Set `NOWPAYMENTS_API_KEY` / `NOWPAYMENTS_IPN_SECRET` in `.env` for crypto checkout (see
+[backend/README.md](backend/README.md#crypto-payments)). Without them, checkout reports that payments aren't
+configured; to try the full flow, run locally (below), where a mock payment page is the default. Data and uploaded images live
 in the `pgdata` and `uploads` volumes.
 
 ```bash
-docker compose exec backend npm run db:seed   # load demo artists and products (resets data)
+docker compose exec backend npm run db:seed   # load demo artists, merchants and products (resets data)
+docker compose exec backend npm run make-admin -- <username>
 docker compose logs -f backend                # follow API logs
 docker compose down                           # stop (add -v to also delete the data)
 ```
@@ -40,7 +52,7 @@ so rebuild it (`docker compose build frontend`) after changing them.
 ```bash
 yarn install                           # installs both workspaces
 cp backend/.env.example backend/.env   # then fill in DATABASE_URL and secrets
-yarn workspace chth-backend prisma:migrate
+yarn workspace chth-backend prisma db push
 yarn workspace chth-backend dev        # http://localhost:5000/api
 yarn workspace chth-frontend dev       # http://localhost:3000
 ```

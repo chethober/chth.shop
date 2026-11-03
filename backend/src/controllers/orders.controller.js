@@ -1,21 +1,49 @@
+const env = require('../config/env');
 const prisma = require('../lib/prisma');
 const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
-const { orderWithItems } = require('../lib/queries');
-const { roundCurrency, serializeOrder } = require('../lib/serializers');
+const { orderWithItems, cartWithItems } = require('../lib/queries');
+const { getCatalogItem } = require('../lib/catalog');
+const { frontendOrigin } = require('../lib/origin');
+const { roundCurrency, serializeOrder, cartItemUnitPrice, cartItemName } = require('../lib/serializers');
+const payments = require('../services/payments');
 
-/** Turns the user's cart into order lines, pricing each item at its current price. */
+/** What the seller keeps from one line: the margin over production cost, minus the platform fee. */
+function sellerEarning(price, baseCost, quantity) {
+  const margin = Math.max(price - baseCost, 0) * quantity;
+  return roundCurrency(margin * (1 - env.platformFeePercent / 100));
+}
+
+/** Turns the user's cart into priced order lines, snapshotting names and costs. */
 async function cartToOrderLines(userId) {
-  const cart = await prisma.cart.findUnique({
-    where: { userId },
-    include: { items: { include: { product: true } } },
-  });
+  const cart = await prisma.cart.findUnique({ where: { userId }, include: cartWithItems });
   if (!cart || cart.items.length === 0) throw new HttpError(400, 'Cart is empty');
 
-  const lines = cart.items.map((item) => ({
-    productId: item.productId,
-    quantity: item.quantity,
-    price: item.product ? item.product.price : 0,
-  }));
+  const lines = cart.items.map((item) => {
+    if (item.productId && (!item.product || !item.product.isActive)) {
+      throw new HttpError(409, `"${cartItemName(item)}" is no longer available - please remove it from your cart`);
+    }
+    const catalogItem = getCatalogItem(item.type);
+    const price = cartItemUnitPrice(item);
+    const baseCost = catalogItem ? catalogItem.baseCost : 0;
+    const storeId = item.product ? item.product.storeId : null;
+
+    return {
+      productId: item.productId,
+      storeId,
+      type: item.type,
+      name: cartItemName(item),
+      // Snapshot what to print: the buyer's design, else the listing's (it may be edited or deleted later).
+      options: {
+        ...(item.options || {}),
+        ...(!item.options?.design && item.product?.design && { sellerDesign: item.product.design }),
+      },
+      quantity: item.quantity,
+      price,
+      baseCost,
+      // The platform keeps the whole margin on buyers' own designs (no seller involved).
+      sellerEarning: storeId ? sellerEarning(price, baseCost, item.quantity) : 0,
+    };
+  });
   return { lines, cartId: cart.id };
 }
 
@@ -26,7 +54,7 @@ async function findOwnedOrder(userId, orderId) {
 }
 
 const createOrder = asyncHandler(async (req, res) => {
-  const { shippingAddress } = req.body;
+  const shippingAddress = String(req.body.shippingAddress || '').trim();
   if (!shippingAddress) throw new HttpError(400, 'Shipping address is required');
 
   const { lines, cartId } = await cartToOrderLines(req.userId);
@@ -37,7 +65,8 @@ const createOrder = asyncHandler(async (req, res) => {
       data: {
         userId: req.userId,
         total,
-        shippingAddress,
+        currency: 'USD',
+        shippingAddress: shippingAddress.slice(0, 1000),
         status: 'PENDING',
         items: { create: lines },
       },
@@ -49,9 +78,17 @@ const createOrder = asyncHandler(async (req, res) => {
 
   sendSuccess(res, {
     status: 201,
-    message: 'Order created successfully',
+    message: 'Order created',
     data: { order: serializeOrder(order) },
   });
+});
+
+/** Creates (or reuses) the crypto invoice for an order and returns its payment URL. */
+const payOrder = asyncHandler(async (req, res) => {
+  const order = await findOwnedOrder(req.userId, req.params.orderId);
+  const updated = await payments.startPayment(order, { frontendOrigin: frontendOrigin(req) });
+
+  sendSuccess(res, { data: { paymentUrl: updated.paymentUrl, provider: updated.paymentProvider } });
 });
 
 const listOrders = asyncHandler(async (req, res) => {
@@ -77,10 +114,10 @@ const getOrder = asyncHandler(async (req, res) => {
 const cancelOrder = asyncHandler(async (req, res) => {
   const order = await findOwnedOrder(req.userId, req.params.orderId);
   if (order.status !== 'PENDING') {
-    throw new HttpError(
-      400,
-      `Order cannot be cancelled because it is already ${order.status.toLowerCase()}`
-    );
+    throw new HttpError(400, `Order cannot be cancelled because it is already ${order.status.toLowerCase()}`);
+  }
+  if (['PAID', 'CONFIRMING', 'PARTIALLY_PAID'].includes(order.paymentStatus)) {
+    throw new HttpError(400, 'A payment is already in progress for this order - contact support to cancel');
   }
 
   const cancelled = await prisma.order.update({
@@ -90,9 +127,9 @@ const cancelOrder = asyncHandler(async (req, res) => {
   });
 
   sendSuccess(res, {
-    message: 'Order cancelled successfully',
+    message: 'Order cancelled',
     data: { order: serializeOrder(cancelled) },
   });
 });
 
-module.exports = { createOrder, listOrders, getOrder, cancelOrder };
+module.exports = { createOrder, payOrder, listOrders, getOrder, cancelOrder };

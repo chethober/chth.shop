@@ -5,7 +5,7 @@ import { Minus, Plus, Trash2 } from 'lucide-react'
 import { ProductImage } from '@/components/shared/product-image'
 import { Button } from '@/components/ui/button'
 import { formatPrice } from '@/lib/format'
-import { getProductTypeLabel } from '@/lib/products'
+import { describeOptions, getProductTypeLabel } from '@/lib/products'
 import type { CartItem } from '@/types'
 
 interface CartLineItemProps {
@@ -16,7 +16,8 @@ interface CartLineItemProps {
 }
 
 export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLineItemProps) {
-  const price = item.product?.price ?? 0
+  const price = item.unitPrice
+  const image = { imageUrl: item.options.previewUrl ?? item.product?.imageUrl, type: item.type, name: item.name }
 
   return (
     <motion.li
@@ -25,13 +26,18 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
       transition={{ delay: index * 0.04 }}
       className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
     >
-      <ProductImage product={item.product} className="size-18 shrink-0 rounded-xl border border-border" />
+      <ProductImage product={image} className="size-18 shrink-0 rounded-xl border border-border" />
 
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold text-foreground">{item.product?.name}</h3>
+        <h3 className="truncate text-sm font-semibold text-foreground">{item.name}</h3>
         <p className="text-xs text-muted-foreground">
-          {item.product ? getProductTypeLabel(item.product.type) : ''}
-          {item.product?.artist?.username && ` · @${item.product.artist.username}`}
+          {[
+            getProductTypeLabel(item.type),
+            describeOptions(item.options),
+            item.product?.store ? `@${item.product.store.username}` : 'Your design',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
         <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{formatPrice(price)}</p>
       </div>
@@ -53,6 +59,7 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
           size="icon-sm"
           className="size-7"
           onClick={() => onQuantityChange(item.quantity + 1)}
+          disabled={item.quantity >= 99}
           aria-label="Increase quantity"
         >
           <Plus />

@@ -38,19 +38,37 @@ const env = {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
 
-  x: {
-    clientId: process.env.TWITTER_CLIENT_ID,
-    clientSecret: process.env.TWITTER_CLIENT_SECRET,
-  },
-
   telegram: {
     botToken: process.env.TELEGRAM_BOT_TOKEN,
     botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
   },
+
+  /** Share of each sale's margin (price minus production cost) the platform keeps. */
+  platformFeePercent: Number(process.env.PLATFORM_FEE_PERCENT ?? 25),
+
+  payments: {
+    /** `nowpayments` in production; `mock` lets you mark orders paid by hand in development. */
+    provider: process.env.PAYMENT_PROVIDER || (isProduction ? 'nowpayments' : 'mock'),
+    nowpayments: {
+      apiKey: process.env.NOWPAYMENTS_API_KEY,
+      ipnSecret: process.env.NOWPAYMENTS_IPN_SECRET,
+      apiUrl: (process.env.NOWPAYMENTS_API_URL || 'https://api.nowpayments.io/v1').replace(/\/+$/, ''),
+    },
+  },
+
+  /** Public base URL of this API as seen by payment providers (for webhooks). Defaults to the first FRONTEND_URL, which proxies /api. */
+  publicApiUrl: (process.env.PUBLIC_API_URL || '').replace(/\/+$/, ''),
 };
 
 env.google.isConfigured = Boolean(env.google.clientId && env.google.clientSecret);
-env.x.isConfigured = Boolean(env.x.clientId);
 env.telegram.isConfigured = Boolean(env.telegram.botToken && env.telegram.botUsername);
+env.payments.nowpayments.isConfigured = Boolean(
+  env.payments.nowpayments.apiKey && env.payments.nowpayments.ipnSecret
+);
+if (!env.publicApiUrl) env.publicApiUrl = `${env.frontendUrls[0]}/api`;
+
+if (env.isProduction && env.payments.provider === 'mock') {
+  throw new Error('PAYMENT_PROVIDER=mock is not allowed in production');
+}
 
 module.exports = env;

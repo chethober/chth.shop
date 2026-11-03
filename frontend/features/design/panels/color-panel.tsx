@@ -5,16 +5,24 @@ export function ColorPanel({
   color,
   onColorChange,
   onClose,
+  colors,
+  title = 'Product color',
 }: {
+  colors?: string[]
+  title?: string
   color: string
   onColorChange: (color: string) => void
   onClose: () => void
 }) {
   return (
-    <PanelShell title="Garment color" icon={Palette} onClose={onClose}>
+    <PanelShell title={title} icon={Palette} onClose={onClose}>
       <div className="space-y-2">
-        <FieldLabel aside={color}>Curated palette</FieldLabel>
-        <SwatchGrid value={color} onChange={onColorChange} />
+        <FieldLabel aside={color}>Available colors</FieldLabel>
+        {colors && colors.length === 0 ? (
+          <p className="text-xs text-muted-foreground">The seller fixed the color of this product.</p>
+        ) : (
+          <SwatchGrid value={color} onChange={onColorChange} colors={colors} />
+        )}
       </div>
     </PanelShell>
   )

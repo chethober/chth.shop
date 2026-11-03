@@ -20,12 +20,13 @@ app.use(
   rateLimit({
     windowMs: env.rateLimit.windowMs,
     max: env.rateLimit.max,
-    skip: (req) => !env.isProduction || req.path === '/health',
+    skip: (req) =>
+      !env.isProduction || req.path === '/health' || req.path.startsWith('/payments/webhook/'),
     message: { success: false, message: 'Too many requests from this IP, please try again later.' },
   })
 );
 
-// Sessions only hold the short-lived PKCE state for the X OAuth flow.
+// Sessions only hold short-lived OAuth state.
 app.use(
   session({
     secret: env.sessionSecret,

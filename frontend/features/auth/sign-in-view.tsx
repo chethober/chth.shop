@@ -15,10 +15,10 @@ import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
 import type { TelegramAuthData, TelegramConfig } from '@/types'
 import { describeAuthError } from './auth-errors'
-import { GoogleIcon, TelegramIcon, XIcon } from './provider-icons'
+import { GoogleIcon, TelegramIcon } from './provider-icons'
 import { rememberRedirect, safeRedirectPath } from './redirect'
 
-type Provider = 'google' | 'x' | 'telegram'
+type Provider = 'google' | 'telegram'
 
 const providerButtonStyles =
   'group flex items-center gap-2.5 rounded-xl border border-border/80 bg-background/70 px-4 py-3 text-xs font-medium text-foreground shadow-xs backdrop-blur-md transition-all duration-200 ease-out cursor-pointer hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-secondary/80 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-75 sm:text-sm'
@@ -94,10 +94,10 @@ export function SignInView() {
     container.appendChild(script)
   }, [telegramOpen, telegramConfig])
 
-  const startOAuth = (provider: 'google' | 'x') => {
-    setLoadingProvider(provider)
+  const startGoogle = () => {
+    setLoadingProvider('google')
     rememberRedirect(redirectTo)
-    window.location.href = provider === 'google' ? api.auth.googleUrl : api.auth.xUrl
+    window.location.href = api.auth.googleUrl
   }
 
   return (
@@ -158,37 +158,19 @@ export function SignInView() {
             )}
           </AnimatePresence>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => startOAuth('google')}
-              disabled={loadingProvider !== null}
-              className={cn(providerButtonStyles, 'justify-center')}
-            >
-              {loadingProvider === 'google' ? (
-                <Spinner className="text-muted-foreground" />
-              ) : (
-                <GoogleIcon className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-              )}
-              Google
-            </button>
-
-            <button
-              type="button"
-              onClick={() => startOAuth('x')}
-              disabled={loadingProvider !== null}
-              className={cn(providerButtonStyles, 'justify-center')}
-            >
-              {loadingProvider === 'x' ? (
-                <Spinner className="text-muted-foreground" />
-              ) : (
-                <span className="flex size-4 shrink-0 items-center justify-center rounded-sm bg-foreground p-0.5 text-background transition-transform group-hover:scale-110">
-                  <XIcon className="size-3" />
-                </span>
-              )}
-              Twitter
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={startGoogle}
+            disabled={loadingProvider !== null}
+            className={cn(providerButtonStyles, 'w-full justify-center')}
+          >
+            {loadingProvider === 'google' ? (
+              <Spinner className="text-muted-foreground" />
+            ) : (
+              <GoogleIcon className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+            )}
+            Continue with Google
+          </button>
 
           <button
             type="button"

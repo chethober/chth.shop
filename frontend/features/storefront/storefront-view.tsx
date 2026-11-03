@@ -11,9 +11,9 @@ import { Select } from '@/components/ui/select'
 import api from '@/lib/api'
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '@/lib/products'
 import useAuthStore from '@/store/auth-store'
-import useCartStore from '@/store/cart-store'
-import type { Artist, Product, ProductType } from '@/types'
-import { ArtistProfileCard } from './artist-profile-card'
+import type { Product, ProductType, Store } from '@/types'
+import { AddToCartDialog } from './add-to-cart-dialog'
+import { StoreProfileCard } from './store-profile-card'
 import { StorefrontProductCard } from './storefront-product-card'
 
 type SortKey = 'newest' | 'price-asc' | 'price-desc' | 'name'
@@ -28,29 +28,28 @@ const SORTERS: Record<SortKey, { label: string; compare: (a: Product, b: Product
   name: { label: 'Name (A–Z)', compare: (a, b) => a.name.localeCompare(b.name) },
 }
 
-type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; artist: Artist }
+type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; store: Store }
 
 export function StorefrontView({ username }: { username: string }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const addToCart = useCartStore((state) => state.addItem)
 
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const [typeFilter, setTypeFilter] = useState<ProductType | 'all'>('all')
   const [sort, setSort] = useState<SortKey>('newest')
-  const [addingId, setAddingId] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Product | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    api.artists
+    api.stores
       .get(username)
-      .then((artist) => !cancelled && setState({ status: 'ready', artist }))
+      .then((store) => !cancelled && setState({ status: 'ready', store }))
       .catch(() => !cancelled && setState({ status: 'error' }))
     return () => {
       cancelled = true
     }
   }, [username])
 
-  const products = useMemo(() => (state.status === 'ready' ? state.artist.products ?? [] : []), [state])
+  const products = useMemo(() => (state.status === 'ready' ? state.store.products ?? [] : []), [state])
   const visibleProducts = useMemo(
     () =>
       products
@@ -59,20 +58,12 @@ export function StorefrontView({ username }: { username: string }) {
     [products, typeFilter, sort]
   )
 
-  const handleAddToCart = async (product: Product) => {
+  const handleSelect = (product: Product) => {
     if (!isAuthenticated) {
       toast.warning('Please sign in to add items to your cart')
       return
     }
-    setAddingId(product.id)
-    try {
-      await addToCart(product.id)
-      toast.success(`Added to cart: ${product.name}`)
-    } catch (error) {
-      toast.danger(error instanceof Error ? error.message : 'Could not add to cart')
-    } finally {
-      setAddingId(null)
-    }
+    setSelected(product)
   }
 
   if (state.status === 'loading') return <LoadingState label="Loading store…" />
@@ -81,7 +72,7 @@ export function StorefrontView({ username }: { username: string }) {
     return (
       <EmptyState
         icon={User}
-        title="Artist not found"
+        title="Store not found"
         description="This store doesn't exist or may have been removed."
         action={
           <Button asChild>
@@ -95,7 +86,7 @@ export function StorefrontView({ username }: { username: string }) {
 
   return (
     <div className="space-y-10">
-      <ArtistProfileCard artist={state.artist} productCount={products.length} />
+      <StoreProfileCard store={state.store} productCount={products.length} />
 
       <section className="space-y-5">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -134,13 +125,14 @@ export function StorefrontView({ username }: { username: string }) {
                 key={product.id}
                 product={product}
                 index={index}
-                isAdding={addingId === product.id}
-                onAddToCart={() => handleAddToCart(product)}
+                onSelect={() => handleSelect(product)}
               />
             ))}
           </ul>
         )}
       </section>
+
+      <AddToCartDialog product={selected} onClose={() => setSelected(null)} />
     </div>
   )
 }

@@ -40,7 +40,7 @@ export function OrdersPanel({ orders, isLoading, onRefresh, onCancel }: OrdersPa
     return orders.filter(
       (order) =>
         matches(order) &&
-        (!q || order.id.toLowerCase().includes(q) || order.items.some((item) => item.product?.name.toLowerCase().includes(q)))
+        (!q || order.id.toLowerCase().includes(q) || order.items.some((item) => item.name.toLowerCase().includes(q)))
     )
   }, [orders, filter, query])
 
@@ -90,10 +90,10 @@ export function OrdersPanel({ orders, isLoading, onRefresh, onCancel }: OrdersPa
           <EmptyState
             icon={Package}
             title="No orders yet"
-            description="When you buy from artists, your orders and their shipping status appear here."
+            description="When you buy from artists and merchants, your orders and their shipping status appear here."
             action={
               <Button asChild size="sm">
-                <Link href="/">Explore products</Link>
+                <Link href="/shop">Explore the shop</Link>
               </Button>
             }
           />

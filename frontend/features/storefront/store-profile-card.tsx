@@ -7,7 +7,9 @@ import { SocialLinks } from '@/components/shared/social-links'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { formatDate } from '@/lib/format'
-import type { Artist } from '@/types'
+import { Badge } from '@/components/ui/badge'
+import { STORE_KIND_LABELS } from '@/lib/products'
+import type { Store } from '@/types'
 
 async function shareStore(title: string) {
   const url = window.location.href
@@ -23,9 +25,9 @@ async function shareStore(title: string) {
   toast.info('Link copied to clipboard')
 }
 
-export function ArtistProfileCard({ artist, productCount }: { artist: Artist; productCount: number }) {
-  const username = artist.user?.username ?? ''
-  const displayName = artist.storeName || username
+export function StoreProfileCard({ store, productCount }: { store: Store; productCount: number }) {
+  const username = store.user?.username ?? ''
+  const displayName = store.storeName || username
   const initials = displayName.slice(0, 2).toUpperCase()
 
   return (
@@ -39,7 +41,10 @@ export function ArtistProfileCard({ artist, productCount }: { artist: Artist; pr
             </div>
             <div className="space-y-0.5">
               <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{displayName}</h1>
-              <p className="text-xs font-medium text-brand">@{username}</p>
+              <p className="flex items-center justify-center gap-2 text-xs font-medium text-brand sm:justify-start">
+                @{username}
+                <Badge variant="secondary">{STORE_KIND_LABELS[store.kind]}</Badge>
+              </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => shareStore(`${displayName} on CHTH`)}>
               <Share2 />
@@ -51,17 +56,20 @@ export function ArtistProfileCard({ artist, productCount }: { artist: Artist; pr
             <div className="space-y-1.5">
               <h2 className="text-sm font-bold text-foreground">About</h2>
               <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                {artist.bio || 'This artist creates unique custom merchandise and apparel.'}
+                {store.bio ||
+                  (store.kind === 'MERCHANT'
+                    ? 'Official merchandise, printed on demand.'
+                    : 'This artist creates unique custom merchandise and apparel.')}
               </p>
             </div>
 
-            <SocialLinks socials={artist} />
+            <SocialLinks socials={store} />
 
             <div className="flex flex-wrap gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-              {artist.createdAt && (
+              {store.createdAt && (
                 <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
                   <Calendar className="size-3.5" />
-                  Joined {formatDate(artist.createdAt)}
+                  Joined {formatDate(store.createdAt)}
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1">

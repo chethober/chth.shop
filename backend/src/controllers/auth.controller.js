@@ -12,7 +12,6 @@ const {
   frontendErrorUrl,
 } = require('../services/identity.service');
 const { isValidTelegramPayload, telegramIdentity } = require('../services/telegram.service');
-const xService = require('../services/x.service');
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]+$/;
 const USERNAME_MIN_LENGTH = 5;
@@ -46,48 +45,6 @@ function googleCallback(req, res, next) {
     }
     res.redirect(frontendCallbackUrl(origin, user, 'google'));
   })(req, res, next);
-}
-
-/* ---------- X (Twitter) ---------- */
-
-function startX(req, res) {
-  const origin = frontendOrigin(req);
-  if (!env.x.isConfigured) return res.redirect(frontendErrorUrl(origin, 'x_not_configured'));
-
-  const { url, state, codeVerifier } = xService.createAuthorization(req);
-  req.session.oauthState = state;
-  req.session.codeVerifier = codeVerifier;
-  res.redirect(url);
-}
-
-async function xCallback(req, res) {
-  const origin = frontendOrigin(req);
-  try {
-    const { code, state, error } = req.query;
-
-    if (error) return res.redirect(frontendErrorUrl(origin, error));
-    if (!code) return res.redirect(frontendErrorUrl(origin, 'x_missing_code'));
-    if (!state || state !== req.session.oauthState) {
-      return res.redirect(frontendErrorUrl(origin, 'x_invalid_state'));
-    }
-
-    const accessToken = await xService.exchangeCode(req, code, req.session.codeVerifier);
-    if (!accessToken) return res.redirect(frontendErrorUrl(origin, 'x_token_failed'));
-
-    const profile = await xService.fetchProfile(accessToken);
-    if (!profile) return res.redirect(frontendErrorUrl(origin, 'x_profile_failed'));
-
-    const user = await findOrCreateOAuthUser({
-      provider: 'x',
-      providerId: profile.id,
-      preferredUsername: profile.username,
-    });
-
-    res.redirect(frontendCallbackUrl(origin, user, 'x'));
-  } catch (error) {
-    console.error('X OAuth callback error:', error);
-    res.redirect(frontendErrorUrl(origin, 'x_oauth_failed'));
-  }
 }
 
 /* ---------- Telegram ---------- */
@@ -144,7 +101,7 @@ const telegramLogin = asyncHandler(async (req, res) => {
 const getMe = asyncHandler(async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId },
-    include: { artist: true },
+    include: { store: true },
   });
   if (!user) throw new HttpError(404, 'User not found');
 
@@ -183,8 +140,6 @@ const updateUsername = asyncHandler(async (req, res) => {
 module.exports = {
   startGoogle,
   googleCallback,
-  startX,
-  xCallback,
   telegramConfig,
   telegramCallback,
   telegramLogin,

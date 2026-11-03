@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, CreditCard, MapPin } from 'lucide-react'
+import { Bitcoin, CheckCircle2, MapPin } from 'lucide-react'
 import { toast } from '@heroui/react'
 import { CopyButton } from '@/components/shared/copy-button'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
 import api from '@/lib/api'
 import type { Cart, Order } from '@/types'
+import { PayButton } from '@/features/checkout/pay-button'
 import { OrderSummary } from './order-summary'
 
 interface CheckoutDialogProps {
@@ -44,10 +45,18 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
 
     setIsPlacing(true)
     try {
-      setOrder(await api.orders.create(shippingAddress.trim()))
+      const created = await api.orders.create(shippingAddress.trim())
+      setOrder(created)
       setShippingAddress('')
       onOrderPlaced()
-      toast.success('Order placed!')
+      // Go straight to the crypto checkout; if that fails the dialog offers a retry.
+      try {
+        const { paymentUrl } = await api.orders.pay(created.id)
+        window.location.href = paymentUrl
+        return
+      } catch (error) {
+        toast.danger(error instanceof Error ? error.message : 'Could not start the payment')
+      }
     } catch (error) {
       toast.danger(error instanceof Error ? error.message : 'Could not place your order')
     } finally {
@@ -64,15 +73,16 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
               <CheckCircle2 className="size-9" />
             </div>
             <div className="space-y-1.5">
-              <DialogTitle className="text-xl">Order placed</DialogTitle>
-              <DialogDescription>We&apos;re preparing it for printing and delivery.</DialogDescription>
+              <DialogTitle className="text-xl">Order created</DialogTitle>
+              <DialogDescription>Complete the crypto payment and we&apos;ll start printing.</DialogDescription>
               <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 Order ID: <code className="font-semibold text-foreground">{order.id.slice(0, 8).toUpperCase()}</code>
                 <CopyButton value={order.id} label="Copy order ID" />
               </p>
             </div>
             <div className="flex flex-col justify-center gap-2 sm:flex-row">
-              <Button asChild>
+              <PayButton orderId={order.id} />
+              <Button asChild variant="outline">
                 <Link href="/account?tab=orders" onClick={close}>
                   View orders
                 </Link>
@@ -86,10 +96,12 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
           <form onSubmit={placeOrder} className="space-y-5">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <CreditCard className="size-5" />
+                <Bitcoin className="size-5" />
                 Checkout
               </DialogTitle>
-              <DialogDescription>Enter your shipping details to place the order.</DialogDescription>
+              <DialogDescription>
+                Enter your shipping details, then pay with USDT, BTC, ETH, TON and more.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-1.5">
@@ -114,8 +126,8 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
                 Cancel
               </Button>
               <Button type="submit" disabled={isPlacing || !shippingAddress.trim()}>
-                {isPlacing ? <Spinner /> : <CheckCircle2 />}
-                {isPlacing ? 'Placing order…' : 'Place order'}
+                {isPlacing ? <Spinner /> : <Bitcoin />}
+                {isPlacing ? 'Creating order…' : 'Continue to payment'}
               </Button>
             </DialogFooter>
           </form>

@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'sw
 export const metadata: Metadata = {
   title: { default: 'CHTH', template: '%s | CHTH' },
   description: 'Design, customize, and order custom apparel with real-time 3D preview',
-  keywords: 'merchandise, apparel, 3d design, tshirt, hoodie, pants, artists, CHTH',
+  keywords: 'merchandise, apparel, 3d design, tshirt, hoodie, pants, mug, cap, tote, artists, merchants, crypto, CHTH',
   authors: [{ name: 'CHTH' }],
   icons: { icon: '/logo-white.png' },
 }

@@ -4,10 +4,18 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Check, ChevronDown, MapPin, Package, XCircle } from 'lucide-react'
 import { ConfirmButton } from '@/components/shared/confirm-button'
 import { CopyButton } from '@/components/shared/copy-button'
-import { ORDER_STATUS, ORDER_STEPS, OrderStatusBadge } from '@/components/shared/order-status-badge'
+import {
+  canPayOrder,
+  ORDER_STATUS,
+  ORDER_STEPS,
+  OrderStatusBadge,
+  PaymentStatusBadge,
+} from '@/components/shared/order-status-badge'
 import { ProductImage } from '@/components/shared/product-image'
 import { formatDateTime, formatPrice, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { PayButton } from '@/features/checkout/pay-button'
+import { describeOptions } from '@/lib/products'
 import type { Order } from '@/types'
 
 function OrderProgress({ status }: { status: Order['status'] }) {
@@ -77,7 +85,7 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
           {order.items.slice(0, 3).map((item, index) => (
             <ProductImage
               key={item.id}
-              product={item.product}
+              product={item}
               alt=""
               className="relative size-10 rounded-lg border-2 border-card"
               style={{ zIndex: 3 - index }}
@@ -97,6 +105,9 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
           </p>
         </div>
 
+        <span className="hidden sm:inline-flex">
+          <PaymentStatusBadge status={order.paymentStatus} />
+        </span>
         <OrderStatusBadge status={order.status} />
         <span className="hidden w-20 text-right text-sm font-semibold tabular-nums text-foreground sm:block">
           {formatPrice(order.total)}
@@ -119,9 +130,14 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
               <div className="divide-y divide-border rounded-xl border border-border bg-card">
                 {order.items.map((item) => (
                   <div key={item.id} className="flex items-center gap-3 p-3">
-                    <ProductImage product={item.product} className="size-12 shrink-0 rounded-lg border border-border" />
+                    <ProductImage product={item} className="size-12 shrink-0 rounded-lg border border-border" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{item.product?.name || 'Item'}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                      {(describeOptions(item.options) || item.store) && (
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {[describeOptions(item.options), item.store && `@${item.store.username}`].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
                       <p className="text-[11px] tabular-nums text-muted-foreground">
                         {item.quantity} × {formatPrice(item.price)}
                       </p>
@@ -143,6 +159,12 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
                     <CopyButton value={order.id} label="Copy order ID" className="-my-1 shrink-0" />
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground">Placed {formatDateTime(order.createdAt)}</p>
+                  {order.paidAt && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Paid {formatDateTime(order.paidAt)}
+                      {order.payCurrency && ` in ${order.payCurrency}`}
+                    </p>
+                  )}
                 </div>
                 {order.shippingAddress && (
                   <div className="rounded-xl border border-border bg-card p-3">
@@ -156,7 +178,7 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
               </div>
 
               {order.status === 'PENDING' && (
-                <div className="flex justify-end">
+                <div className="flex flex-wrap justify-end gap-2">
                   <ConfirmButton
                     variant="destructive-outline"
                     question="Cancel this order?"
@@ -167,6 +189,7 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
                     <XCircle />
                     Cancel order
                   </ConfirmButton>
+                  {canPayOrder(order) && <PayButton orderId={order.id} size="sm" />}
                 </div>
               )}
             </div>

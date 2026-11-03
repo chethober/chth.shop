@@ -7,8 +7,9 @@ import { easing } from 'maath'
 import * as THREE from 'three'
 import { GARMENTS, type DesignLayer, type Garment } from '../constants'
 import { ChestDecal, LayerDecal } from './decals'
+import { HatModel, MugModel, ToteModel } from './procedural-models'
 
-GARMENTS.forEach((garment) => useGLTF.preload(garment.modelPath))
+GARMENTS.forEach((garment) => garment.modelPath && useGLTF.preload(garment.modelPath))
 
 const COLOR_EASING = 0.25
 
@@ -34,7 +35,7 @@ function Decals({ garment, logoUrl, layers, onSelectLayer }: Omit<GarmentModelPr
 
 /** The baked T-shirt model: a single mesh with one material. */
 function BakedTShirt({ color, logoUrl, ...rest }: GarmentModelProps) {
-  const { nodes, materials } = useGLTF(rest.garment.modelPath) as unknown as {
+  const { nodes, materials } = useGLTF(rest.garment.modelPath!) as unknown as {
     nodes: Record<string, THREE.Mesh>
     materials: Record<string, THREE.MeshStandardMaterial>
   }
@@ -55,7 +56,7 @@ function BakedTShirt({ color, logoUrl, ...rest }: GarmentModelProps) {
 
 /** Multi-part models (hoodie, pants): tint every mesh, project decals onto the largest one. */
 function MultiPartGarment({ color, garment, ...rest }: GarmentModelProps) {
-  const { scene } = useGLTF(garment.modelPath)
+  const { scene } = useGLTF(garment.modelPath!)
   const model = useMemo(() => scene.clone(true), [scene])
 
   const { meshes, torso } = useMemo(() => {
@@ -96,5 +97,16 @@ function MultiPartGarment({ color, garment, ...rest }: GarmentModelProps) {
 }
 
 export function GarmentModel(props: GarmentModelProps) {
-  return props.garment.id === 'tshirt' ? <BakedTShirt {...props} /> : <MultiPartGarment {...props} />
+  switch (props.garment.renderer) {
+    case 'baked-gltf':
+      return <BakedTShirt {...props} />
+    case 'mug':
+      return <MugModel {...props} />
+    case 'hat':
+      return <HatModel {...props} />
+    case 'tote':
+      return <ToteModel {...props} />
+    default:
+      return <MultiPartGarment {...props} />
+  }
 }

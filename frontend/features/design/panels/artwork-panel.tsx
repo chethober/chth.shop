@@ -19,6 +19,8 @@ interface ArtworkPanelProps {
   onRemoveLogo: () => void
   onAddText: (text: string, color: string) => void
   onClose: () => void
+  /** "chest logo", "front print"… */
+  printAreaLabel: string
 }
 
 function readImage(event: React.ChangeEvent<HTMLInputElement>, onLoad: (dataUrl: string) => void) {
@@ -91,11 +93,11 @@ export function ArtworkPanel(props: ArtworkPanelProps) {
       {tab === 'graphic' ? (
         <div className="space-y-3">
           <FieldLabel>Upload graphic</FieldLabel>
-          <UploadTile icon={Shirt} title="Apply as chest logo" hint="Fixed front chest placement" onLoad={props.onUploadLogo} />
+          <UploadTile icon={Shirt} title={`Apply as ${props.printAreaLabel}`} hint="Fixed front placement" onLoad={props.onUploadLogo} />
           <UploadTile icon={Plus} title="Add as movable layer" hint="Scale & position freely" onLoad={props.onUploadLayer} />
           {hasLogo && (
             <div className="flex items-center justify-between border-t border-border/50 pt-2 text-[10px]">
-              <span className="text-muted-foreground">Chest logo applied</span>
+              <span className="text-muted-foreground capitalize">{props.printAreaLabel} applied</span>
               <button type="button" onClick={onRemoveLogo} className="cursor-pointer font-semibold text-destructive hover:underline">
                 Remove logo
               </button>

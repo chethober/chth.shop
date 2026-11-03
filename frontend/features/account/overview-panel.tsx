@@ -22,13 +22,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatPrice, formatRelativeTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { Artist, Order, Product } from '@/types'
+import type { Order, Product, Store as StoreRecord } from '@/types'
 import type { AccountTab } from './account-tabs'
 import { hasSocialLinks } from './store-form'
 
 interface OverviewPanelProps {
   username: string
-  artist: Artist | null
+  store: StoreRecord | null
   products: Product[]
   orders: Order[]
   isLoadingOrders: boolean
@@ -133,7 +133,7 @@ function QuickAction({
   )
 }
 
-export function OverviewPanel({ username, artist, products, orders, isLoadingOrders, onNavigate }: OverviewPanelProps) {
+export function OverviewPanel({ username, store, products, orders, isLoadingOrders, onNavigate }: OverviewPanelProps) {
   const activeOrders = orders.filter((order) => isActiveOrder(order.status))
   const totalSpent = orders
     .filter((order) => order.status !== 'CANCELLED')
@@ -142,9 +142,10 @@ export function OverviewPanel({ username, artist, products, orders, isLoadingOrd
 
   const checklist: { id: string; label: string; hint: string; done: boolean; tab: AccountTab }[] = [
     { id: 'username', label: 'Claim your username', hint: 'Your public handle', done: Boolean(username), tab: 'profile' },
-    { id: 'store', label: 'Activate your store', hint: 'Pick a store name to go live', done: Boolean(artist), tab: 'store' },
-    { id: 'bio', label: 'Write a bio', hint: 'Tell fans who you are', done: Boolean(artist?.bio?.trim()), tab: 'store' },
-    { id: 'socials', label: 'Connect a social', hint: 'Help fans find you', done: hasSocialLinks(artist), tab: 'store' },
+    { id: 'store', label: 'Activate your store', hint: 'Pick a store name to go live', done: Boolean(store), tab: 'store' },
+    { id: 'payout', label: 'Add a payout address', hint: 'Where your crypto earnings go', done: Boolean(store?.payoutAddress?.trim()), tab: 'store' },
+    { id: 'bio', label: 'Write a bio', hint: 'Tell fans who you are', done: Boolean(store?.bio?.trim()), tab: 'store' },
+    { id: 'socials', label: 'Connect a social', hint: 'Help fans find you', done: hasSocialLinks(store), tab: 'store' },
     { id: 'product', label: 'Publish a product', hint: 'Design your first piece', done: products.length > 0, tab: 'store' },
   ]
   const completed = checklist.filter((item) => item.done).length
@@ -154,7 +155,7 @@ export function OverviewPanel({ username, artist, products, orders, isLoadingOrd
     {
       label: 'Products',
       value: String(products.length),
-      caption: artist ? 'In your store' : 'Store not active',
+      caption: store ? 'In your store' : 'Store not active',
       icon: Store,
       tab: 'store' as const,
       accent: 'bg-brand/10 text-brand',
@@ -268,10 +269,10 @@ export function OverviewPanel({ username, artist, products, orders, isLoadingOrd
           <h2 className="mb-3 text-sm font-bold text-foreground">Quick actions</h2>
           <div className="grid grid-cols-2 gap-2">
             <QuickAction href="/design" icon={Palette} label="New design" primary />
-            {artist ? (
+            {store ? (
               <QuickAction href={`/${username}`} icon={ExternalLink} label="Public store" external />
             ) : (
-              <QuickAction href="/collab" icon={Sparkles} label="Become artist" />
+              <QuickAction href="/collab" icon={Sparkles} label="Become a seller" />
             )}
             <QuickAction href="/" icon={ShoppingBag} label="Browse shop" />
             <QuickAction href="/cart" icon={Package} label="My cart" />
@@ -303,17 +304,17 @@ export function OverviewPanel({ username, artist, products, orders, isLoadingOrd
             <EmptyState
               icon={Package}
               title="No orders yet"
-              description="Items you buy from artists will show up here."
+              description="Items you buy from artists and merchants will show up here."
               action={
                 <Button asChild size="sm">
-                  <Link href="/">Explore products</Link>
+                  <Link href="/shop">Explore the shop</Link>
                 </Button>
               }
             />
           ) : (
             <ul className="divide-y divide-border">
               {recentOrders.map((order) => {
-                const firstProduct = order.items[0]?.product
+                const firstProduct = order.items[0]
                 return (
                   <li key={order.id}>
                     <button

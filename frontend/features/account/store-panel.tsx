@@ -7,11 +7,12 @@ import { ExternalLink } from 'lucide-react'
 import { CopyButton } from '@/components/shared/copy-button'
 import { cn } from '@/lib/utils'
 import type { Product } from '@/types'
+import { SalesPanel } from './sales-panel'
 import { StoreProducts } from './store-products'
 import type { StoreForm } from './store-form'
 import { StorefrontSettings } from './storefront-settings'
 
-type StoreView = 'products' | 'storefront'
+type StoreView = 'products' | 'sales' | 'storefront'
 
 interface StorePanelProps {
   username: string
@@ -35,7 +36,7 @@ export function StorePanel(props: StorePanelProps) {
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div className="inline-flex self-start rounded-xl border border-border bg-muted/70 p-1">
-          {(['products', 'storefront'] as const).map((option) => (
+          {(isStoreActive ? (['products', 'sales', 'storefront'] as const) : (['products', 'storefront'] as const)).map((option) => (
             <button
               key={option}
               type="button"
@@ -52,7 +53,9 @@ export function StorePanel(props: StorePanelProps) {
                   transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                 />
               )}
-              <span className="relative">{option === 'products' ? `Products (${products.length})` : 'Storefront'}</span>
+              <span className="relative">
+                {option === 'products' ? `Products (${products.length})` : option === 'sales' ? 'Sales' : 'Settings'}
+              </span>
             </button>
           ))}
         </div>
@@ -85,6 +88,8 @@ export function StorePanel(props: StorePanelProps) {
               onDelete={props.onDeleteProduct}
               onSetUpStore={() => setView('storefront')}
             />
+          ) : view === 'sales' ? (
+            <SalesPanel />
           ) : (
             <StorefrontSettings
               username={username}

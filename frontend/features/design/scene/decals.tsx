@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { Decal, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { resolveUploadUrl } from '@/lib/products'
 import type { DesignLayer } from '../constants'
 
 const TEXTURE_SIZE = 1024
@@ -31,21 +32,30 @@ function useTextTexture(text: string, color: string, fontSize = 1) {
 function useImageTexture(url?: string) {
   return useMemo(() => {
     if (!url) return null
-    const texture = new THREE.TextureLoader().load(url)
+    const texture = new THREE.TextureLoader().load(resolveUploadUrl(url))
     texture.colorSpace = THREE.SRGBColorSpace
     return texture
   }, [url])
 }
 
 /** A user layer projected onto the garment surface. Clicking it selects it. */
-export function LayerDecal({ layer, onSelect }: { layer: DesignLayer; onSelect: (id: string) => void }) {
+export function LayerDecal({
+  layer,
+  onSelect,
+  maxDepth = 0.8,
+}: {
+  layer: DesignLayer
+  onSelect: (id: string) => void
+  /** Projection depth; see Garment.decalDepth. */
+  maxDepth?: number
+}) {
   const textTexture = useTextTexture(layer.content || ' ', layer.color || '#000000', layer.fontSize)
   const imageTexture = useImageTexture(layer.type === 'image' ? layer.imageUrl : undefined)
   const texture = imageTexture ?? textTexture
 
   const [sx, sy, sz] = layer.scale
-  // Deep projection box so the decal wraps around curved fabric.
-  const scale: [number, number, number] = [sx, sy, Math.max(sz, 0.8)]
+  // Deep projection box so the decal wraps around curved fabric (shallow on rigid products).
+  const scale: [number, number, number] = [sx, sy, Math.max(sz, maxDepth)]
 
   return (
     <Decal
@@ -82,7 +92,7 @@ export function ChestDecal({
   position: [number, number, number]
   scale: [number, number, number]
 }) {
-  const texture = useTexture(url, (loaded) => {
+  const texture = useTexture(resolveUploadUrl(url), (loaded) => {
     loaded.anisotropy = 16
   })
   return <Decal depthTest position={position} rotation={[0, 0, 0]} scale={scale} map={texture} />

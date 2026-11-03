@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Moon, ShoppingBag, Star, Sun, User } from 'lucide-react'
+import { Moon, ShoppingBag, Star, Store, Sun, User } from 'lucide-react'
 import { MobileNav, MobileNavHeader, NavBody, Navbar, NavbarLogo } from '@/components/custom/resizable-navbar'
 import TextType from '@/components/custom/text-type'
 import { useHydrated } from '@/hooks/use-hydrated'
@@ -58,7 +58,7 @@ function PrimaryLink({ isSignedIn, isActive }: { isSignedIn: boolean; isActive: 
   return (
     <Link
       href="/collab"
-      aria-label="Artist collaboration"
+      aria-label="Sell on CHTH"
       className={cn(
         'inline-flex min-w-[88px] items-center rounded-full px-2.5 py-1 text-xs tracking-wider transition-all duration-200 ease-out select-none hover:scale-105 hover:bg-muted/70 active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
         isActive('/collab') ? 'bg-muted/40 font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'
@@ -66,7 +66,7 @@ function PrimaryLink({ isSignedIn, isActive }: { isSignedIn: boolean; isActive: 
     >
       <TextType
         as="span"
-        text={['Artists?', 'Creators?', 'Collab?']}
+        text={['Artists?', 'Merchants?', 'Sell with us?']}
         typingSpeed={75}
         pauseDuration={1500}
         deletingSpeed={40}
@@ -84,6 +84,10 @@ function Actions({ cartCount }: { cartCount: number }) {
         <Sun className={cn(iconStyles, 'hidden group-hover:rotate-45 dark:block')} />
         <Moon className={cn(iconStyles, 'block group-hover:-rotate-12 dark:hidden')} />
       </button>
+
+      <Link href="/shop" aria-label="Shop" title="Shop" className={iconLinkStyles}>
+        <Store className={cn(iconStyles, 'group-hover:-translate-y-0.5')} />
+      </Link>
 
       <Link href="/cart" aria-label="Cart" title="Cart" className={iconLinkStyles}>
         <ShoppingBag className={cn(iconStyles, 'group-hover:-translate-y-0.5')} />

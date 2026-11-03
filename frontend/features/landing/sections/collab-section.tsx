@@ -9,10 +9,10 @@ import { LandingSection, SectionTitle, glassCard } from '../section-parts'
 export function CollabSection() {
   return (
     <LandingSection id="collab" align="right">
-      <Eyebrow icon={Users}>For artists</Eyebrow>
+      <Eyebrow icon={Users}>For artists & merchants</Eyebrow>
       <SectionTitle accent="Our production.">Your art.</SectionTitle>
       <p className="max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">
-        Put your work on the back of a premium tee and sell it from your own store. No inventory, no upfront cost.
+        Put your art or your brand on tees, hoodies, mugs and caps and sell them from your own store. No inventory, no upfront cost, crypto payouts.
       </p>
 
       <ul className="space-y-2.5">
@@ -38,7 +38,7 @@ export function CollabSection() {
 
       <Button asChild size="lg" className="group">
         <Link href="/collab">
-          Join as an artist
+          Open your store
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </Link>
       </Button>

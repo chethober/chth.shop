@@ -14,11 +14,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
+import { Textarea } from '@/components/ui/textarea'
+import { useCatalog } from '@/hooks/use-catalog'
+import { formatPrice } from '@/lib/format'
 import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import type { Product, ProductType } from '@/types'
 
-export type ProductChanges = Pick<Product, 'name' | 'type' | 'price'>
+export type ProductChanges = Pick<Product, 'name' | 'type' | 'price' | 'description' | 'customizable' | 'isActive'>
 
 interface ProductEditDialogProps {
   product: Product | null
@@ -41,15 +44,32 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
   const [name, setName] = useState(product.name)
   const [type, setType] = useState(product.type as ProductType)
   const [price, setPrice] = useState(String(product.price))
+  const [description, setDescription] = useState(product.description ?? '')
+  const [customizable, setCustomizable] = useState(product.customizable)
+  const [isActive, setIsActive] = useState(product.isActive)
+  const { get: getCatalogItem } = useCatalog()
+  const baseCost = getCatalogItem(type)?.baseCost ?? 0
 
   const priceValue = Number(price)
   const nameError = name.trim() ? '' : 'Name is required'
-  const priceError = price === '' || !Number.isFinite(priceValue) || priceValue < 0 ? 'Enter a valid price' : ''
+  const priceError =
+    price === '' || !Number.isFinite(priceValue) || priceValue < 0
+      ? 'Enter a valid price'
+      : priceValue < baseCost
+        ? `Must be at least the production cost (${formatPrice(baseCost)})`
+        : ''
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     if (nameError || priceError || saving) return
-    await onSave({ name: name.trim(), type, price: Math.round(priceValue * 100) / 100 })
+    await onSave({
+      name: name.trim(),
+      type,
+      price: Math.round(priceValue * 100) / 100,
+      description: description.trim() || null,
+      customizable,
+      isActive,
+    })
   }
 
   return (
@@ -107,7 +127,45 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
             className="pl-7 tabular-nums"
           />
         </div>
-        {priceError && <p className="text-[11px] text-destructive">{priceError}</p>}
+        {priceError ? (
+          <p className="text-[11px] text-destructive">{priceError}</p>
+        ) : (
+          baseCost > 0 && (
+            <p className="text-[11px] text-muted-foreground">
+              Production cost {formatPrice(baseCost)} · you earn about{' '}
+              <span className="font-semibold text-foreground">{formatPrice(Math.max(priceValue - baseCost, 0) * 0.75)}</span>{' '}
+              per sale
+            </p>
+          )
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="product-description">Description</Label>
+        <Textarea
+          id="product-description"
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Materials, fit, the story behind the design…"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+          <input type="checkbox" checked={customizable} onChange={(e) => setCustomizable(e.target.checked)} className="mt-0.5" />
+          <span>
+            <span className="font-semibold text-foreground">Let buyers personalize</span>
+            <span className="block text-muted-foreground">Buyers can add their own text or image in the 3D studio.</span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2.5 text-xs">
+          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="mt-0.5" />
+          <span>
+            <span className="font-semibold text-foreground">Listed in the shop</span>
+            <span className="block text-muted-foreground">Unlisted products stay in your dashboard only.</span>
+          </span>
+        </label>
       </div>
 
       <DialogFooter>

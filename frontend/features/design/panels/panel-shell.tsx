@@ -40,11 +40,14 @@ export function FieldLabel({ children, aside }: { children: React.ReactNode; asi
   )
 }
 
-/** Grid of colour swatches from the studio palette. */
-export function SwatchGrid({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+/** Grid of colour swatches: the given colors, or the whole studio palette. */
+export function SwatchGrid({ value, onChange, colors }: { value: string; onChange: (color: string) => void; colors?: string[] }) {
+  const swatches = colors
+    ? colors.map((hex) => COLOR_PALETTE.find((s) => s.value.toUpperCase() === hex.toUpperCase()) ?? { name: hex, value: hex })
+    : COLOR_PALETTE
   return (
     <div className="grid grid-cols-4 gap-2" role="radiogroup">
-      {COLOR_PALETTE.map((swatch) => {
+      {swatches.map((swatch) => {
         const selected = value.toUpperCase() === swatch.value.toUpperCase()
         return (
           <button

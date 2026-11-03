@@ -4,7 +4,6 @@ const { serializeAuthUser } = require('../lib/serializers');
 
 const PROVIDER_ID_FIELD = {
   google: 'googleId',
-  x: 'twitterId',
   telegram: 'telegramId',
 };
 

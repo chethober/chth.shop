@@ -1,40 +1,36 @@
 // Shared Prisma `include` shapes so every endpoint returns the same nested data.
 
-const artistWithUsername = {
+const storeWithUsername = {
   include: { user: { select: { username: true } } },
 };
 
-const artistWithUser = {
+const storeWithUser = {
   include: { user: { select: { username: true, email: true } } },
 };
 
-const productWithArtist = {
-  artist: artistWithUsername,
-};
-
-const productWithArtistContact = {
-  artist: artistWithUser,
+const productWithStore = {
+  store: storeWithUsername,
 };
 
 const cartWithItems = {
   items: {
-    include: { product: { include: productWithArtist } },
+    include: { product: { include: productWithStore } },
     orderBy: { createdAt: 'asc' },
   },
 };
 
 const cartItemWithProduct = {
-  product: { include: productWithArtist },
+  product: { include: productWithStore },
 };
 
 const orderWithItems = {
-  items: { include: { product: { include: productWithArtist } } },
+  items: { include: { product: true, store: storeWithUsername }, orderBy: { createdAt: 'asc' } },
 };
 
 module.exports = {
-  artistWithUser,
-  productWithArtist,
-  productWithArtistContact,
+  storeWithUsername,
+  storeWithUser,
+  productWithStore,
   cartWithItems,
   cartItemWithProduct,
   orderWithItems,

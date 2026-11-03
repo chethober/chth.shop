@@ -4,8 +4,8 @@ import { AgreementCard } from '@/features/collab/agreement-card'
 import { EconomicsCard } from '@/features/collab/economics-card'
 
 export const metadata: Metadata = {
-  title: 'Artist Collaboration',
-  description: 'Join the CHTH artist program: 25% royalties, zero upfront cost, full IP ownership.',
+  title: 'Sell on CHTH',
+  description: 'Open a CHTH store as an artist or merchant: 75% of the margin, zero upfront cost, crypto payouts.',
 }
 
 export default function CollabPage() {

@@ -1,5 +1,5 @@
 import { Badge, type BadgeProps } from '@/components/ui/badge'
-import type { OrderStatus } from '@/types'
+import type { Order, OrderStatus, PaymentStatus } from '@/types'
 
 export const ORDER_STEPS: OrderStatus[] = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED']
 
@@ -23,4 +23,25 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
       {label}
     </Badge>
   )
+}
+
+export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; variant: BadgeProps['variant'] }> = {
+  UNPAID: { label: 'Unpaid', variant: 'warning' },
+  WAITING: { label: 'Awaiting payment', variant: 'warning' },
+  CONFIRMING: { label: 'Confirming on-chain', variant: 'info' },
+  PAID: { label: 'Paid', variant: 'success' },
+  PARTIALLY_PAID: { label: 'Partially paid', variant: 'destructive' },
+  EXPIRED: { label: 'Payment expired', variant: 'secondary' },
+  FAILED: { label: 'Payment failed', variant: 'destructive' },
+  REFUNDED: { label: 'Refunded', variant: 'secondary' },
+}
+
+/** Whether the buyer can (re)start the crypto payment for this order. */
+export function canPayOrder(order: Pick<Order, 'status' | 'paymentStatus'>) {
+  return order.status === 'PENDING' && ['UNPAID', 'WAITING', 'EXPIRED', 'FAILED'].includes(order.paymentStatus)
+}
+
+export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+  const { label, variant } = PAYMENT_STATUS[status] ?? { label: status, variant: 'secondary' }
+  return <Badge variant={variant}>{label}</Badge>
 }

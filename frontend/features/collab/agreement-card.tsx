@@ -13,7 +13,9 @@ import { Card } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { useHydrated } from '@/hooks/use-hydrated'
 import api from '@/lib/api'
+import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
+import type { StoreKind } from '@/types'
 import { AGREEMENT_CLAUSES, AGREEMENT_FOOTNOTE, AGREEMENT_NOTICE, AGREEMENT_VERSION } from './agreement-content'
 
 export function AgreementCard() {
@@ -22,9 +24,10 @@ export function AgreementCard() {
   const { user, isAuthenticated, patchUser } = useAuthStore()
   const [isAccepting, setIsAccepting] = useState(false)
   const [readProgress, setReadProgress] = useState(0)
+  const [kind, setKind] = useState<StoreKind>('ARTIST')
 
   const isSignedIn = hydrated && isAuthenticated
-  const isArtist = isSignedIn && Boolean(user?.isArtist)
+  const isSeller = isSignedIn && Boolean(user?.isSeller)
 
   const trackReading = (event: React.UIEvent<HTMLDivElement>) => {
     const el = event.currentTarget
@@ -34,16 +37,16 @@ export function AgreementCard() {
 
   const accept = async () => {
     if (!isSignedIn) {
-      toast.warning('Please sign in to join the artist program')
+      toast.warning('Please sign in to open your store')
       router.push('/auth?redirect=/collab')
       return
     }
 
     setIsAccepting(true)
     try {
-      await api.artists.acceptContract()
-      patchUser({ isArtist: true })
-      toast.success('Agreement accepted! Welcome to the collective.')
+      await api.stores.acceptContract(kind)
+      patchUser({ isSeller: true })
+      toast.success('Agreement accepted! Your store is ready.')
       router.push('/account?tab=store')
     } catch (error) {
       toast.danger(error instanceof Error ? error.message : 'Failed to accept the agreement')
@@ -66,20 +69,20 @@ export function AgreementCard() {
               <FileText className="size-3.5 text-brand" />
             </span>
             <div>
-              <p className="text-xs font-bold tracking-tight text-foreground">Artist Collaboration Agreement</p>
+              <p className="text-xs font-bold tracking-tight text-foreground">Seller Agreement</p>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">CHTH // {AGREEMENT_VERSION}</p>
             </div>
           </div>
-          <Badge variant={isArtist ? 'success' : 'secondary'}>
+          <Badge variant={isSeller ? 'success' : 'secondary'}>
             <span className="size-1.5 rounded-full bg-current" />
-            {isArtist ? 'Active partner' : 'Pending'}
+            {isSeller ? 'Active partner' : 'Pending'}
           </Badge>
         </div>
 
         <div className="h-0.5 shrink-0">
           <div
             className="h-full bg-brand transition-all duration-150"
-            style={{ width: isArtist ? '100%' : `${readProgress}%` }}
+            style={{ width: isSeller ? '100%' : `${readProgress}%` }}
           />
         </div>
 
@@ -95,24 +98,43 @@ export function AgreementCard() {
         </div>
 
         <div className="flex shrink-0 flex-col items-center justify-between gap-3 bg-muted/30 p-4 sm:flex-row sm:p-5">
-          {isArtist ? (
+          {isSeller ? (
             <>
               <p className="flex items-center gap-2 text-xs font-medium text-foreground">
                 <Check className="size-4 shrink-0 text-success" />
-                You are an active CHTH artist partner
+                Your CHTH store is active
               </p>
               <Button asChild size="sm" className="w-full sm:w-auto">
                 <Link href="/account?tab=store">
-                  Artist dashboard
+                  Store dashboard
                   <ExternalLink />
                 </Link>
               </Button>
             </>
           ) : (
             <>
-              <p className="text-[11px] text-muted-foreground">
-                {isSignedIn ? `Signed in as @${user?.username}` : 'Instant collective access'}
-              </p>
+              <div className="flex flex-col items-center gap-1.5 sm:items-start">
+                <div role="radiogroup" aria-label="I am joining as" className="inline-flex rounded-lg border border-border bg-background p-0.5">
+                  {(['ARTIST', 'MERCHANT'] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      role="radio"
+                      aria-checked={kind === option}
+                      onClick={() => setKind(option)}
+                      className={cn(
+                        'cursor-pointer rounded-md px-3 py-1 text-[11px] font-semibold transition-colors',
+                        kind === option ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {option === 'ARTIST' ? 'Artist' : 'Merchant'}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {isSignedIn ? `Signed in as @${user?.username}` : 'Sign in with Google or Telegram'}
+                </p>
+              </div>
               <ArrowFillButton
                 type="button"
                 onClick={accept}
@@ -133,7 +155,7 @@ export function AgreementCard() {
                     Accepting…
                   </span>
                 ) : isSignedIn ? (
-                  'Accept & join collective'
+                  'Accept & open store'
                 ) : (
                   'Sign in & accept'
                 )}

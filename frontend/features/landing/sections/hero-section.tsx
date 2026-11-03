@@ -27,7 +27,7 @@ export function HeroSection({ onDesign, onMeetArtists }: { onDesign: () => void;
       </motion.div>
 
       <motion.p {...fadeUp(0.2)} className="max-w-md text-balance text-base leading-relaxed text-muted-foreground sm:text-lg">
-        Premium heavyweight tees, designed by you or by independent artists — and made only when someone orders one.
+        Tees, hoodies, mugs, caps and more, designed by you or by independent artists and merchants. Paid in crypto, made only when someone orders one.
       </motion.p>
 
       <motion.div {...fadeUp(0.3)} className="flex flex-col gap-3 sm:flex-row">
@@ -36,7 +36,7 @@ export function HeroSection({ onDesign, onMeetArtists }: { onDesign: () => void;
           <ArrowRight className="transition-transform group-hover:translate-x-1" />
         </Button>
         <Button size="lg" variant="outline" onClick={onMeetArtists} className="bg-card/60 backdrop-blur-md">
-          I&apos;m an artist
+          Sell with us
         </Button>
       </motion.div>
 

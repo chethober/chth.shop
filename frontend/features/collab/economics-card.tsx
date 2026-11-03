@@ -7,10 +7,11 @@ import Wheel from '@/components/custom/wheel'
 import { Eyebrow } from '@/components/shared/eyebrow'
 import { Card } from '@/components/ui/card'
 
-const EARNINGS_PER_SALE = 20
+/** A $29 tee on a $12 blank leaves a $17 margin; the seller keeps 75%. */
+const EARNINGS_PER_SALE = 12.75
 
 const STATS: { label: string; value: string; caption: string; icon: LucideIcon }[] = [
-  { label: 'Royalty', value: '25%', caption: 'Guaranteed cut on every item sold', icon: Percent },
+  { label: 'Your margin', value: '75%', caption: 'Of every sale above production cost', icon: Percent },
   { label: 'Upfront', value: '$0', caption: 'Zero setup, stocking, or tooling fees', icon: DollarSign },
   { label: 'Ownership', value: '100%', caption: 'You retain all copyrights and IP', icon: ShieldCheck },
   { label: 'Fulfillment', value: '24/7', caption: 'Worldwide on-demand dispatch', icon: Clock },
@@ -18,7 +19,7 @@ const STATS: { label: string; value: string; caption: string; icon: LucideIcon }
 
 export function EconomicsCard() {
   const [monthlySales, setMonthlySales] = useState(25)
-  const estimatedEarnings = Math.round(monthlySales) * EARNINGS_PER_SALE
+  const estimatedEarnings = Math.round(Math.round(monthlySales) * EARNINGS_PER_SALE)
 
   return (
     <motion.div
@@ -34,8 +35,8 @@ export function EconomicsCard() {
             Transparent <span className="font-serif font-light italic text-foreground/90">economics</span>
           </h1>
           <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-            Zero inventory risk. We manufacture, fulfill, and ship worldwide while you retain full rights and receive
-            automated monthly payouts.
+            Artists and merchants alike: zero inventory risk. We print, fulfill, and ship worldwide, buyers pay in
+            crypto, and you receive monthly crypto payouts.
           </p>
         </div>
 

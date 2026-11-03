@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button'
 import { useRequireAuth } from '@/hooks/use-require-auth'
 import api, { ApiError } from '@/lib/api'
 import useAuthStore from '@/store/auth-store'
-import type { Artist, Order, Product } from '@/types'
+import { STORE_KIND_LABELS } from '@/lib/products'
+import type { Order, Product, Store } from '@/types'
 import { AccountNav } from './account-nav'
 import { AccountSkeleton } from './account-skeleton'
 import { ACCOUNT_TABS, isAccountTab, type AccountTab } from './account-tabs'
@@ -21,7 +22,7 @@ import { OverviewPanel } from './overview-panel'
 import { ProductEditDialog, type ProductChanges } from './product-edit-dialog'
 import { ProfilePanel } from './profile-panel'
 import { StorePanel } from './store-panel'
-import { isStoreFormDirty, storeFormFromArtist, storeFormToPayload, type StoreForm } from './store-form'
+import { isStoreFormDirty, storeFormFromStore, storeFormToPayload, type StoreForm } from './store-form'
 import { UnsavedChangesBar } from './unsaved-changes-bar'
 
 function showError(error: unknown, fallback: string) {
@@ -52,11 +53,11 @@ export function AccountView() {
   // The first render is always the skeleton, so reading the URL here can't cause a hydration mismatch.
   const [activeTab, setActiveTab] = useState<AccountTab>(initialTab)
   const [isLoading, setIsLoading] = useState(true)
-  const [artist, setArtist] = useState<Artist | null>(null)
+  const [store, setStore] = useState<Store | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoadingOrders, setIsLoadingOrders] = useState(true)
-  const [form, setForm] = useState<StoreForm>(() => storeFormFromArtist(null))
+  const [form, setForm] = useState<StoreForm>(() => storeFormFromStore(null))
   const [savingStore, setSavingStore] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [savingProduct, setSavingProduct] = useState(false)
@@ -89,9 +90,9 @@ export function AccountView() {
 
   /* ---------- Data ---------- */
 
-  const applyArtist = (next: Artist | null) => {
-    setArtist(next)
-    setForm(storeFormFromArtist(next))
+  const applyStore = (next: Store | null) => {
+    setStore(next)
+    setForm(storeFormFromStore(next))
   }
 
   const refreshOrders = useCallback(async () => {
@@ -109,9 +110,9 @@ export function AccountView() {
     if (!isSignedIn) return
     let cancelled = false
 
-    const loadArtist = api.artists
+    const loadStore = api.stores
       .me()
-      .then((next) => !cancelled && applyArtist(next))
+      .then((next) => !cancelled && applyStore(next))
       .catch((error) => {
         // 404 just means the store hasn't been created yet.
         if (!cancelled && !(error instanceof ApiError && error.status === 404)) showError(error, 'Failed to load your store')
@@ -122,7 +123,7 @@ export function AccountView() {
       .then((items) => !cancelled && setProducts(items))
       .catch(() => {})
 
-    Promise.all([loadArtist, loadProducts]).finally(() => !cancelled && setIsLoading(false))
+    Promise.all([loadStore, loadProducts]).finally(() => !cancelled && setIsLoading(false))
 
     api.orders
       .list()
@@ -137,8 +138,8 @@ export function AccountView() {
 
   /* ---------- Store settings ---------- */
 
-  const savedForm = useMemo(() => storeFormFromArtist(artist), [artist])
-  const isStoreDirty = Boolean(artist) && isStoreFormDirty(savedForm, form)
+  const savedForm = useMemo(() => storeFormFromStore(store), [store])
+  const isStoreDirty = Boolean(store) && isStoreFormDirty(savedForm, form)
 
   useEffect(() => {
     if (!isStoreDirty) return
@@ -157,11 +158,11 @@ export function AccountView() {
     setSavingStore(true)
     try {
       const payload = storeFormToPayload(form)
-      if (artist) {
-        applyArtist(await api.artists.update(payload))
+      if (store) {
+        applyStore(await api.stores.update(payload))
         toast.success('Store settings saved')
       } else {
-        applyArtist(await api.artists.create(payload))
+        applyStore(await api.stores.create(payload))
         toast.success('Your store is live!')
       }
     } catch (error) {
@@ -173,8 +174,8 @@ export function AccountView() {
 
   const deleteStore = async () => {
     try {
-      await api.artists.remove()
-      applyArtist(null)
+      await api.stores.remove()
+      applyStore(null)
       setProducts([])
       toast.success('Store deleted')
     } catch (error) {
@@ -252,8 +253,8 @@ export function AccountView() {
             <div className="flex size-14 select-none items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-brand/25 via-muted to-muted text-lg font-bold text-foreground sm:size-16 sm:text-xl">
               {username.slice(0, 2).toUpperCase() || 'U'}
             </div>
-            {artist && (
-              <span title="Artist" className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-brand">
+            {store && (
+              <span title={STORE_KIND_LABELS[store.kind]} className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-brand">
                 <Sparkles className="size-2.5 text-white" />
               </span>
             )}
@@ -262,18 +263,24 @@ export function AccountView() {
             <p className="text-xs text-muted-foreground">{greeting()},</p>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{username}</h1>
-              <Badge variant={artist ? 'brand' : 'secondary'}>{artist ? 'Artist' : 'Member'}</Badge>
+              <Badge variant={store ? 'brand' : 'secondary'}>{store ? STORE_KIND_LABELS[store.kind] : 'Member'}</Badge>
+              {user?.role === 'ADMIN' && <Badge variant="secondary">Admin</Badge>}
             </div>
-            {artist?.storeName && (
+            {store?.storeName && (
               <p className="truncate text-xs text-muted-foreground">
-                Running <span className="font-semibold text-foreground">{artist.storeName}</span>
+                Running <span className="font-semibold text-foreground">{store.storeName}</span>
               </p>
             )}
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {artist ? (
+          {user?.role === 'ADMIN' && (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin">Fulfillment</Link>
+            </Button>
+          )}
+          {store ? (
             <Button asChild variant="outline" size="sm">
               <Link href={`/${username}`} target="_blank">
                 View store
@@ -315,7 +322,7 @@ export function AccountView() {
               {activeTab === 'overview' && (
                 <OverviewPanel
                   username={username}
-                  artist={artist}
+                  store={store}
                   products={products}
                   orders={orders}
                   isLoadingOrders={isLoadingOrders}
@@ -325,7 +332,7 @@ export function AccountView() {
               {activeTab === 'store' && (
                 <StorePanel
                   username={username}
-                  isStoreActive={Boolean(artist)}
+                  isStoreActive={Boolean(store)}
                   products={products}
                   form={form}
                   onFormChange={updateForm}
