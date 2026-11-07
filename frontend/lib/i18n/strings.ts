@@ -11,6 +11,7 @@ export const STRINGS: Record<string, [string, string, string, string]> = {
   'Collab?': ['همکاری؟', 'تعاون؟', 'Коллаб?', '¿Colaboramos?'],
   'We use cookies to improve your experience.': ['برای بهتر شدن تجربه‌ات از کوکی استفاده می‌کنیم.', 'نستخدم ملفات تعريف الارتباط لتحسين تجربتك.', 'Мы используем cookie, чтобы сайт работал лучше.', 'Usamos cookies para mejorar tu experiencia.'],
   'OK': ['باشه', 'حسنًا', 'ОК', 'Vale'],
+  'Source code': ['کد منبع', 'الكود المصدري', 'Исходный код', 'Código fuente'],
   'Toggle theme': ['تغییر تم', 'تبديل السمة', 'Сменить тему', 'Cambiar tema'],
   'Cart': ['سبد خرید', 'السلة', 'Корзина', 'Carrito'],
   'Account': ['حساب', 'الحساب', 'Аккаунт', 'Cuenta'],

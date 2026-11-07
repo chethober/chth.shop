@@ -182,3 +182,6 @@ html[dir='rtl'] :is(.lucide-arrow-right, .lucide-chevron-right) { transform: sca
 html[data-telegram='mini-app'] footer {
   display: none;
 }
+/* The CHTH language menu, sized like the navbar's other round icon buttons. */
+.shop-lang-menu { --chth-control-size: 2rem; --chth-line: transparent; --chth-menu-bg: hsl(var(--card)); --chth-menu-ink: hsl(var(--foreground)); color: hsl(var(--muted-foreground)); }
+.shop-lang-menu > summary svg { height: 0.875rem; width: 0.875rem; }

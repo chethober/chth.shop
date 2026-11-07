@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
 import useCartStore from '@/store/cart-store'
 import { useT } from '@/lib/i18n'
+import { LanguageMenu } from './language-menu'
 
 const iconLinkStyles =
   'group relative flex size-8 items-center justify-center rounded-full text-muted-foreground transition-all duration-300 ease-out select-none hover:scale-110 hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
@@ -82,6 +83,7 @@ function Actions({ cartCount }: { cartCount: number }) {
   const t = useT()
   return (
     <>
+      <LanguageMenu className="shop-lang-menu" />
       <button type="button" onClick={toggleTheme} aria-label={t("Toggle theme")} title={t("Toggle theme")} className={iconLinkStyles}>
         <Sun className={cn(iconStyles, 'hidden group-hover:rotate-45 dark:block')} />
         <Moon className={cn(iconStyles, 'block group-hover:-rotate-12 dark:hidden')} />
