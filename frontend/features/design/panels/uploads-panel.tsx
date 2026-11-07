@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { ImagePlus, Plus, X } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { getGarment } from '../constants'
 import { MAX_UPLOAD_MB, readImageFile } from '../files'

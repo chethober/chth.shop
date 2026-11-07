@@ -3,16 +3,16 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Moon, ShoppingBag, Star, Store, Sun, User } from 'lucide-react'
+import { ShoppingBag, Star, Store, User } from 'lucide-react'
 import { MobileNav, MobileNavHeader, NavBody, Navbar, NavbarLogo } from '@/components/custom/resizable-navbar'
 import TextType from '@/components/custom/text-type'
 import { ChthLogo } from '@/components/shared/chth-logo'
 import { useHydrated } from '@/hooks/use-hydrated'
-import { THEME_STORAGE_KEY, applyTheme, toggleTheme } from '@/lib/theme'
+import { themeToggleModel } from '@/chth-kit/shell.js'
 import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
 import useCartStore from '@/store/cart-store'
-import { useT } from '@/lib/i18n'
+import { useLocale, useT } from '@/lib/i18n'
 import { LanguageMenu } from './language-menu'
 
 const iconLinkStyles =
@@ -79,15 +79,29 @@ function PrimaryLink({ isSignedIn, isActive }: { isSignedIn: boolean; isActive: 
   )
 }
 
+/** The shared CHTH theme toggle; the kit's script handles the click. */
+function ThemeToggle() {
+  const { locale } = useLocale()
+  const m = themeToggleModel(locale)
+  return (
+    <button
+      type="button"
+      className="chth-theme shop-icon-control"
+      data-chth-theme-toggle
+      aria-label={m.label}
+      title={m.label}
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: m.iconsSvg }}
+    />
+  )
+}
+
 function Actions({ cartCount }: { cartCount: number }) {
   const t = useT()
   return (
     <>
       <LanguageMenu className="shop-lang-menu" />
-      <button type="button" onClick={toggleTheme} aria-label={t("Toggle theme")} title={t("Toggle theme")} className={iconLinkStyles}>
-        <Sun className={cn(iconStyles, 'hidden group-hover:rotate-45 dark:block')} />
-        <Moon className={cn(iconStyles, 'block group-hover:-rotate-12 dark:hidden')} />
-      </button>
+      <ThemeToggle />
 
       <Link href="/shop" aria-label={t("Shop")} title={t("Shop")} className={iconLinkStyles}>
         <Store className={cn(iconStyles, 'group-hover:-translate-y-0.5')} />
@@ -124,15 +138,6 @@ export function SiteHeader() {
   useEffect(() => {
     if (isSignedIn) fetchCart()
   }, [isSignedIn, fetchCart])
-
-  // Follow theme changes made in other tabs.
-  useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === THEME_STORAGE_KEY && event.newValue) applyTheme(event.newValue === 'dark' ? 'dark' : 'light')
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
 
   // Drop focus after a click so the pill navbar doesn't keep a stale ring.
   const blurOnClick = (event: React.MouseEvent<HTMLElement>) => {

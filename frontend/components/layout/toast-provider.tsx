@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Toast, toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { useT } from '@/lib/i18n'
 
 const COOKIE_CONSENT_KEYS = ['chth_cookie_consent', 'chth_cookie_consent_v1']
@@ -22,33 +22,23 @@ function acceptCookies() {
   }
 }
 
-/** Renders the toast region and shows the one-time cookie notice. */
+/** Shows the one-time cookie notice. Toasts themselves are the shared CHTH ones (chth-kit/shell.js). */
 export function ToastProvider() {
   const t = useT()
   useEffect(() => {
     if (hasAcceptedCookies()) return
-
-    let key: string | undefined
     const timer = setTimeout(() => {
-      key = toast(t('We use cookies to improve your experience.'), {
-        variant: 'accent',
-        timeout: 0,
-        actionProps: {
-          children: t('OK'),
-          'data-action': 'cookie-ok',
-          onPress: () => {
-            acceptCookies()
-            if (key) toast.close(key)
-          },
-        } as never,
+      toast(t('We use cookies to improve your experience.'), {
+        type: 'accent',
+        duration: 0,
+        action: { label: t('OK'), onClick: acceptCookies },
         onClose: acceptCookies,
       })
     }, 600)
-
     return () => clearTimeout(timer)
     // Shown once, in the language of the first page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  return <Toast.Provider placement="bottom" maxVisibleToasts={5} gap={12} className="z-50" />
+  return null
 }

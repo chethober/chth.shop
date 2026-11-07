@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "../styles/heroui-toast.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -182,6 +181,7 @@ html[dir='rtl'] :is(.lucide-arrow-right, .lucide-chevron-right) { transform: sca
 html[data-telegram='mini-app'] footer {
   display: none;
 }
-/* The CHTH language menu, sized like the navbar's other round icon buttons. */
-.shop-lang-menu { --chth-control-size: 2rem; --chth-line: transparent; --chth-menu-bg: hsl(var(--card)); --chth-menu-ink: hsl(var(--foreground)); color: hsl(var(--muted-foreground)); }
-.shop-lang-menu > summary svg { height: 0.875rem; width: 0.875rem; }
+/* The CHTH language menu and theme toggle, sized like the navbar's other round icon buttons. */
+.shop-lang-menu, .shop-icon-control { --chth-control-size: 2rem; --chth-line: transparent; --chth-menu-bg: hsl(var(--card)); --chth-menu-ink: hsl(var(--foreground)); color: hsl(var(--muted-foreground)); }
+.shop-lang-menu > summary svg, .shop-icon-control svg { height: 0.875rem; width: 0.875rem; }
+@media (hover: hover) and (pointer: fine) { .shop-icon-control:hover, .shop-lang-menu > summary:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); } }

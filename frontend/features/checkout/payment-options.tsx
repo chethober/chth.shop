@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Bitcoin, CircleDollarSign, Gem } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useCryptoPayment, usePaymentMethods, type PayMethod } from './use-crypto-payment'

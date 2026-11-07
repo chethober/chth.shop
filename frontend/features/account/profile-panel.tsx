@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlertTriangle, AtSign, Calendar, Check, KeyRound, Mail, RotateCcw, X, type LucideIcon } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { InlineConfirm } from '@/components/custom/inline-confirm'
 import { CopyButton } from '@/components/shared/copy-button'
 import { Button } from '@/components/ui/button'

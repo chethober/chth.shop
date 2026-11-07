@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import Script from 'next/script'
 import { usePathname, useRouter } from 'next/navigation'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import api from '@/lib/api'
 import { applyTheme } from '@/lib/theme'
 import useAuthStore from '@/store/auth-store'

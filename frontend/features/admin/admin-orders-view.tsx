@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Package, RefreshCw, ShieldAlert } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { EmptyState } from '@/components/shared/empty-state'
 import { FilterChip } from '@/components/shared/filter-chip'
 import { LoadingState } from '@/components/shared/loading-state'

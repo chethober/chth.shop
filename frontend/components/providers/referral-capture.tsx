@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import api from '@/lib/api'
 import useAuthStore from '@/store/auth-store'
 
