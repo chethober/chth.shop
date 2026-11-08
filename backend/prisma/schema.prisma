@@ -360,3 +360,10 @@ enum PayoutStatus {
   SENT
   FAILED
 }
+
+/// Small site-wide settings by key, such as the CHTH banner set from the hub ("banner").
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

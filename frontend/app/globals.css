@@ -188,3 +188,6 @@ html[data-telegram='mini-app'] footer {
 .shop-icon-control .chth-apps__langs > svg { height: 1rem; width: 1rem; }
 .shop-icon-control .chth-apps__prefs .chth-theme svg { height: 1rem; width: 1rem; }
 @media (hover: hover) and (pointer: fine) { .shop-icon-control:hover, .shop-icon-control > summary:hover, .shop-lang-menu > summary:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); } }
+
+/* The CHTH banner stays fixed above the floating navbar (which moves down by --chth-banner-h). */
+.shop-banner .chth-banner { inset-inline: 0; position: fixed; top: 0; }

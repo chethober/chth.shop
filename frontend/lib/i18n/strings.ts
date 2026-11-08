@@ -9,8 +9,6 @@ export const STRINGS: Record<string, [string, string, string, string]> = {
   'Artists?': ['هنرمندی؟', 'فنان؟', 'Художник?', '¿Artista?'],
   'Creators?': ['سازنده‌ای؟', 'صانع محتوى؟', 'Автор?', '¿Creador?'],
   'Collab?': ['همکاری؟', 'تعاون؟', 'Коллаб?', '¿Colaboramos?'],
-  'We use cookies to improve your experience.': ['برای بهتر شدن تجربه‌ات از کوکی استفاده می‌کنیم.', 'نستخدم ملفات تعريف الارتباط لتحسين تجربتك.', 'Мы используем cookie, чтобы сайт работал лучше.', 'Usamos cookies para mejorar tu experiencia.'],
-  'OK': ['باشه', 'حسنًا', 'ОК', 'Vale'],
   'Source code': ['کد منبع', 'الكود المصدري', 'Исходный код', 'Código fuente'],
   'Cart': ['سبد خرید', 'السلة', 'Корзина', 'Carrito'],
   'Account': ['حساب', 'الحساب', 'Аккаунт', 'Cuenta'],

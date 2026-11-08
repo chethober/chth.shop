@@ -3,6 +3,7 @@
 // answers two signed calls from the hub under /api/internal:
 //   GET  /api/internal/stats          counts, revenue and the open orders
 //   POST /api/internal/orders/status  { id, status }: an order button pressed in the bot
+//   POST /api/internal/announcement   { text, url? }: the banner, from the bot's 📢 Banners
 // Requests in both directions are signed with HUB_SECRET (see src/chth-kit/hub.mjs). Without
 // HUB_URL and HUB_SECRET nothing is sent and /api/internal refuses every call.
 

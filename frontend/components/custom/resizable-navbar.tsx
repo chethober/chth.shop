@@ -60,7 +60,7 @@ export const Navbar = ({
   return (
     <motion.div
       ref={ref}
-      className={cn("fixed inset-x-0 top-3 z-50 w-full px-4 sm:px-6 pointer-events-none", className)}
+      className={cn("fixed inset-x-0 top-[calc(var(--chth-banner-h,0px)+0.75rem)] z-50 w-full px-4 sm:px-6 pointer-events-none transition-[top] duration-200", className)}
     >
       <div className="w-full pointer-events-auto">
         {React.Children.map(children, (child) =>
