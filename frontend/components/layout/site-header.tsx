@@ -14,6 +14,7 @@ import useAuthStore from '@/store/auth-store'
 import useCartStore from '@/store/cart-store'
 import { useLocale, useT } from '@/lib/i18n'
 import { LanguageMenu } from './language-menu'
+import { AppSwitcher } from './app-switcher'
 
 const iconLinkStyles =
   'group relative flex size-8 items-center justify-center rounded-full text-muted-foreground transition-all duration-300 ease-out select-none hover:scale-110 hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
@@ -100,8 +101,6 @@ function Actions({ cartCount }: { cartCount: number }) {
   const t = useT()
   return (
     <>
-      <LanguageMenu className="shop-lang-menu" />
-      <ThemeToggle />
 
       <Link href="/shop" aria-label={t("Shop")} title={t("Shop")} className={iconLinkStyles}>
         <Store className={cn(iconStyles, 'group-hover:-translate-y-0.5')} />
@@ -119,6 +118,13 @@ function Actions({ cartCount }: { cartCount: number }) {
       <Link href="/account" aria-label={t("Account")} title={t("Account")} className={iconLinkStyles}>
         <User className={cn(iconStyles, 'group-hover:-translate-y-0.5')} />
       </Link>
+
+      {/* The CHTH tools every header ends with: language, theme, apps (on phones, all in apps). */}
+      <div className="chth-tools chth-tools--compact gap-1.5">
+        <LanguageMenu className="shop-lang-menu" />
+        <ThemeToggle />
+        <AppSwitcher className="shop-icon-control" prefs />
+      </div>
     </>
   )
 }
