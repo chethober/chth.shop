@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { bannerHtml, cookieNoticeHtml, type Announcement } from '@/chth-kit/shell.js'
 import { useLocale } from '@/lib/i18n'
+import { useHydrated } from '@/hooks/use-hydrated'
 
 /**
  * The CHTH banner (set from the hub's 📢 Banners), fixed across the top. The navbar floats over
@@ -43,8 +44,6 @@ export function SiteBanner() {
  */
 export function CookieNotice() {
   const { locale } = useLocale()
-  const [ready, setReady] = useState(false)
-  useEffect(() => setReady(true), [])
-  if (!ready) return null
+  if (!useHydrated()) return null
   return <div className="contents" dangerouslySetInnerHTML={{ __html: cookieNoticeHtml(locale, { privacyHref: '/terms' }) }} />
 }
