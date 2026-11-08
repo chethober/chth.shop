@@ -11,7 +11,7 @@ export function SiteFooter() {
   const { locale } = useLocale()
   const m = footerModel(locale, 'shop')
   return (
-    <footer className="chth-footer mt-auto w-full" data-chth-footer>
+    <footer className="chth-footer relative z-10 mt-auto w-full bg-background" data-chth-footer>
       <div className="chth-footer__cta">
         <span className="chth-footer__mark" aria-hidden="true" dangerouslySetInnerHTML={{ __html: m.logoSvg }} />
         <p className="chth-footer__pitch"><strong>{m.partOf}</strong><span>{m.pitch}</span></p>
