@@ -3,13 +3,6 @@
 
 export const STRINGS: Record<string, [string, string, string, string]> = {
   // Header and footer
-  'CHTH home': ['خانهٔ CHTH', 'الرئيسية CHTH', 'Главная CHTH', 'Inicio de CHTH'],
-  'Design studio': ['استودیوی طراحی', 'استوديو التصميم', 'Студия дизайна', 'Estudio de diseño'],
-  'Artist collaboration': ['همکاری با هنرمندان', 'التعاون مع الفنانين', 'Сотрудничество с художниками', 'Colaboración con artistas'],
-  'Artists?': ['هنرمندی؟', 'فنان؟', 'Художник?', '¿Artista?'],
-  'Creators?': ['سازنده‌ای؟', 'صانع محتوى؟', 'Автор?', '¿Creador?'],
-  'Collab?': ['همکاری؟', 'تعاون؟', 'Коллаб?', '¿Colaboramos?'],
-  'Source code': ['کد منبع', 'الكود المصدري', 'Исходный код', 'Código fuente'],
   'Cart': ['سبد خرید', 'السلة', 'Корзина', 'Carrito'],
   'Account': ['حساب', 'الحساب', 'Аккаунт', 'Cuenta'],
   'Shop': ['فروشگاه', 'المتجر', 'Магазин', 'Tienda'],

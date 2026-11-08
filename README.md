@@ -171,15 +171,16 @@ comes in English, Persian, Arabic, Russian and Spanish, with right-to-left layou
 Arabic. Strings live in `frontend/lib/i18n/strings.ts`, keyed by their English text, so a missing
 translation shows English; components use `useT()` from `frontend/lib/i18n`. The language comes
 from `?lang=`, the `chth_lang` cookie shared by every CHTH site, or the browser, and visitors
-switch it with the globe in the navbar (inside the ⋮⋮⋮ app switcher on phones). Product and artist names are shown as written. The account pages are
+switch it with the globe in the navbar. Product and artist names are shown as written. The account pages are
 English for now.
 
 ## CHTH kit and hub
 
 `frontend/chth-kit/` and `backend/src/chth-kit/` are generated from the shared CHTH kit (brand
 tokens, logo, languages, product links, the "Part of CHTH" footer, signed hub client, and the CHTH
-shell): don't edit them here. The shell gives the shop the same theme toggle, language menu and
-app switcher as every CHTH site, its toasts (`import { toast } from '@/lib/toast'`, with
+shell): don't edit them here. The shell gives the shop the same navbar (`SiteHeader`, the kit's
+markup with the shop and cart icons added), footer, theme toggle and language menu as every CHTH
+site, its toasts (`import { toast } from '@/lib/toast'`, with
 `toast.success / danger / warning / info`), the banner and the essential-cookies notice. With `HUB_URL` and `HUB_SECRET` set, the backend reports new orders, sign-ups and
 server errors to the CHTH hub, and answers the hub's signed calls at `GET /api/internal/stats`,
 `POST /api/internal/orders/status` (the admin bot's order buttons) and
