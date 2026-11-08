@@ -87,7 +87,7 @@ export function HomeView() {
   )
 
   return (
-    <div data-scroll-snap className="relative selection:bg-brand selection:text-white">
+    <div data-scroll-snap className="relative selection:bg-brand selection:text-background">
       {/* Ambient dotted grid */}
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:36px_36px] opacity-35 [mask-image:radial-gradient(ellipse_75%_55%_at_50%_40%,#000_65%,transparent_100%)]" />
 

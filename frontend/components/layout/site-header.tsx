@@ -12,8 +12,8 @@ import useCartStore from '@/store/cart-store'
 import { useLocale, useT } from '@/lib/i18n'
 
 /**
- * The shared CHTH navbar (chth-kit's navbarHtml, as React): the shop's words on the left, the CHTH
- * mark in the middle, then the shop (not on phones) and cart, profile, theme and language. It floats over the page
+ * The shared CHTH navbar (chth-kit's navbarHtml, as React): language, theme and the shop's words on
+ * the left, the CHTH mark in the middle, the shop (not on phones), cart and profile on the right. It floats over the page
  * and narrows as the page scrolls; the kit's script types the words and handles theme and menus.
  */
 export function SiteHeader() {
@@ -41,24 +41,6 @@ export function SiteHeader() {
     <header className="chth-nav chth-nav--overlay" data-chth-nav>
       <div className="chth-nav__pill">
         <div className="chth-nav__start">
-          <Link className="chth-nav__lead" href={nav.leadHref} data-chth-type={JSON.stringify(nav.words)}>
-            <span className="chth-nav__type">{nav.words[0]}</span>
-            <span className="chth-nav__caret" aria-hidden="true" />
-          </Link>
-        </div>
-        <Link className="chth-nav__logo" href={nav.home} aria-label={nav.homeLabel} dangerouslySetInnerHTML={{ __html: nav.logoSvg }} />
-        <div className="chth-nav__end">
-          <Link className="chth-nav__icon chth-nav__icon--wide" href="/shop" aria-label={t('Shop')} title={t('Shop')} aria-current={current('/shop')}>
-            <Store aria-hidden="true" />
-          </Link>
-          <Link className="chth-nav__icon" href="/cart" aria-label={t('Cart')} title={t('Cart')} aria-current={current('/cart')}>
-            <ShoppingBag aria-hidden="true" />
-            {count > 0 && <span className="chth-nav__badge">{count}</span>}
-          </Link>
-          <Link className="chth-nav__icon" href={nav.account!.href} aria-label={nav.account!.label} title={nav.account!.label} aria-current={current('/account')}
-            dangerouslySetInnerHTML={{ __html: nav.userSvg }} />
-          <button type="button" className="chth-theme chth-nav__icon" data-chth-theme-toggle aria-label={theme.label} title={theme.label}
-            suppressHydrationWarning dangerouslySetInnerHTML={{ __html: theme.iconsSvg }} />
           <details className="chth-lang-menu chth-nav__lang">
             <summary aria-label={`${lang.label}: ${lang.locales.find((l) => l.current)?.label ?? ''}`} title={lang.label} dangerouslySetInnerHTML={{ __html: lang.globeSvg }} />
             <nav className="chth-lang-menu__list" aria-label={lang.label}>
@@ -78,6 +60,24 @@ export function SiteHeader() {
               ))}
             </nav>
           </details>
+          <button type="button" className="chth-theme chth-nav__icon" data-chth-theme-toggle aria-label={theme.label} title={theme.label}
+            suppressHydrationWarning dangerouslySetInnerHTML={{ __html: theme.iconsSvg }} />
+          <Link className="chth-nav__lead" href={nav.leadHref} data-chth-type={JSON.stringify(nav.words)}>
+            <span className="chth-nav__type">{nav.words[0]}</span>
+            <span className="chth-nav__caret" aria-hidden="true" />
+          </Link>
+        </div>
+        <Link className="chth-nav__logo" href={nav.home} aria-label={nav.homeLabel} dangerouslySetInnerHTML={{ __html: nav.logoSvg }} />
+        <div className="chth-nav__end">
+          <Link className="chth-nav__icon chth-nav__icon--wide" href="/shop" aria-label={t('Shop')} title={t('Shop')} aria-current={current('/shop')}>
+            <Store aria-hidden="true" />
+          </Link>
+          <Link className="chth-nav__icon" href="/cart" aria-label={t('Cart')} title={t('Cart')} aria-current={current('/cart')}>
+            <ShoppingBag aria-hidden="true" />
+            {count > 0 && <span className="chth-nav__badge">{count}</span>}
+          </Link>
+          <Link className="chth-nav__icon" href={nav.account!.href} aria-label={nav.account!.label} title={nav.account!.label} aria-current={current('/account')}
+            dangerouslySetInnerHTML={{ __html: nav.userSvg }} />
         </div>
       </div>
     </header>
