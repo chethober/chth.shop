@@ -7,7 +7,7 @@ import { useHydrated } from '@/hooks/use-hydrated'
 
 /**
  * The CHTH banner (set from the hub's 📢 Banners), fixed across the top. The navbar floats over
- * the page, so the banner's height goes into --chth-banner-h and the navbar moves down by it. The
+ * the page, so the room down to the banner's bottom goes into --chth-banner-h and the navbar moves down by it. The
  * kit's script hides it for a visitor who closed it, until the text changes.
  */
 export function SiteBanner() {
@@ -25,7 +25,7 @@ export function SiteBanner() {
     const el = box.current
     if (!announcement || !el) return
     // The strip's height while it's there; 0 once it's closed (or was closed before).
-    const measure = () => root.style.setProperty('--chth-banner-h', `${el.querySelector('.chth-banner:not(.chth-dismissing)')?.getBoundingClientRect().height ?? 0}px`)
+    const measure = () => root.style.setProperty('--chth-banner-h', `${el.querySelector('.chth-banner:not(.chth-dismissing)')?.getBoundingClientRect().bottom ?? 0}px`)
     const size = new ResizeObserver(measure)
     const strip = new MutationObserver(measure)
     size.observe(el)
