@@ -23,7 +23,7 @@
 
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--chth-space-12);
   /* 300 unless an ancestor sets `--upl-w` — `100%` fills the row.
      The box still closes in round an upload at its own measured
      size; it only opens out to this. */
@@ -48,19 +48,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--chth-space-10);
   width: 100%;
   /* 176, up from 128: the drop target is the block, and a short
      one read as a banner rather than a place to put something */
   height: 176px;
-  padding: 0 16px;
+  padding: 0 var(--chth-space-16);
   overflow: hidden;
   border-radius: var(--upl-r);
   background: var(--fill-slab, var(--card));
   /* a file over it and it grows, with a bounce; an upload and it
      closes in round it */
   transition:
-    scale 420ms cubic-bezier(0.3, 1.35, 0.4, 1),
+    scale var(--chth-dur-400) cubic-bezier(0.3, 1.35, 0.4, 1),
     width 460ms cubic-bezier(0.3, 1.2, 0.4, 1),
     height 460ms cubic-bezier(0.3, 1.2, 0.4, 1),
     background-color 200ms ease;}
@@ -76,9 +76,9 @@
 
 /* the gulp: in a little as the file goes down, out past its size,
    and settle */
-.upl-zone[data-gulp] { animation: upl-gulp 460ms cubic-bezier(0.3, 1.2, 0.4, 1); }
+.upl-zone[data-gulp] { animation: upl-gulp var(--chth-dur-500) cubic-bezier(0.3, 1.2, 0.4, 1); }
 
-.upl-zone[data-gulp] .upl-icon { animation: upl-open 460ms cubic-bezier(0.3, 1.4, 0.4, 1); }
+.upl-zone[data-gulp] .upl-icon { animation: upl-open var(--chth-dur-500) cubic-bezier(0.3, 1.4, 0.4, 1); }
 
 [data-stroke="on"] .upl-zone { box-shadow: 0 0 0 1px var(--pane-edge); }
 
@@ -87,13 +87,13 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: var(--chth-radius-md);
   /* a light grey tile, no edge — the fill's own ink walked most
      of the way to its slab, so it is a pale grey on the light fill
      and a lifted grey on the dark one */
   background: color-mix(in srgb, var(--fill-on, #17181a) 6%, var(--fill-slab, #fff));
   color: color-mix(in srgb, var(--fill-on, #17181a) 70%, var(--fill-slab, #fff));
-  transition: translate 320ms cubic-bezier(0.3, 1.5, 0.4, 1), background-color 200ms ease, color 200ms ease;}
+  transition: translate var(--chth-dur-300) cubic-bezier(0.3, 1.5, 0.4, 1), background-color var(--chth-dur-200) ease, color var(--chth-dur-200) ease;}
 
 /* over the box the tile only lifts, and its arrow goes to full
    ink — no colour of its own */
@@ -105,8 +105,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  font-size: 13px;
+  gap: var(--chth-space-2);
+  font-size: var(--chth-text-13);
   text-align: center;}
 
 .upl-say b { font-weight: 500; }
@@ -114,7 +114,7 @@
 /* the second line only — the first carries spans of its own,
    for the two wordings, and they keep its ink */
 .upl-say > span {
-  font-size: 12px;
+  font-size: var(--chth-text-12);
   color: color-mix(in srgb, var(--fill-on, #17181a) 45%, var(--fill-slab, #fff));}
 
 /* ── mouse or finger ────────────────────────────────────────
@@ -136,20 +136,20 @@
 .upl-now {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--chth-space-12);
   width: max-content;
   flex: none;
-  animation: upl-land 420ms var(--upl-spring) both;}
+  animation: upl-land var(--chth-dur-400) var(--upl-spring) both;}
 
 .upl-text {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--chth-space-2);
   width: 150px;}
 
 .upl-name {
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--chth-text-13);
   font-weight: 500;
   white-space: nowrap;
   text-overflow: ellipsis;}
@@ -157,21 +157,21 @@
 .upl-meta {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--chth-space-4);
   height: 14px;
   /* a refusal said here can be longer than the row is wide */
   overflow: hidden;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: var(--chth-text-12);
   font-variant-numeric: tabular-nums;
   color: color-mix(in srgb, var(--fill-on, #17181a) 45%, var(--fill-slab, #fff));}
 
 .upl-track {
   position: relative;
   height: 4px;
-  margin-top: 4px;
+  margin-top: var(--chth-space-4);
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--chth-radius-2);
   background: color-mix(in srgb, var(--fill-on, #17181a) 8%, var(--fill-slab, #fff));}
 
 .upl-bar {
@@ -188,7 +188,7 @@
 .upl-roll-strip {
   display: flex;
   flex-direction: column;
-  transition: transform 220ms cubic-bezier(0.3, 1.2, 0.4, 1);}
+  transition: transform var(--chth-dur-200) cubic-bezier(0.3, 1.2, 0.4, 1);}
 
 .upl-roll-strip > span { height: 1em; }
 
@@ -208,7 +208,7 @@
   border-radius: 50%;
   background: var(--ok, #15803d);
   color: #fff;
-  animation: upl-pop 380ms cubic-bezier(0.3, 1.6, 0.4, 1) both;}
+  animation: upl-pop var(--chth-dur-400) cubic-bezier(0.3, 1.6, 0.4, 1) both;}
 
 .upl-page { overflow: visible; }
 
@@ -233,7 +233,7 @@
   width: 36px;
   height: 36px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: var(--chth-radius-sm);
   background: color-mix(in srgb, var(--fill-on, #17181a) 6%, var(--fill-slab, #fff));}
 
 /* the remove, in the room the tick had — no chrome until it is
@@ -249,8 +249,8 @@
   background: transparent;
   color: color-mix(in srgb, var(--fill-on, #17181a) 45%, var(--fill-slab, #fff));
   cursor: pointer;
-  animation: upl-pop 380ms cubic-bezier(0.3, 1.6, 0.4, 1) both;
-  transition: background-color 160ms ease, color 160ms ease;}
+  animation: upl-pop var(--chth-dur-400) cubic-bezier(0.3, 1.6, 0.4, 1) both;
+  transition: background-color var(--chth-dur-150) ease, color var(--chth-dur-150) ease;}
 
 .upl-x:hover {
   background: color-mix(in srgb, var(--fill-on, #17181a) 8%, var(--fill-slab, #fff));

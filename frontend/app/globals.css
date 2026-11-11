@@ -32,7 +32,7 @@
   --input: 240 6% 87%;
   --ring: 240 10% 5%;
   --brand: 240 4% 30%; /* the CHTH grey (chth-kit tokens.json, shop) */
-  --radius: 0.5rem;
+  --radius: var(--chth-radius-sm);
 }
 
 .dark {
@@ -89,7 +89,28 @@
   --color-ring: hsl(var(--ring));
   --color-brand: hsl(var(--brand));
 
-  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-strong: var(--chth-ease-out);
+
+  /* Tailwind's scales come from the CHTH kit's tokens (chth-kit/brand.css), so p-3, text-sm and
+     rounded-xl are the same sizes as on every CHTH site. Sizes Tailwind has and the kit doesn't
+     (text-3xl, rounded-4xl…) keep Tailwind's values. */
+  --spacing: var(--chth-space-4);
+  --text-xs: var(--chth-text-12);
+  --text-sm: var(--chth-text-14);
+  --text-base: var(--chth-text-16);
+  --text-lg: var(--chth-text-18);
+  --text-xl: var(--chth-text-20);
+  --text-2xl: var(--chth-text-24);
+  --text-4xl: var(--chth-text-36);
+  --radius-xs: var(--chth-radius-2);
+  --radius-sm: var(--chth-radius-4);
+  --radius-md: var(--chth-radius-6);
+  --radius-lg: var(--chth-radius-sm);
+  --radius-xl: var(--chth-radius-12);
+  --radius-2xl: var(--chth-radius-16);
+  --radius-3xl: var(--chth-radius-24);
+  --radius-4xl: var(--chth-radius-32);
+  --default-transition-duration: var(--chth-dur-150);
 
   /* Endless horizontal scroll: content is rendered twice, so sliding by half loops seamlessly. */
   --animate-marquee: marquee 40s linear infinite;

@@ -5,7 +5,7 @@
 }
 
 .text-type__cursor {
-  margin-left: 0.15rem;
+  margin-left: var(--chth-space-2);
   display: inline-block;
   opacity: 1;
   line-height: 1;

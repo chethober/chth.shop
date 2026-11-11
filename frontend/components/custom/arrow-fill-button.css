@@ -4,13 +4,13 @@
   justify-content: center;
   height: 2.75rem;
   padding-right: 3.25rem;
-  padding-left: 1.35rem;
+  padding-left: var(--chth-space-22);
   position: relative;
   width: fit-content;
-  border-radius: 1000px;
+  border-radius: var(--chth-radius-full);
   background: var(--btn-bg);
   color: var(--btn-text);
-  font-size: 0.875rem;
+  font-size: var(--chth-text-14);
   font-weight: 600;
   text-rendering: geometricPrecision;
   white-space: nowrap;
@@ -18,7 +18,7 @@
   text-decoration: none;
   cursor: pointer;
   border: none;
-  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--chth-dur-200) ease, opacity var(--chth-dur-200) ease, box-shadow var(--chth-dur-200) ease;
 }
 
 .obsidian-arrow-fill-btn:active:not(:disabled) {
@@ -30,22 +30,22 @@
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--chth-space-8);
 }
 
 .obsidian-arrow-fill-btn__circle {
   clip-path: inset(0.35rem 0.35rem 0.35rem calc(100% - 2.4rem) round 2rem);
   position: absolute;
   inset: -1px;
-  border-radius: 1000px;
+  border-radius: var(--chth-radius-full);
   display: flex;
   align-items: center;
   padding-right: 3.25rem;
-  padding-left: 1.35rem;
+  padding-left: var(--chth-space-22);
   z-index: 2;
   background-color: var(--btn-fill-bg);
   color: var(--btn-fill-text);
-  transition: clip-path 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86),
+  transition: clip-path var(--chth-dur-400) cubic-bezier(0.785, 0.135, 0.15, 0.86),
     background-color 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86),
     color 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86);
   pointer-events: none;
@@ -55,7 +55,7 @@
   padding: 0 1px 0 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--chth-space-8);
   width: 100%;
   white-space: nowrap;
 }
@@ -68,7 +68,7 @@
   overflow: hidden;
   flex: 0 0 auto;
   color: var(--btn-arrow);
-  transition: color 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+  transition: color var(--chth-dur-400) cubic-bezier(0.785, 0.135, 0.15, 0.86);
 }
 
 .obsidian-arrow-fill-btn:is(:hover, :focus-visible):not(:disabled) .obsidian-arrow-fill-btn__icon {
@@ -76,7 +76,7 @@
 }
 
 .obsidian-arrow-fill-btn__path {
-  transition: transform 0.45s cubic-bezier(0.785, 0.135, 0.15, 0.86);
+  transition: transform var(--chth-dur-400) cubic-bezier(0.785, 0.135, 0.15, 0.86);
   transform-origin: center center;
   fill: currentColor;
 }

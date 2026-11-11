@@ -122,7 +122,7 @@ export function InlineConfirm({
           visibility: 'hidden',
           whiteSpace: 'nowrap',
           font: 'inherit',
-          fontSize: '13px',
+          fontSize: 'var(--chth-text-13)',
           fontWeight: 500,
           pointerEvents: 'none',
         }}
