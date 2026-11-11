@@ -26,7 +26,7 @@ const TermSection = ({
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, {
     amount: 0.2,
-    margin: 'calc(-1 * var(--chth-space-80)) 0px -40% 0px',
+    margin: '-80px 0px -40% 0px',
   });
 
   useEffect(() => {
