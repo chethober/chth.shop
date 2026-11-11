@@ -1,6 +1,8 @@
 @import "tailwindcss";
+/* The CHTH kit (navbar, footer, toasts and the components in components/ui) in Tailwind's
+   components layer, so a utility class on a component still wins, as it did before. */
+@import "../chth-kit/brand.css" layer(components);
 @import "tw-animate-css";
-@import "../styles/heroui-toast.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -10,7 +12,7 @@
    ========================================================================== */
 
 :root {
-  --background: 40 20% 98%;
+  --background: 0 0% 98%;
   --foreground: 240 10% 5%;
   --card: 0 0% 100%;
   --card-foreground: 240 10% 5%;
@@ -18,22 +20,22 @@
   --popover-foreground: 240 10% 5%;
   --primary: 240 10% 5%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 40 15% 93%;
+  --secondary: 240 5% 94%;
   --secondary-foreground: 240 10% 5%;
-  --muted: 40 12% 92%;
+  --muted: 240 5% 92%;
   --muted-foreground: 240 4% 36%;
-  --accent: 40 15% 90%;
+  --accent: 240 5% 90%;
   --accent-foreground: 240 10% 5%;
   --destructive: 0 84% 45%;
   --destructive-foreground: 0 0% 100%;
   --success: 152 69% 34%;
   --warning: 32 95% 40%;
   --info: 217 91% 50%;
-  --border: 40 10% 85%;
-  --input: 40 10% 85%;
+  --border: 240 6% 87%;
+  --input: 240 6% 87%;
   --ring: 240 10% 5%;
-  --brand: 24 95% 53%;
-  --radius: 0.5rem;
+  --brand: 240 4% 30%; /* the CHTH grey (chth-kit tokens.json, shop) */
+  --radius: var(--chth-radius-sm);
 }
 
 .dark {
@@ -59,7 +61,7 @@
   --border: 240 6% 18%;
   --input: 240 6% 18%;
   --ring: 0 0% 98%;
-  --brand: 24 95% 53%;
+  --brand: 240 5% 72%;
 }
 
 @theme inline {
@@ -90,7 +92,28 @@
   --color-ring: hsl(var(--ring));
   --color-brand: hsl(var(--brand));
 
-  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-strong: var(--chth-ease-out);
+
+  /* Tailwind's scales come from the CHTH kit's tokens (chth-kit/brand.css), so p-3, text-sm and
+     rounded-xl are the same sizes as on every CHTH site. Sizes Tailwind has and the kit doesn't
+     (text-3xl, rounded-4xl…) keep Tailwind's values. */
+  --spacing: var(--chth-space-4);
+  --text-xs: var(--chth-text-12);
+  --text-sm: var(--chth-text-14);
+  --text-base: var(--chth-text-16);
+  --text-lg: var(--chth-text-18);
+  --text-xl: var(--chth-text-20);
+  --text-2xl: var(--chth-text-24);
+  --text-4xl: var(--chth-text-36);
+  --radius-xs: var(--chth-radius-2);
+  --radius-sm: var(--chth-radius-4);
+  --radius-md: var(--chth-radius-6);
+  --radius-lg: var(--chth-radius-sm);
+  --radius-xl: var(--chth-radius-12);
+  --radius-2xl: var(--chth-radius-16);
+  --radius-3xl: var(--chth-radius-24);
+  --radius-4xl: var(--chth-radius-32);
+  --default-transition-duration: var(--chth-dur-150);
 
   /* Endless horizontal scroll: content is rendered twice, so sliding by half loops seamlessly. */
   --animate-marquee: marquee 40s linear infinite;
@@ -181,4 +204,59 @@ html[dir='rtl'] :is(.lucide-arrow-right, .lucide-chevron-right) { transform: sca
 /* Inside the Telegram Mini App: Telegram provides the chrome, so drop the site footer. */
 html[data-telegram='mini-app'] footer {
   display: none;
+}
+
+/* The CHTH banner stays fixed above the floating CHTH navbar (which moves down by --chth-banner-h). */
+.shop-banner .chth-banner { inset-inline: 0; position: fixed; top: 0; }
+
+
+/* ==========================================================================
+   The CHTH kit's components in the shop's palette and sizes
+   components/ui renders the kit's buttons, badges, fields and dialog; these hooks give them the
+   shop's colours (the shadcn tokens above), its compact heights and its 8px corners.
+   ========================================================================== */
+:root {
+  --chth-product-accent: hsl(var(--primary));
+  --chth-product-accent-hover: hsl(var(--primary) / 0.9);
+  --chth-product-on-accent: hsl(var(--primary-foreground));
+  --chth-success: hsl(var(--success));
+  --chth-warning: hsl(var(--warning));
+  --chth-danger: hsl(var(--destructive));
+  --chth-telegram: hsl(var(--info));
+  --chth-field-line: hsl(var(--input));
+  --chth-field-bg: hsl(var(--background));
+  --chth-field-focus: hsl(var(--ring));
+  --chth-field-radius: var(--radius);
+  --chth-field-font: var(--chth-text-14);
+  --chth-field-h: var(--chth-space-36);
+  --chth-btn-radius: var(--radius);
+  --chth-dialog-radius: var(--chth-radius-16);
+}
+@media (pointer: coarse) { :root { --chth-field-font: var(--chth-text-16); } }
+@layer components {
+  .chth-btn { font-weight: 600; gap: var(--chth-space-6); }
+  .chth-btn--md { --chth-btn-h: var(--chth-space-36); }
+  .chth-btn--lg { --chth-btn-h: var(--chth-space-44); font-size: var(--chth-text-14); }
+  .chth-btn--sm { font-size: var(--chth-text-12); }
+  .chth-btn--primary { box-shadow: var(--chth-shadow-sm); }
+  .chth-btn--secondary { background: hsl(var(--secondary)); border-color: transparent; color: hsl(var(--secondary-foreground)); }
+  .chth-btn--outline { background: hsl(var(--background)); border-color: hsl(var(--border)); color: hsl(var(--foreground)); }
+  .chth-btn--ghost { color: hsl(var(--muted-foreground)); }
+  .chth-btn--danger { color: hsl(var(--destructive-foreground)); }
+  /* The shop's own variants on the kit's button */
+  .chth-btn--danger-outline { background: hsl(var(--destructive) / 0.05); border-color: hsl(var(--destructive) / 0.3); color: hsl(var(--destructive)); }
+  .chth-btn--link { background: none; color: hsl(var(--foreground)); height: auto; padding: 0; text-underline-offset: 4px; }
+  @media (hover: hover) and (pointer: fine) {
+    .chth-btn--secondary:hover:not(:disabled) { background: hsl(var(--secondary) / 0.8); }
+    .chth-btn--outline:hover:not(:disabled), .chth-btn--ghost:hover:not(:disabled) { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
+    .chth-btn--danger-outline:hover:not(:disabled) { background: hsl(var(--destructive) / 0.1); }
+    .chth-btn--link:hover:not(:disabled) { background: none; text-decoration: underline; }
+  }
+  .chth-badge { font-size: var(--chth-text-11); }
+  .chth-badge--outline { background: transparent; box-shadow: inset 0 0 0 1px hsl(var(--border)); color: hsl(var(--foreground)); }
+  .chth-badge--neutral { color: hsl(var(--muted-foreground)); }
+  .chth-input, .chth-select, .chth-textarea { box-shadow: var(--chth-shadow-sm); color: hsl(var(--foreground)); padding-block: 0; }
+  .chth-textarea { padding-block: var(--chth-space-8); }
+  .chth-select { font-size: var(--chth-text-12); font-weight: 500; }
+  .chth-input::placeholder, .chth-textarea::placeholder { color: hsl(var(--muted-foreground) / 0.7); opacity: 1; }
 }

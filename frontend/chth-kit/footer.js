@@ -1,12 +1,12 @@
 // Generated from the CHTH kit (chth.hub/kit) by `npm run sync`. Do not edit here: edit the kit and sync.
-// The shared "Part of CHTH" footer: the data every site renders, and a plain-HTML version for
-// the server-rendered sites. React sites map footerModel() to their own markup and reuse the
-// .chth-footer styles from brand.css, so every footer looks the same. The footer doesn't list the
-// other CHTH sites and bots; it points to chth.wtf, which does.
+// The shared CHTH footer: a small call to CHTH (the mark, "Part of CHTH", a button to chth.wtf),
+// then one row of links: the site's source code and documentation, its API docs where it has
+// them, and the privacy policy and terms. footerHtml() is for the server-rendered sites; React
+// sites map footerModel() to the same markup and reuse the .chth-footer styles from brand.css.
 
-import { LOCALES, translator } from './locales.js';
+import { translator } from './locales.js';
 
-/** Where "more about CHTH" goes. */
+/** Where "Part of CHTH" goes. */
 export const CHTH_INFO_URL = 'https://chth.wtf';
 
 /** The minimal CHTH logo (from chth.shop/chth-logo-minimal.svg), drawn in currentColor. */
@@ -17,72 +17,75 @@ export const FOOTER_LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox=
   + '<g fill="currentColor"><circle cx="988" cy="464" r="22"/><circle cx="937" cy="503" r="20"/><circle cx="904" cy="558" r="19"/>'
   + '<circle cx="1668" cy="684" r="20"/><circle cx="1633" cy="731" r="19"/><circle cx="1593" cy="768" r="18"/></g></svg>';
 
+/**
+ * Each site's footer links. Privacy and terms default to the CHTH-wide pages on chth.wtf; a site
+ * with its own (the shop's marketplace terms) says so here. Leave a link out to hide it.
+ */
+export const SITE_LINKS = {
+  gym: { source: 'https://github.com/chethober/chth.gym', docs: 'https://github.com/chethober/chth.gym#readme' },
+  cafe: { source: 'https://github.com/chethober/chth.cafe', docs: 'https://github.com/chethober/chth.cafe#readme' },
+  shop: {
+    source: 'https://github.com/chethober/chth.shop', docs: 'https://github.com/chethober/chth.shop#readme',
+    api: 'https://chth.shop/api-docs', terms: 'https://chth.shop/terms',
+  },
+  wtf: { source: 'https://github.com/chethober' },
+};
+export const PRIVACY_URL = `${CHTH_INFO_URL}/privacy/`;
+export const TERMS_URL = `${CHTH_INFO_URL}/terms/`;
+
 export const FOOTER_STRINGS = {
   partOf: { en: 'Part of CHTH', fa: 'بخشی از CHTH', ar: 'جزء من CHTH', ru: 'Часть CHTH', es: 'Parte de CHTH' },
-  moreInfo: {
-    en: 'More about CHTH',
-    fa: 'دربارهٔ CHTH بیشتر بدانید',
-    ar: 'المزيد عن CHTH',
-    ru: 'Подробнее о CHTH',
-    es: 'Más sobre CHTH',
+  pitch: {
+    en: 'Small, free and open-source tools. Read the code, run your own, or help build the next one.',
+    fa: 'ابزارهای کوچک، رایگان و متن‌باز. کد را بخوان، نسخهٔ خودت را اجرا کن یا در ساختن بعدی کمک کن.',
+    ar: 'أدوات صغيرة ومجانية ومفتوحة المصدر. اقرأ الكود، شغّل نسختك، أو ساعد في بناء الأداة التالية.',
+    ru: 'Небольшие бесплатные инструменты с открытым кодом. Читайте код, запускайте у себя или помогите сделать следующий.',
+    es: 'Herramientas pequeñas, gratuitas y de código abierto. Lee el código, monta el tuyo o ayuda a crear el siguiente.',
   },
-  language: { en: 'Language', fa: 'زبان', ar: 'اللغة', ru: 'Язык', es: 'Idioma' },
+  explore: { en: 'Explore CHTH', fa: 'CHTH را ببین', ar: 'استكشف CHTH', ru: 'Всё о CHTH', es: 'Descubre CHTH' },
   source: { en: 'Source code', fa: 'کد منبع', ar: 'الكود المصدري', ru: 'Исходный код', es: 'Código fuente' },
-  openSource: {
-    en: 'Free and open source',
-    fa: 'رایگان و متن‌باز',
-    ar: 'مجاني ومفتوح المصدر',
-    ru: 'Бесплатно и с открытым кодом',
-    es: 'Gratis y de código abierto',
-  },
+  docs: { en: 'Docs', fa: 'مستندات', ar: 'التوثيق', ru: 'Документация', es: 'Documentación' },
+  api: { en: 'API docs', fa: 'مستندات API', ar: 'توثيق API', ru: 'API', es: 'Docs de la API' },
+  privacy: { en: 'Privacy', fa: 'حریم خصوصی', ar: 'الخصوصية', ru: 'Конфиденциальность', es: 'Privacidad' },
+  terms: { en: 'Terms', fa: 'شرایط استفاده', ar: 'الشروط', ru: 'Условия', es: 'Términos' },
 };
 
 /**
  * Everything a footer shows, already translated.
  * @param {string} locale
  * @param {string} self   this product's id, sent to chth.wtf as the link ref
- * @param {{ sourceUrl?: string }} [opts]
+ * @param {{ links?: Partial<Record<'source'|'docs'|'api'|'privacy'|'terms', string | null>>, legal?: boolean }} [opts]
+ *   `links` overrides SITE_LINKS (null hides one); `legal: false` leaves out privacy and terms
+ *   (a café's own menu, whose policies are the café's).
  */
 export function footerModel(locale, self, opts = {}) {
   const t = translator(FOOTER_STRINGS, locale);
+  const urls = { privacy: PRIVACY_URL, terms: TERMS_URL, ...SITE_LINKS[self], ...opts.links };
+  if (opts.legal === false) { urls.privacy = null; urls.terms = null; }
+  const order = ['source', 'docs', 'api', 'privacy', 'terms'];
   return {
     partOf: t('partOf'),
-    openSource: t('openSource'),
-    moreInfoLabel: t('moreInfo'),
+    pitch: t('pitch'),
+    explore: t('explore'),
     infoUrl: `${CHTH_INFO_URL}/?ref=${encodeURIComponent(self)}`,
     logoSvg: FOOTER_LOGO_SVG,
-    languageLabel: t('language'),
-    sourceLabel: t('source'),
-    sourceUrl: opts.sourceUrl ?? null,
-    locales: LOCALES.map((l) => ({ code: l.code, label: l.native, current: l.code === locale })),
+    links: order.filter((k) => urls[k]).map((k) => ({ id: k, label: t(k), href: urls[k], external: /^https?:/.test(urls[k]) })),
+    year: new Date().getFullYear(),
   };
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-/**
- * The footer as HTML. Language links go to `langHref(code)`; by default `?lang=<code>`, which
- * each server-rendered site turns into the chth_lang cookie.
- */
+/** The footer as HTML. */
 export function footerHtml(locale, self, opts = {}) {
   const m = footerModel(locale, self, opts);
-  const langHref = opts.langHref ?? ((code) => `?lang=${code}`);
-  const langs = m.locales.map((l) =>
-    `<a href="${esc(langHref(l.code))}" hreflang="${l.code}" lang="${l.code}"${l.current ? ' aria-current="true"' : ''}>${esc(l.label)}</a>`).join('');
+  const links = m.links.map((l) => `<a href="${esc(l.href)}">${esc(l.label)}</a>`).join('');
   return `<footer class="chth-footer" data-chth-footer>
-  <div class="chth-footer__inner">
-    <a class="chth-footer__brand" href="${esc(m.infoUrl)}">
-      <span class="chth-footer__mark" aria-hidden="true">${m.logoSvg}</span>
-      <span><strong>${esc(m.partOf)}</strong><br><small>${esc(m.openSource)}</small></span>
-    </a>
-    <div class="chth-footer__col">
-      <p class="chth-footer__more"><a href="${esc(m.infoUrl)}">${esc(m.moreInfoLabel)} · chth.wtf ↗</a></p>
-      ${m.sourceUrl ? `<p><a href="${esc(m.sourceUrl)}">${esc(m.sourceLabel)} ↗</a></p>` : ''}
-    </div>
-    <div class="chth-footer__col">
-      <h2>${esc(m.languageLabel)}</h2>
-      <div class="chth-footer__langs">${langs}</div>
-    </div>
+  <div class="chth-footer__cta">
+    <span class="chth-footer__mark" aria-hidden="true">${m.logoSvg}</span>
+    <p class="chth-footer__pitch"><strong>${esc(m.partOf)}</strong><span>${esc(m.pitch)}</span></p>
+    <a class="chth-footer__btn" href="${esc(m.infoUrl)}">${esc(m.explore)} <span aria-hidden="true">→</span></a>
   </div>
+  <nav class="chth-footer__links" aria-label="${esc(m.partOf)}">${links}<span class="chth-footer__year">© ${m.year} CHTH</span></nav>
 </footer>`;
 }

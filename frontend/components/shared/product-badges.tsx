@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Clock, Gem, Heart, Palette, Star } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { useHydrated } from '@/hooks/use-hydrated'
 import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'

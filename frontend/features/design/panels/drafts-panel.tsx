@@ -2,7 +2,7 @@
 
 import { useRef } from 'react'
 import { FileDown, FileUp, Save, Trash2 } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
 import { getGarment } from '../constants'
 import { exportDesignFile, readDesignFile } from '../files'

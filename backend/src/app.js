@@ -50,6 +50,9 @@ const internal = require('./controllers/internal.controller');
 const { requireHub } = require('./services/hub.service');
 app.get('/api/internal/stats', requireHub, internal.stats);
 app.post('/api/internal/orders/status', express.text({ type: '*/*', limit: '16kb' }), requireHub, internal.setOrderStatus);
+const announcement = require('./controllers/announcement.controller');
+app.post('/api/internal/announcement', express.text({ type: '*/*', limit: '16kb' }), requireHub, announcement.set);
+app.get('/api/announcement', announcement.get);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

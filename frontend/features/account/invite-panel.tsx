@@ -11,7 +11,7 @@ import { TELEGRAM_MINI_APP_LINK } from '@/lib/config'
 import { formatPrice } from '@/lib/format'
 import type { ReferralInfo } from '@/types'
 import { useTonAddress, useTonConnectUI } from '@tonconnect/ui-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { Input } from '@/components/ui/input'
 
 /** The user's referral link, and what it has earned. */

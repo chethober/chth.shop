@@ -3,15 +3,6 @@
 
 export const STRINGS: Record<string, [string, string, string, string]> = {
   // Header and footer
-  'CHTH home': ['خانهٔ CHTH', 'الرئيسية CHTH', 'Главная CHTH', 'Inicio de CHTH'],
-  'Design studio': ['استودیوی طراحی', 'استوديو التصميم', 'Студия дизайна', 'Estudio de diseño'],
-  'Artist collaboration': ['همکاری با هنرمندان', 'التعاون مع الفنانين', 'Сотрудничество с художниками', 'Colaboración con artistas'],
-  'Artists?': ['هنرمندی؟', 'فنان؟', 'Художник?', '¿Artista?'],
-  'Creators?': ['سازنده‌ای؟', 'صانع محتوى؟', 'Автор?', '¿Creador?'],
-  'Collab?': ['همکاری؟', 'تعاون؟', 'Коллаб?', '¿Colaboramos?'],
-  'We use cookies to improve your experience.': ['برای بهتر شدن تجربه‌ات از کوکی استفاده می‌کنیم.', 'نستخدم ملفات تعريف الارتباط لتحسين تجربتك.', 'Мы используем cookie, чтобы сайт работал лучше.', 'Usamos cookies para mejorar tu experiencia.'],
-  'OK': ['باشه', 'حسنًا', 'ОК', 'Vale'],
-  'Toggle theme': ['تغییر تم', 'تبديل السمة', 'Сменить тему', 'Cambiar tema'],
   'Cart': ['سبد خرید', 'السلة', 'Корзина', 'Carrito'],
   'Account': ['حساب', 'الحساب', 'Аккаунт', 'Cuenta'],
   'Shop': ['فروشگاه', 'المتجر', 'Магазин', 'Tienda'],

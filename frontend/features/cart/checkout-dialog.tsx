@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Bitcoin, CheckCircle2, MapPin } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { CopyButton } from '@/components/shared/copy-button'
 import { Button } from '@/components/ui/button'
 import {

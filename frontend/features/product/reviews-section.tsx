@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Star, Trash2 } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { Stars } from '@/components/shared/product-badges'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

@@ -92,7 +92,7 @@
      top, which is what 152px was */
   top: 50%;
   translate: 0 -50%;
-  display: flex; align-items: baseline; justify-content: center; gap: 2px;
+  display: flex; align-items: baseline; justify-content: center; gap: var(--chth-space-2);
   pointer-events: none;
 }
 

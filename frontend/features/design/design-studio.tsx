@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { FolderOpen, ImagePlus, Layers, Palette, Shirt, Sparkles, Type, type LucideIcon } from 'lucide-react'
-import { toast } from '@heroui/react'
+import { toast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
 import { BACKDROPS, DEFAULT_GARMENT_COLOR, EMPTY_DOC, getGarment, type DesignLayer } from './constants'
 import { captureThumbnail, composeTechSheet, download, slugify } from './files'

@@ -130,7 +130,7 @@ export function selectionFrameTexture(aspect: number) {
     const { canvas, ctx } = createCanvas(width, width * key, false)
     const line = 4
     const handle = 18
-    ctx.strokeStyle = '#F97316'
+    ctx.strokeStyle = '#A1A1AA'
     ctx.lineWidth = line
     ctx.strokeRect(line, line, canvas.width - line * 2, canvas.height - line * 2)
     ctx.fillStyle = '#FFFFFF'

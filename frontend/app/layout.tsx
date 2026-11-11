@@ -2,14 +2,13 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
-import { ToastProvider } from '@/components/layout/toast-provider'
+import { CookieNotice, SiteBanner } from '@/components/layout/site-notices'
 import { ReferralCapture } from '@/components/providers/referral-capture'
 import { TelegramMiniApp } from '@/components/providers/telegram-mini-app'
 import { TonProvider } from '@/components/providers/ton-provider'
 import { Suspense } from 'react'
 import { themeInitScript } from '@/lib/theme'
 import './globals.css'
-import '@/chth-kit/brand.css'
 import { dirOf } from '@/chth-kit/locales.js'
 import { LocaleProvider } from '@/lib/i18n'
 import { requestLocale } from '@/lib/i18n/server'
@@ -43,10 +42,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body suppressHydrationWarning className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
         <LocaleProvider initial={locale} hasCookie={hasCookie}>
           <TonProvider>
+            <SiteBanner />
             <SiteHeader />
             <main className="flex flex-1 flex-col">{children}</main>
             <SiteFooter />
-            <ToastProvider />
+            <CookieNotice />
             <Suspense>
               <ReferralCapture />
             </Suspense>
