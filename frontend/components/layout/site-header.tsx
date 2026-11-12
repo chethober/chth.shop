@@ -42,7 +42,11 @@ export function SiteHeader() {
       <div className="chth-nav__pill">
         <div className="chth-nav__start">
           <details className="chth-lang-menu chth-nav__lang">
-            <summary aria-label={`${lang.label}: ${lang.locales.find((l) => l.current)?.label ?? ''}`} title={lang.label} dangerouslySetInnerHTML={{ __html: lang.globeSvg }} />
+            {/* The kit's switcher (chth-kit/language-menu.js): the globe with the current code on a badge */}
+            <summary aria-label={`${lang.label}: ${lang.current?.label ?? ''}`} title={lang.label}>
+              <span className="contents" dangerouslySetInnerHTML={{ __html: lang.globeSvg }} />
+              {lang.badge ? <span className="chth-lang-menu__badge" aria-hidden="true">{lang.badge}</span> : null}
+            </summary>
             <nav className="chth-lang-menu__list" aria-label={lang.label}>
               {lang.locales.map((l) => (
                 <button
@@ -55,7 +59,11 @@ export function SiteHeader() {
                     setLocale(l.code)
                   }}
                 >
-                  {l.label}
+                  {/* Check (current only), flag, the language's own name, its code */}
+                  <span className="chth-lang-menu__check" dangerouslySetInnerHTML={{ __html: l.current ? lang.checkSvg : '' }} />
+                  <span className="contents" dangerouslySetInnerHTML={{ __html: l.flagSvg }} />
+                  <span className="chth-lang-menu__name">{l.label}</span>
+                  <span className="chth-lang-menu__code" aria-hidden="true">{l.short}</span>
                 </button>
               ))}
             </nav>
