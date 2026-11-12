@@ -33,7 +33,8 @@ export function SiteHeader() {
 
   const nav = navbarModel(locale, 'shop', { leadHref: isSignedIn ? '/design' : '/collab', account: { href: '/account' } })
   const theme = themeToggleModel(locale)
-  const lang = languageMenuModel(locale)
+  // The switcher's flags are synced from the kit into public/chth-flags
+  const lang = languageMenuModel(locale, { flagBase: '/chth-flags' })
   const current = (href: string) => (pathname.startsWith(href) ? 'page' : undefined)
   const count = hydrated ? cartCount : 0
 
@@ -61,7 +62,11 @@ export function SiteHeader() {
                 >
                   {/* Check (current only), flag, the language's own name, its code */}
                   <span className="chth-lang-menu__check" dangerouslySetInnerHTML={{ __html: l.current ? lang.checkSvg : '' }} />
-                  <span className="contents" dangerouslySetInnerHTML={{ __html: l.flagSvg }} />
+                  {l.flagSrc
+                    // A 20px SVG fetched only when the menu opens: next/image would add nothing
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img className="chth-flag" src={l.flagSrc} alt="" width={20} height={15} loading="lazy" decoding="async" />
+                    : <span className="chth-flag chth-flag--none" aria-hidden="true" />}
                   <span className="chth-lang-menu__name">{l.label}</span>
                   <span className="chth-lang-menu__code" aria-hidden="true">{l.short}</span>
                 </button>
