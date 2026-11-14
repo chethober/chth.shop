@@ -2,9 +2,10 @@ name: Release
 
 # Publishes the backend and frontend images to GitHub Container Registry:
 #   ghcr.io/<owner>/chth-backend   ghcr.io/<owner>/chth-frontend
-# Pushes to main are tagged `edge` + `sha-<short>`; version tags (v1.2.3) are tagged
-# `1.2.3`, `1.2`, `latest`, and also get a GitHub release with generated notes.
-# Either way the notes are posted to the CHTH updates channel through the hub.
+# Every push to main that changes the shop is a release: vX.Y.Z, the patch number raised by each
+# (raise "version" in backend/package.json to start a new minor or major). Its images are tagged
+# `1.2.3`, `latest`, `edge` and `sha-<short>`, and it gets a GitHub release, which the CHTH hub
+# posts to the updates channel. A version tag pushed by hand (v1.2.3) is published the same way.
 
 on:
   push:
@@ -21,7 +22,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      release: ${{ steps.plan.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the version comes from the tags, the notes from the commits since
+      - name: Work out the version
+        id: plan
+        if: github.ref == 'refs/heads/main'
+        env:
+          RELEASE_PACKAGE: backend/package.json
+          RELEASE_EXCLUDE: .specify
+        run: node .github/scripts/release.mjs plan
+
   images:
+    needs: version
     name: Publish ${{ matrix.service }} image
     runs-on: ubuntu-latest
     strategy:
@@ -52,6 +72,8 @@ jobs:
             type=sha,format=short
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ needs.version.outputs.version || 'edge' }},enable=${{ needs.version.outputs.release == 'true' }}
+            type=raw,value=latest,enable=${{ needs.version.outputs.release == 'true' }}
           labels: |
             org.opencontainers.image.licenses=MIT
 
@@ -78,24 +100,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag
 
-  # A push to main is announced as <backend version>-<date>.<commit>, a version tag by its name.
-  announce:
-    name: Announce release
-    needs: images
+  release:
+    name: Release
+    if: needs.version.outputs.release == 'true'
+    needs: [version, images]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # the release post lists the commits since the last push or tag
-
-      - name: Announce release
+          fetch-depth: 0
+      - name: Publish GitHub release
         env:
-          CHTH_HUB_URL: ${{ secrets.CHTH_HUB_URL }}
-          CHTH_RELEASE_SECRET: ${{ secrets.CHTH_RELEASE_SECRET }}
-          RELEASE_PRODUCT: shop
+          GH_TOKEN: ${{ github.token }}
           RELEASE_PACKAGE: backend/package.json
-          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
-          RELEASE_BASE: ${{ github.event.before }}
           RELEASE_EXCLUDE: .specify
-          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/${{ startsWith(github.ref, 'refs/tags/') && format('releases/tag/{0}', github.ref_name) || format('commits/{0}', github.sha) }}
-        run: node .github/scripts/announce-release.mjs
+          RELEASE_TITLE: CHTH Shop
+        run: node .github/scripts/release.mjs publish
