@@ -4,6 +4,7 @@ name: Release
 #   ghcr.io/<owner>/chth-backend   ghcr.io/<owner>/chth-frontend
 # Pushes to main are tagged `edge` + `sha-<short>`; version tags (v1.2.3) are tagged
 # `1.2.3`, `1.2`, `latest`, and also get a GitHub release with generated notes.
+# Either way the notes are posted to the CHTH updates channel through the hub.
 
 on:
   push:
@@ -76,3 +77,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --generate-notes --verify-tag
+
+  # A push to main is announced as <backend version>-<date>.<commit>, a version tag by its name.
+  announce:
+    name: Announce release
+    needs: images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the release post lists the commits since the last push or tag
+
+      - name: Announce release
+        env:
+          CHTH_HUB_URL: ${{ secrets.CHTH_HUB_URL }}
+          CHTH_RELEASE_SECRET: ${{ secrets.CHTH_RELEASE_SECRET }}
+          RELEASE_PRODUCT: shop
+          RELEASE_PACKAGE: backend/package.json
+          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          RELEASE_BASE: ${{ github.event.before }}
+          RELEASE_EXCLUDE: .specify
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/${{ startsWith(github.ref, 'refs/tags/') && format('releases/tag/{0}', github.ref_name) || format('commits/{0}', github.sha) }}
+        run: node .github/scripts/announce-release.mjs
