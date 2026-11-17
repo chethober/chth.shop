@@ -25,8 +25,9 @@ export function formatRelativeTime(date: string | Date): string {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
 
   if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`
+  const ago = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'} ago`
+  if (seconds < 3600) return ago(Math.floor(seconds / 60), 'minute')
+  if (seconds < 86400) return ago(Math.floor(seconds / 3600), 'hour')
+  if (seconds < 604800) return ago(Math.floor(seconds / 86400), 'day')
   return formatDate(date)
 }

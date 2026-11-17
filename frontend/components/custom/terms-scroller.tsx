@@ -135,9 +135,9 @@ export const TermsScroller = ({
               index={index}
               setActiveTerm={setActiveTerm}
             >
-              <h3 className="text-xl font-bold tracking-tight text-foreground lg:text-3xl">
+              <h2 className="text-xl font-bold tracking-tight text-foreground lg:text-3xl">
                 {term.title}
-              </h3>
+              </h2>
               <div className="text-muted-foreground leading-relaxed space-y-4 text-sm sm:text-base">
                 {term.content}
               </div>

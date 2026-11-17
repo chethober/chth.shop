@@ -20,10 +20,11 @@ export function FilterChip({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+        // The small button's height and shapes: filled when on, outlined when off.
+        'inline-flex h-9 cursor-pointer items-center rounded-full border px-4 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40',
         active
-          ? 'border-primary bg-primary text-primary-foreground'
-          : 'border-border bg-background text-muted-foreground hover:border-foreground/30 hover:text-foreground'
+          ? 'border-transparent bg-primary text-primary-foreground'
+          : 'border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
       )}
     >
       {children}

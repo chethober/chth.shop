@@ -181,7 +181,7 @@ export const TERMS: TermItem[] = [
     title: '10. Warranties & Disclaimers',
     content: (
       <div className="space-y-3">
-        <p className="uppercase text-xs font-mono tracking-wider text-muted-foreground font-semibold">
+        <p className="text-label text-muted-foreground">
           AS-IS Disclaimer
         </p>
         <p>

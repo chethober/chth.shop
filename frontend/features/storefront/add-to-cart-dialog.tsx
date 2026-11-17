@@ -15,6 +15,7 @@ import { colorName, getProductTypeLabel } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import useCartStore from '@/store/cart-store'
 import type { Product } from '@/types'
+import { stepperTrack } from '@/components/shared/segmented'
 
 interface AddToCartDialogProps {
   product: Product | null
@@ -163,7 +164,7 @@ export function PurchaseOptions({ product, onAdded }: { product: Product; onAdde
 
       <div className="flex items-center justify-between">
         <Label>Quantity</Label>
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+        <div className={stepperTrack}>
           <Button variant="ghost" size="icon-sm" className="size-7" onClick={() => setQuantity((q) => q - 1)} disabled={quantity <= 1} aria-label="Decrease quantity">
             <Minus />
           </Button>

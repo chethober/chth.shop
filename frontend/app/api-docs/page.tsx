@@ -62,12 +62,12 @@ export default function ApiDocsPage() {
           The CHTH REST API serves the storefront, artist stores, cart and checkout. All endpoints live under{' '}
           <code className="font-mono text-foreground">{API_BASE_PATH}</code> on this site and take and return JSON.
         </p>
-        <nav aria-label="API sections" className="flex flex-wrap gap-1.5 pt-1">
+        <nav aria-label="API sections" className="flex flex-wrap gap-2 pt-1">
           {ENDPOINT_GROUPS.map((group) => (
             <a
               key={group.id}
               href={`#${group.id}`}
-              className="rounded-full border border-border px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex h-9 items-center rounded-full border border-border px-4 text-[13px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               {group.title}
             </a>
@@ -76,7 +76,7 @@ export default function ApiDocsPage() {
       </header>
 
       <section className="grid gap-6 border-b border-border/40 py-8 md:grid-cols-2">
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <h2 className="text-base font-semibold">Responses</h2>
           <CodeBlock>{ENVELOPE}</CodeBlock>
           <ul className="space-y-1 text-sm">
@@ -88,7 +88,7 @@ export default function ApiDocsPage() {
             ))}
           </ul>
         </div>
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <h2 className="text-base font-semibold">Authentication</h2>
           <p className="text-sm text-muted-foreground">
             Sign in with Google, X or Telegram to get a JWT that lasts 7 days, then send it on protected routes:

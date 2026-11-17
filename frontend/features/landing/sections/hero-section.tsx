@@ -13,7 +13,7 @@ export function HeroSection({ onDesign, onMeetArtists }: { onDesign: () => void;
       </Reveal>
 
       <Reveal>
-        <SectionTitle as="h1" className="sm:text-6xl xl:text-7xl">
+        <SectionTitle as="h1" className="text-5xl sm:text-6xl xl:text-7xl">
           Merch without compromise.
         </SectionTitle>
       </Reveal>

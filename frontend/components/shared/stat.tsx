@@ -13,7 +13,7 @@ interface StatProps {
   className?: string
 }
 
-/** A labelled number: uppercase caption, the figure, an optional hint. Used by every account panel. */
+/** A labelled number: a label, the figure, an optional hint. Used by every account panel. */
 export function Stat({ label, value, hint, icon: Icon, variant = 'card', onClick, className }: StatProps) {
   const Comp = onClick ? 'button' : 'div'
   return (
@@ -29,7 +29,7 @@ export function Stat({ label, value, hint, icon: Icon, variant = 'card', onClick
     >
       {/* Labels and hints wrap rather than truncate: three tiles share a phone's width. */}
       <span className="flex items-start justify-between gap-2 text-muted-foreground">
-        <span className="text-[10px] font-semibold uppercase leading-tight tracking-wide sm:text-[11px] sm:tracking-wider">{label}</span>
+        <span className="text-label">{label}</span>
         {Icon && <Icon className="hidden size-3.5 shrink-0 sm:block" />}
       </span>
       <span className="mt-1 block truncate text-lg font-extrabold tabular-nums tracking-tight text-foreground sm:text-2xl">{value}</span>

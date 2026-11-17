@@ -15,6 +15,8 @@ import { Spinner } from '@/components/ui/spinner'
 import { formatPrice } from '@/lib/format'
 import { PRODUCT_TYPES, getProductTypeLabel } from '@/lib/products'
 import type { Product } from '@/types'
+import { cn } from '@/lib/utils'
+import { tile } from '@/components/shared/tile'
 
 type SortKey = 'newest' | 'price-asc' | 'price-desc' | 'name'
 
@@ -67,10 +69,10 @@ function ProductTile({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.18, delay: index * 0.02 }}
-      className="group relative overflow-hidden rounded-xl border border-border bg-background transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm"
+      className={cn(tile.root, 'relative')}
     >
       <button type="button" onClick={onEdit} aria-label={`Edit ${product.name}`} className="block aspect-square w-full cursor-pointer overflow-hidden">
-        <ProductImage product={product} className="size-full transition-transform duration-300 group-hover:scale-105" />
+        <ProductImage product={product} className={cn('size-full', tile.media)} />
       </button>
 
       <span className="absolute left-2 top-2 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
@@ -204,7 +206,7 @@ export function StoreProducts({ isStoreActive, products, onEdit, onDelete, onSet
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           <FilterChip active={typeFilter === 'all'} count={products.length} onClick={() => setTypeFilter('all')}>
             All
           </FilterChip>

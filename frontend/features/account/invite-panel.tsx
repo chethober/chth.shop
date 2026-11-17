@@ -58,7 +58,7 @@ export function InvitePanel() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 rounded-xl bg-muted/50 p-3">
             <code className="min-w-0 flex-1 truncate text-sm text-foreground">{link}</code>
             <CopyButton value={link} label="Copy invite link" />
           </div>

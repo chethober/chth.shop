@@ -20,6 +20,7 @@ import { describeOptions, getProductImageUrl, getProductTypeLabel } from '@/lib/
 import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
 import type { Order, OrderStatus } from '@/types'
+import { segmented } from '@/components/shared/segmented'
 
 const STATUSES = Object.keys(ORDER_STATUS) as OrderStatus[]
 
@@ -64,16 +65,13 @@ export function AdminOrdersView() {
   }
 
   const sectionTabs = (
-    <div className="inline-flex rounded-lg border border-border bg-muted/70 p-0.5">
+    <div className={segmented.root}>
       {(['orders', 'payouts'] as const).map((option) => (
         <button
           key={option}
           type="button"
           onClick={() => setSection(option)}
-          className={cn(
-            'cursor-pointer rounded-md px-3 py-1 text-xs font-semibold capitalize',
-            section === option ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
-          )}
+          className={cn(segmented.item(section === option), 'capitalize')}
         >
           {option}
         </button>
@@ -109,7 +107,7 @@ export function AdminOrdersView() {
         }
       />
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         <FilterChip active={!filter} onClick={() => setFilter(undefined)}>
           All
         </FilterChip>

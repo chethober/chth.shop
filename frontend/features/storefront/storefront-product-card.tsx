@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { formatPrice } from '@/lib/format'
 import { getProductTypeLabel, STORE_KIND_LABELS } from '@/lib/products'
 import type { Product } from '@/types'
+import { cn } from '@/lib/utils'
+import { tile } from '@/components/shared/tile'
 
 interface StorefrontProductCardProps {
   product: Product
@@ -24,24 +26,25 @@ export function StorefrontProductCard({ product, index, showStore = false, onSel
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: Math.min(index, 12) * 0.04 }}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm"
+      className={cn(tile.root, 'flex flex-col')}
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
         <Link href={`/p/${product.id}`} aria-label={product.name} className="block size-full">
-          <ProductImage product={product} className="size-full transition-transform duration-300 group-hover:scale-105" />
+          <ProductImage product={product} className={cn('size-full', tile.media)} />
         </Link>
-        <ProductBadges product={product} className="pointer-events-none absolute left-2 top-2 right-11" />
         <WishlistButton productId={product.id} className="absolute right-2 top-2" />
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <h3 className="truncate text-sm font-semibold text-foreground" title={product.name}>
-          <Link href={`/p/${product.id}`} className="hover:underline">
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        {/* Badges sit with the text, never over the photograph. */}
+        <ProductBadges product={product} className="mb-1 min-h-5" />
+        <h3 className="truncate text-base font-semibold text-foreground" title={product.name}>
+          <Link href={`/p/${product.id}`} className="block py-0.5 hover:underline">
             {product.name}
           </Link>
         </h3>
         {product.ratingCount > 0 && <Stars value={product.ratingAvg} count={product.ratingCount} />}
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="line-clamp-2 text-xs text-muted-foreground">
           {getProductTypeLabel(product.type)}
           {showStore && product.store && (
             <>

@@ -30,7 +30,7 @@ export function Section({ title, aside, children }: { title: string; aside?: Rea
 export function FieldLabel({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{children}</span>
+      <span className="text-label text-muted-foreground">{children}</span>
       {aside && <span className="font-mono text-[11px] tabular-nums text-foreground">{aside}</span>}
     </div>
   )

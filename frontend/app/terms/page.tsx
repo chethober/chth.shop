@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <PageContainer className="max-w-7xl">
+    <PageContainer>
       <div className="flex flex-wrap items-center gap-2 border-b border-border/40 pb-6">
         <Badge variant="success">
           <span className="size-1.5 animate-pulse rounded-full bg-current" />

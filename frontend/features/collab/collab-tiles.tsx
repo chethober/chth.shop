@@ -16,7 +16,7 @@ export function EarningsTile() {
 
   return (
     <div className="flex h-full flex-col items-center justify-between gap-4">
-      <p className="self-start text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="self-start text-label text-muted-foreground">
         Your monthly payout
       </p>
       <Wheel
@@ -27,7 +27,7 @@ export function EarningsTile() {
         size={200}
       />
       <p className="flex items-baseline gap-1">
-        <span className="text-4xl font-extrabold tabular-nums tracking-tight text-brand sm:text-5xl">
+        <span className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground">
           ${earnings.toLocaleString()}
         </span>
         <span className="text-xs text-muted-foreground">/mo</span>
@@ -44,7 +44,7 @@ export function SplitTile() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Every sale</p>
+      <p className="text-label text-muted-foreground">Every sale</p>
 
       <div role="tablist" aria-label="Sale split" className="flex h-12 gap-1 rounded-xl bg-muted p-1">
         {(
@@ -151,7 +151,7 @@ export function FactTile({ icon: Icon, value, label, detail }: FactTileProps) {
           ) : (
             <>
               <span className="block text-3xl font-extrabold tracking-tight text-foreground">{value}</span>
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="block text-label text-muted-foreground">
                 {label}
               </span>
             </>

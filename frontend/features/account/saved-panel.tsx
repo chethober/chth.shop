@@ -95,7 +95,7 @@ export function SavedPanel() {
                 <li key={store.id}>
                   <Link
                     href={`/${store.username}`}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:bg-muted"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border px-4 text-[13px] font-semibold text-foreground hover:bg-muted"
                   >
                     <Store className="size-3.5" />
                     {store.storeName || `@${store.username}`}

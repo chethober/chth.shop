@@ -8,6 +8,7 @@ import { formatPrice } from '@/lib/format'
 import { describeOptions, getProductTypeLabel } from '@/lib/products'
 import type { CartItem } from '@/types'
 import { useT } from '@/lib/i18n'
+import { stepperTrack } from '@/components/shared/segmented'
 
 interface CartLineItemProps {
   item: CartItem
@@ -44,7 +45,7 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
         <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{formatPrice(price)}</p>
       </div>
 
-      <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
+      <div className={stepperTrack}>
         <Button
           variant="ghost"
           size="icon-sm"

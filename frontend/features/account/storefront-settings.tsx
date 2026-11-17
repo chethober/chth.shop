@@ -252,7 +252,7 @@ export function StorefrontSettings({
       </div>
 
       <div className="lg:sticky lg:top-24 lg:col-span-2">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Live preview</p>
+        <p className="mb-2 text-label text-muted-foreground">Live preview</p>
         <StorefrontPreview username={username} form={form} />
       </div>
     </div>

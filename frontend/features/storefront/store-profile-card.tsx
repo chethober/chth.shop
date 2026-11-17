@@ -60,7 +60,7 @@ export function StoreProfileCard({ store, productCount }: { store: Store; produc
 
           <div className="flex-1 space-y-5 lg:pt-12">
             <div className="space-y-1.5">
-              <h2 className="text-sm font-bold text-foreground">About</h2>
+              <p className="text-label text-muted-foreground">About</p>
               <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                 {store.bio ||
                   (store.kind === 'MERCHANT'
