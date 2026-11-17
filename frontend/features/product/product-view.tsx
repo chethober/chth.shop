@@ -119,8 +119,8 @@ export function ProductView({ id }: { id: string }) {
           </Card>
 
           {product.nftBacked && (
-            <div className="flex gap-3 rounded-xl border border-[#0098EA]/30 bg-[#0098EA]/5 p-4 text-xs">
-              <Gem className="size-5 shrink-0 text-[#0098EA]" />
+            <div className="flex gap-3 rounded-xl border border-ton/30 bg-ton/5 p-4 text-xs">
+              <Gem className="size-5 shrink-0 text-ton" />
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">Comes with an NFT certificate</p>
                 <p className="text-muted-foreground">

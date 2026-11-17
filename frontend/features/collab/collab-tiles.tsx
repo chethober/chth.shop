@@ -68,10 +68,10 @@ export function SplitTile() {
               <motion.span
                 layoutId="split-active"
                 transition={{ type: 'spring', duration: 0.35, bounce: 0.1 }}
-                className={cn('absolute inset-0 rounded-lg', id === 'you' ? 'bg-brand' : 'bg-foreground')}
+                className={cn('absolute inset-0 rounded-lg', id === 'you' ? 'bg-primary' : 'bg-foreground')}
               />
             )}
-            <span className={cn('relative', side === id && (id === 'you' ? 'text-white' : 'text-background'))}>{label}</span>
+            <span className={cn('relative', side === id && (id === 'you' ? 'text-primary-foreground' : 'text-background'))}>{label}</span>
           </button>
         ))}
       </div>
@@ -88,7 +88,7 @@ export function SplitTile() {
             {side === 'you' ? (
               <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Wallet className="size-4 text-brand" />
-                Paid monthly · Bank, Stripe or crypto
+                Paid monthly · USDT on TON
               </p>
             ) : (
               <ul className="flex flex-wrap gap-1.5">

@@ -72,7 +72,7 @@ export function PaymentOptions({ orderId, className }: { orderId: string; classN
           <span
             className={cn(
               'flex size-9 shrink-0 items-center justify-center rounded-lg',
-              id === 'ton' ? 'bg-[#0098EA]/15 text-[#0098EA]' : id === 'usdt' ? 'bg-[#26A17B]/15 text-[#26A17B]' : 'bg-brand/15 text-brand'
+              id === 'ton' ? 'bg-ton/15 text-ton' : id === 'usdt' ? 'bg-success/15 text-success' : 'bg-brand/15 text-brand'
             )}
           >
             {busy && chosen === id ? <Spinner /> : <Icon className="size-4" />}

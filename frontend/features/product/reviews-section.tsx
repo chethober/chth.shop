@@ -86,7 +86,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
                   onClick={() => setRating(n)}
                   className="cursor-pointer"
                 >
-                  <Star className={cn('size-5', n <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50')} />
+                  <Star className={cn('size-5', n <= rating ? 'fill-warning text-warning' : 'text-muted-foreground/50')} />
                 </button>
               ))}
             </div>

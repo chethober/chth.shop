@@ -62,7 +62,7 @@ export function ProductBadges({ product, className }: { product: Product; classN
         </span>
       )}
       {product.nftBacked && (
-        <span className={cn(pill, 'border-[#0098EA]/40 text-[#0098EA]')}>
+        <span className={cn(pill, 'border-ton/40 text-ton')}>
           <Gem className="size-3" />
           NFT certificate
         </span>
@@ -82,7 +82,7 @@ export function Stars({ value, count, className }: { value: number; count?: numb
     <span className={cn('inline-flex items-center gap-1 text-xs text-muted-foreground', className)} aria-label={`${value} out of 5 stars`}>
       <span className="inline-flex">
         {[1, 2, 3, 4, 5].map((n) => (
-          <Star key={n} className={cn('size-3', n <= Math.round(value) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/40')} />
+          <Star key={n} className={cn('size-3', n <= Math.round(value) ? 'fill-warning text-warning' : 'text-muted-foreground/40')} />
         ))}
       </span>
       {count !== undefined && <span className="tabular-nums">({count})</span>}
@@ -127,7 +127,7 @@ export function WishlistButton({ productId, className }: { productId: string; cl
         className
       )}
     >
-      <Heart className={cn('size-4', saved ? 'fill-rose-500 text-rose-500' : 'text-muted-foreground')} />
+      <Heart className={cn('size-4', saved ? 'fill-destructive text-destructive' : 'text-muted-foreground')} />
     </button>
   )
 }

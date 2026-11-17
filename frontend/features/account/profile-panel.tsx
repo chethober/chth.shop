@@ -217,7 +217,7 @@ export function ProfilePanel({ onDeleteAccount }: { onDeleteAccount: () => Promi
               </p>
             </div>
           </div>
-          <InlineConfirm corner={12} label="Delete Account" onConfirm={onDeleteAccount} />
+          <InlineConfirm corner={12} label="Delete account" onConfirm={onDeleteAccount} />
         </div>
       </Card>
     </div>

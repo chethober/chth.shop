@@ -123,7 +123,11 @@ export function AdminOrdersView() {
       {!orders ? (
         <LoadingState />
       ) : orders.length === 0 ? (
-        <EmptyState icon={Package} title="No orders here" />
+        <EmptyState
+          icon={Package}
+          title={filter ? `No ${ORDER_STATUS[filter].label.toLowerCase()} orders` : 'No orders yet'}
+          description={filter === 'CONFIRMED' ? 'Paid orders land here, ready to print.' : 'Try another status.'}
+        />
       ) : (
         <ul className="space-y-3">
           {orders.map((order) => (

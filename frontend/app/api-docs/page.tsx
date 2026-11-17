@@ -57,7 +57,7 @@ export default function ApiDocsPage() {
   return (
     <PageContainer>
       <header className="space-y-3 border-b border-border/40 pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">API Reference</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">API Reference</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           The CHTH REST API serves the storefront, artist stores, cart and checkout. All endpoints live under{' '}
           <code className="font-mono text-foreground">{API_BASE_PATH}</code> on this site and take and return JSON.

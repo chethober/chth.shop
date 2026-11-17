@@ -79,7 +79,16 @@ export function SavedPanel() {
         </CardHeader>
         <CardContent>
           {stores.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted-foreground">You don&apos;t follow any stores yet.</p>
+            <EmptyState
+              icon={Store}
+              title="Not following anyone yet"
+              description="Follow a store from its page to see its new drops here."
+              action={
+                <Button asChild size="sm">
+                  <Link href="/shop">Find stores</Link>
+                </Button>
+              }
+            />
           ) : (
             <ul className="flex flex-wrap gap-2">
               {stores.map((store) => (

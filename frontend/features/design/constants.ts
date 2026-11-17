@@ -267,9 +267,10 @@ export function getFabric(id: string) {
 }
 
 export const FONTS = [
-  { id: 'geist', label: 'Geist', family: "Geist, Inter, -apple-system, 'Segoe UI', sans-serif" },
+  // id 'geist' is kept for saved designs; it renders in the site's own sans (Plus Jakarta Sans).
+  { id: 'geist', label: 'Sans', family: "'Plus Jakarta Sans', Inter, -apple-system, 'Segoe UI', sans-serif" },
   { id: 'serif', label: 'Serif', family: "Georgia, 'Times New Roman', serif" },
-  { id: 'mono', label: 'Mono', family: "'Geist Mono', ui-monospace, Menlo, monospace" },
+  { id: 'mono', label: 'Mono', family: "'JetBrains Mono', ui-monospace, Menlo, monospace" },
   { id: 'impact', label: 'Impact', family: "Impact, 'Arial Narrow Bold', sans-serif" },
   { id: 'script', label: 'Script', family: "'Brush Script MT', 'Segoe Script', cursive" },
 ]

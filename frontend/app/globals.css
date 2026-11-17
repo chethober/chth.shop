@@ -35,6 +35,8 @@
   --input: 240 6% 87%;
   --ring: 240 10% 5%;
   --brand: 240 4% 30%; /* the CHTH grey (chth-kit tokens.json, shop) */
+  --ton: 201 100% 46%; /* TON blue, for TON payments and NFT certificates */
+  --telegram: 198 73% 50%;
   --radius: var(--chth-radius-sm);
 }
 
@@ -62,11 +64,15 @@
   --input: 240 6% 18%;
   --ring: 0 0% 98%;
   --brand: 240 5% 72%;
+  --ton: 201 100% 56%;
+  --telegram: 198 73% 58%;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist), "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  /* The kit's families (loaded in app/layout.tsx): font-sans, font-display and font-mono. */
+  --font-sans: var(--chth-font-sans);
+  --font-display: var(--chth-font-display);
+  --font-mono: var(--chth-font-mono);
 
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -91,6 +97,8 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   --color-brand: hsl(var(--brand));
+  --color-ton: hsl(var(--ton));
+  --color-telegram: hsl(var(--telegram));
 
   --ease-out-strong: var(--chth-ease-out);
 
@@ -176,6 +184,14 @@
     font: inherit;
   }
 
+  /* Titles use the kit's display face, as its dialogs, toasts and footer do. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--chth-font-display);
+    letter-spacing: -0.02em;
+  }
+
   ::selection {
     background-color: hsl(var(--foreground));
     color: hsl(var(--background));
@@ -193,8 +209,17 @@
   }
 }
 
-/* Persian and Arabic: the CHTH RTL font. */
-html[dir='rtl'] body { font-family: var(--chth-font-rtl); }
+/* The kit's font tokens, pointed at the self-hosted files (next/font names them differently). */
+:root {
+  --chth-font-sans: var(--font-chth-sans), 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --chth-font-display: var(--font-chth-display), 'Outfit', var(--font-chth-sans), system-ui, sans-serif;
+  --chth-font-mono: var(--font-chth-mono), 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+/* Persian and Arabic: the CHTH RTL font, for text and titles alike. */
+:root:lang(fa), :root:lang(ar), html[dir='rtl'] {
+  --chth-font-sans: var(--chth-font-rtl);
+  --chth-font-display: var(--chth-font-rtl);
+}
 .chth-footer { --chth-line: hsl(var(--border)); }
 /* The landing keeps text beside the 3D tee: sections stay where they are, text reads right to left. */
 html[dir='rtl'] .landing-grid { direction: ltr; }
@@ -222,7 +247,7 @@ html[data-telegram='mini-app'] footer {
   --chth-success: hsl(var(--success));
   --chth-warning: hsl(var(--warning));
   --chth-danger: hsl(var(--destructive));
-  --chth-telegram: hsl(var(--info));
+  --chth-telegram: hsl(var(--telegram));
   --chth-field-line: hsl(var(--input));
   --chth-field-bg: hsl(var(--background));
   --chth-field-focus: hsl(var(--ring));

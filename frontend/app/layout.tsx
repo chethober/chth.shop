@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { JetBrains_Mono, Outfit, Plus_Jakarta_Sans } from 'next/font/google'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
 import { CookieNotice, SiteBanner } from '@/components/layout/site-notices'
@@ -13,8 +13,11 @@ import { dirOf } from '@/chth-kit/locales.js'
 import { LocaleProvider } from '@/lib/i18n'
 import { requestLocale } from '@/lib/i18n/server'
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-geist', display: 'swap' })
-const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono', display: 'swap' })
+// The CHTH kit's type: Plus Jakarta Sans for text, Outfit for titles, JetBrains Mono for code
+// (chth-kit/tokens.css). Self-hosted here so the navbar, footer, dialogs and pages all match.
+const sans = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-chth-sans', display: 'swap' })
+const display = Outfit({ subsets: ['latin'], variable: '--font-chth-display', display: 'swap' })
+const mono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-chth-mono', display: 'swap' })
 
 export const metadata: Metadata = {
   title: { default: 'CHTH', template: '%s | CHTH' },
@@ -26,13 +29,17 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#0f172a',
+  // The CHTH paper and ink (chth-kit/tokens.css), matching the page behind the browser chrome.
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#fafafa' },
+    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+  ],
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, hasCookie } = await requestLocale()
   return (
-    <html lang={locale} dir={dirOf(locale)} data-chth-product="shop" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
+    <html lang={locale} dir={dirOf(locale)} data-chth-product="shop" suppressHydrationWarning className={`${sans.variable} ${display.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         {/* Persian and Arabic text uses Vazirmatn (see .chth-* rules in globals.css). */}

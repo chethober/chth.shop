@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { CircleDollarSign, Package, TrendingUp } from 'lucide-react'
 import { EmptyState } from '@/components/shared/empty-state'
 import { OrderStatusBadge } from '@/components/shared/order-status-badge'
+import { Stat } from '@/components/shared/stat'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import api from '@/lib/api'
 import { formatPrice, formatRelativeTime } from '@/lib/format'
@@ -45,15 +46,9 @@ export function SalesPanel({ onEditPayoutSettings }: { onEditPayoutSettings?: ()
   return (
     <div className="space-y-4">
       <PayoutsCard onEditSettings={onEditPayoutSettings} />
-      <div className="grid gap-3 sm:grid-cols-3">
-        {stats.map(({ label, value, icon: Icon }) => (
-          <Card key={label} className="p-4">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">{label}</span>
-              <Icon className="size-3.5 text-brand" />
-            </div>
-            <p className="mt-1 text-2xl font-extrabold tabular-nums tracking-tight text-foreground">{value}</p>
-          </Card>
+      <div className="grid grid-cols-3 gap-3">
+        {stats.map((stat) => (
+          <Stat key={stat.label} {...stat} />
         ))}
       </div>
 

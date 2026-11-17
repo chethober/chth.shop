@@ -39,7 +39,9 @@ export function SiteHeader() {
   const count = hydrated ? cartCount : 0
 
   return (
-    <header className="chth-nav chth-nav--overlay" data-chth-nav>
+    // The kit's script measures the pill (style) and labels the typed word (aria-label) as soon as
+    // it loads, which can be before React hydrates; those attributes are the script's to own.
+    <header className="chth-nav chth-nav--overlay" data-chth-nav suppressHydrationWarning>
       <div className="chth-nav__pill">
         <div className="chth-nav__start">
           <details className="chth-lang-menu chth-nav__lang">
@@ -75,7 +77,7 @@ export function SiteHeader() {
           </details>
           <button type="button" className="chth-theme chth-nav__icon" data-chth-theme-toggle aria-label={theme.label} title={theme.label}
             suppressHydrationWarning dangerouslySetInnerHTML={{ __html: theme.iconsSvg }} />
-          <Link className="chth-nav__lead" href={nav.leadHref} data-chth-type={JSON.stringify(nav.words)}>
+          <Link className="chth-nav__lead" href={nav.leadHref} data-chth-type={JSON.stringify(nav.words)} suppressHydrationWarning>
             <span className="chth-nav__type">{nav.words[0]}</span>
             <span className="chth-nav__caret" aria-hidden="true" />
           </Link>

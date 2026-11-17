@@ -6,8 +6,8 @@ import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { canPayOrder, PaymentStatusBadge } from '@/components/shared/order-status-badge'
 import { LoadingState } from '@/components/shared/loading-state'
+import { StatusCard } from '@/components/shared/status-card'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useRequireAuth } from '@/hooks/use-require-auth'
 import api from '@/lib/api'
 import { formatPrice } from '@/lib/format'
@@ -49,7 +49,7 @@ export function PaymentStatusView() {
   }, [isSignedIn, orderId])
 
   if (!orderId || error) {
-    return <p className="py-16 text-center text-sm text-muted-foreground">{error || 'No order given.'}</p>
+    return <StatusCard icon={XCircle} tone="destructive" title="Order not found" description={error || 'No order given.'} />
   }
   if (!order) return <LoadingState label="Checking your payment…" />
 
@@ -58,34 +58,21 @@ export function PaymentStatusView() {
   const Icon = paid ? CheckCircle2 : failed ? XCircle : Clock
 
   return (
-    <Card className="mx-auto max-w-md space-y-5 p-6 text-center sm:p-8">
-      <div
-        className={
-          paid
-            ? 'mx-auto flex size-16 items-center justify-center rounded-full bg-success/15 text-success'
+    <StatusCard
+      icon={Icon}
+      tone={paid ? 'success' : failed ? 'destructive' : 'warning'}
+      pulse={!paid && !failed}
+      title={paid ? 'Payment received' : failed ? 'Payment not completed' : 'Waiting for confirmations'}
+      description={
+        paid
+          ? "Thanks! We're printing your order now."
+          : order.paymentStatus === 'PARTIALLY_PAID'
+            ? 'We received less than the order total. Contact support with your order ID to settle the difference.'
             : failed
-              ? 'mx-auto flex size-16 items-center justify-center rounded-full bg-destructive/10 text-destructive'
-              : 'mx-auto flex size-16 items-center justify-center rounded-full bg-warning/15 text-warning'
-        }
-      >
-        <Icon className={paid || failed ? 'size-9' : 'size-9 animate-pulse'} />
-      </div>
-
-      <div className="space-y-1.5">
-        <h1 className="text-xl font-bold text-foreground">
-          {paid ? 'Payment received' : failed ? 'Payment not completed' : 'Waiting for confirmations'}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {paid
-            ? "Thanks! We're printing your order now."
-            : order.paymentStatus === 'PARTIALLY_PAID'
-              ? 'We received less than the order total. Contact support with your order ID to settle the difference.'
-              : failed
-                ? 'The payment expired or failed. You can start a new one.'
-                : 'This page updates automatically once the network confirms your transaction.'}
-        </p>
-      </div>
-
+              ? 'The payment expired or failed. You can start a new one.'
+              : 'This page updates automatically once the network confirms your transaction.'
+      }
+    >
       <div className="flex items-center justify-between rounded-xl border border-border p-3 text-sm">
         <span className="font-mono text-xs text-muted-foreground">#{order.id.slice(0, 8).toUpperCase()}</span>
         <PaymentStatusBadge status={order.paymentStatus} />
@@ -98,6 +85,6 @@ export function PaymentStatusView() {
           <Link href="/account?tab=orders">View orders</Link>
         </Button>
       </div>
-    </Card>
+    </StatusCard>
   )
 }

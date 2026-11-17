@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, Wallet } from 'lucide-react'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { Stat } from '@/components/shared/stat'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { shortAddress } from '@/features/collectibles/collectible-card'
 import api from '@/lib/api'
@@ -61,15 +62,11 @@ export function PayoutsCard({ onEditSettings }: { onEditSettings?: () => void })
         )}
       </CardHeader>
       <CardContent className="space-y-4">
-        <dl className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-3">
           {stats.map((stat) => (
-            <div key={stat.label} className="rounded-xl bg-muted/50 p-3">
-              <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</dt>
-              <dd className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{formatPrice(stat.value)}</dd>
-              <dd className="text-[11px] text-muted-foreground">{stat.hint}</dd>
-            </div>
+            <Stat key={stat.label} variant="inset" label={stat.label} value={formatPrice(stat.value)} hint={stat.hint} />
           ))}
-        </dl>
+        </div>
 
         {summary.payouts.length > 0 && (
           <ul className="divide-y divide-border rounded-xl border border-border">

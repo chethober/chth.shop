@@ -42,8 +42,14 @@ except for shared constants (e.g. `features/design/constants`).
   (`bg-card`, `text-muted-foreground`, `text-success`, `bg-brand/10`). Avoid raw hex and
   palette colours (`emerald-500`) in app code; they break light/dark consistency.
 - **Shape scale:** controls `rounded-lg`, cards and panels `rounded-2xl`, pills `rounded-full`.
+- **Fonts:** the CHTH kit's faces, self-hosted in `app/layout.tsx`: Plus Jakarta Sans for text
+  (`font-sans`), Outfit for `h1`–`h3` (`font-display`), JetBrains Mono for code (`font-mono`).
+  Don't add other families; `font-serif` isn't defined.
 - **Type scale:** page title `text-2xl sm:text-3xl font-extrabold`, card title
   `text-base sm:text-lg font-bold`, body `text-sm`, captions `text-xs text-muted-foreground`.
+- **Numbers** in panels use `Stat` (`card` or `inset`); single-outcome screens (payment status,
+  sign-in callback, verify) use `StatusCard`; anything empty uses `EmptyState`.
+- **Brand colours** for third parties are tokens too: `text-ton`, `bg-telegram`.
 - **Status colours** go through `Badge` variants (`success`, `warning`, `info`, `destructive`, `brand`).
 - **Feedback:** toasts via `toast` from `@heroui/react`; confirmations via `ConfirmButton`
   (never `window.confirm`).

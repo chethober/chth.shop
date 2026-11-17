@@ -135,7 +135,7 @@ export function SignInView() {
                   <XIcon className="size-3" />
                 </span>
               )}
-              Twitter
+              X
             </button>
           </div>
 
@@ -149,7 +149,7 @@ export function SignInView() {
               {loadingProvider === 'telegram' ? (
                 <Spinner className="text-muted-foreground" />
               ) : (
-                <TelegramIcon className="size-4 shrink-0 text-[#24A1DE] transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
+                <TelegramIcon className="size-4 shrink-0 text-telegram transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
               )}
               Telegram
             </span>
@@ -162,11 +162,11 @@ export function SignInView() {
             className={cn(providerButtonStyles, 'w-full justify-between')}
           >
             <span className="flex items-center gap-2.5">
-              <TelegramIcon className="size-4 shrink-0 text-[#24A1DE] transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
+              <TelegramIcon className="size-4 shrink-0 text-telegram transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
               Sign in via bot
             </span>
             <span className="flex items-center gap-1.5 rounded-full border border-border/80 bg-secondary/80 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
-              <span className="size-1.5 rounded-full bg-[#24A1DE]" />
+              <span className="size-1.5 rounded-full bg-telegram" />
               {t("Management Bot")}
             </span>
           </button>

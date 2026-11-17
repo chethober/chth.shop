@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Gift, Send } from 'lucide-react'
 import { CopyButton } from '@/components/shared/copy-button'
 import { Button } from '@/components/ui/button'
+import { Stat } from '@/components/shared/stat'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
@@ -72,14 +73,11 @@ export function InvitePanel() {
               Code <span className="font-mono font-semibold text-foreground">{info.code}</span>
             </span>
           </div>
-          <dl className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {stats.map((stat) => (
-              <div key={stat.label} className="rounded-xl bg-muted/50 p-3">
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</dt>
-                <dd className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{stat.value}</dd>
-              </div>
+              <Stat key={stat.label} variant="inset" {...stat} />
             ))}
-          </dl>
+          </div>
           <RewardWallet />
           {info.hasWelcomeDiscount && (
             <p className="rounded-xl bg-success/10 p-3 text-xs font-medium text-success">
