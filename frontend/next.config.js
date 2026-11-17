@@ -12,6 +12,8 @@ const nextConfig = {
     outputFileTracingRoot: path.join(__dirname, '..'),
   }),
   transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
+  // Client navigations run inside the browser's view transitions (app/layout.tsx, app/globals.css).
+  experimental: { viewTransition: true },
   images: {
     // Product images can come from the API or any HTTPS host.
     unoptimized: true,

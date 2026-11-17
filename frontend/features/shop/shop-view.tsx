@@ -19,6 +19,7 @@ import api, { type ProductQuery } from '@/lib/api'
 import { isProductType, PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '@/lib/products'
 import useAuthStore from '@/store/auth-store'
 import type { Product, StoreKind } from '@/types'
+import { segmented } from '@/components/shared/segmented'
 
 type Sort = NonNullable<ProductQuery['sort']>
 
@@ -137,7 +138,7 @@ export function ShopView() {
       />
 
       <div className="space-y-3">
-        <div className="inline-flex rounded-xl border border-border bg-muted/70 p-1" role="tablist" aria-label="Feed">
+        <div className={segmented.root} role="tablist" aria-label="Feed">
           {(
             [
               { id: 'all', label: 'All', active: !following && !collection, params: { following: undefined, collection: undefined } },
@@ -162,11 +163,7 @@ export function ShopView() {
                 }
                 router.replace(`/shop${params.size > 0 ? `?${params}` : ''}`, { scroll: false })
               }}
-              className={
-                tab.active
-                  ? 'cursor-pointer rounded-lg bg-card px-3 py-1.5 text-xs font-semibold text-foreground shadow-xs'
-                  : 'cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground'
-              }
+              className={segmented.item(tab.active)}
             >
               {tab.label}
             </button>
@@ -202,7 +199,7 @@ export function ShopView() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           <FilterChip active={!type} onClick={() => setParam('type')}>
             All
           </FilterChip>
@@ -233,6 +230,7 @@ export function ShopView() {
         />
       ) : (
         <>
+          <h2 className="sr-only">Products</h2>
           <p className="text-xs text-muted-foreground">
             {total} {total === 1 ? 'product' : 'products'}
           </p>

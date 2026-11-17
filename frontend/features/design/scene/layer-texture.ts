@@ -47,10 +47,10 @@ async function drawImage(url: string, flipX: boolean) {
   return canvas
 }
 
-/** next/font serves Geist under a generated family name, so read the real one off the page. */
+/** next/font serves the site's fonts under generated family names, so read the real ones off the page. */
 function resolveFontFamily(fontId?: string) {
   const styles = getComputedStyle(document.body)
-  if (fontId === 'mono') return `${styles.getPropertyValue('--font-geist-mono')}, ${getFont('mono').family}`
+  if (fontId === 'mono') return `${styles.getPropertyValue('--font-chth-mono')}, ${getFont('mono').family}`
   if (!fontId || fontId === 'geist') return styles.fontFamily
   return getFont(fontId).family
 }

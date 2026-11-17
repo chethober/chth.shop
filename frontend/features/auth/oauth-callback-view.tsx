@@ -6,8 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
+import { StatusCard } from '@/components/shared/status-card'
 import useAuthStore from '@/store/auth-store'
 import type { User } from '@/types'
 import { consumeRedirect } from './redirect'
@@ -51,31 +50,15 @@ export function OAuthCallbackView() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-24">
-      <Card className="w-full max-w-sm space-y-4 p-8 text-center">
-        {status === 'loading' && (
-          <>
-            <Spinner className="mx-auto size-10 text-muted-foreground" />
-            <p className="text-sm text-foreground">Completing sign-in…</p>
-          </>
-        )}
-
-        {status === 'success' && (
-          <>
-            <CheckCircle2 className="mx-auto size-10 text-success" />
-            <p className="text-sm text-foreground">Signed in! Redirecting…</p>
-          </>
-        )}
-
-        {status === 'error' && (
-          <>
-            <XCircle className="mx-auto size-10 text-destructive" />
-            <p className="text-sm text-foreground">Authentication failed. Please try again.</p>
-            <Button asChild>
-              <Link href="/auth">Back to sign in</Link>
-            </Button>
-          </>
-        )}
-      </Card>
+      {status === 'loading' && <StatusCard title="Completing sign-in…" className="max-w-sm" />}
+      {status === 'success' && <StatusCard icon={CheckCircle2} tone="success" title="Signed in" description="Taking you back…" className="max-w-sm" />}
+      {status === 'error' && (
+        <StatusCard icon={XCircle} tone="destructive" title="Sign-in failed" description="Something went wrong with the provider. Please try again." className="max-w-sm">
+          <Button asChild>
+            <Link href="/auth">Back to sign in</Link>
+          </Button>
+        </StatusCard>
+      )}
     </div>
   )
 }

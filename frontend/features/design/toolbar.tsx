@@ -25,7 +25,7 @@ export function Toolbar({ onSave, onClear, onExportView, onExportSheet }: Toolba
     <>
       <span className="hidden items-center gap-2 pl-1.5 pr-1 sm:flex">
         <span className="size-1.5 rounded-full bg-brand" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Studio</span>
+        <span className="text-label text-foreground">Studio</span>
       </span>
       <span className="hidden h-5 w-px bg-border sm:block" />
       <input

@@ -18,7 +18,8 @@ import { useT } from '@/lib/i18n'
 type Provider = 'google' | 'x' | 'telegram'
 
 const providerButtonStyles =
-  'group flex items-center gap-2.5 rounded-xl border border-border/80 bg-background/70 px-4 py-3 text-xs font-medium text-foreground shadow-xs backdrop-blur-md transition-all duration-200 ease-out cursor-pointer hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-secondary/80 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-75 sm:text-sm'
+  // The outline button's shape and height (pill, 44px), with the provider's mark beside the label.
+  'chth-btn chth-btn--md chth-btn--secondary chth-btn--outline group gap-2.5 disabled:cursor-not-allowed disabled:opacity-75'
 
 export function SignInView() {
   const t = useT()
@@ -44,11 +45,6 @@ export function SignInView() {
     window.location.href = api.auth.providerUrl(provider)
   }
 
-  // Opens the bot in Telegram; its sign-in button lands on /auth/callback in a new tab.
-  const startBotLogin = () => {
-    window.open(api.auth.telegramBotUrl(), '_blank', 'noopener')
-  }
-
   return (
     <SonarGrid
       id="login-sonar-grid"
@@ -68,21 +64,15 @@ export function SignInView() {
       />
 
       <div className="w-full max-w-[380px] space-y-5">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="space-y-1.5 text-center"
+        <div
+          className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2 motion-safe:fill-mode-both motion-safe:duration-300 space-y-1.5 text-center"
         >
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{t("Sign in")}</h1>
           <p className="text-sm text-muted-foreground">{t("Continue with your preferred account")}</p>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.25, delay: 0.05 }}
-          className="space-y-3.5 rounded-2xl border border-border/80 bg-card/75 p-5 shadow-xl shadow-black/5 backdrop-blur-xl sm:p-6 dark:shadow-black/25"
+        <div
+          className="motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-[0.98] motion-safe:fill-mode-both motion-safe:delay-75 motion-safe:duration-300 space-y-2.5 rounded-2xl border border-border/80 bg-card/75 p-5 shadow-xl shadow-black/5 backdrop-blur-xl sm:p-6 dark:shadow-black/25"
         >
           <AnimatePresence>
             {errorMessage && (
@@ -91,7 +81,7 @@ export function SignInView() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 role="alert"
-                className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive"
+                className="flex items-start gap-2.5 rounded-xl bg-destructive/10 p-3 text-xs text-destructive"
               >
                 <AlertCircle className="mt-0.5 size-4 shrink-0" />
                 <p className="flex-1 font-medium leading-relaxed">{errorMessage}</p>
@@ -135,42 +125,25 @@ export function SignInView() {
                   <XIcon className="size-3" />
                 </span>
               )}
-              Twitter
+              X
             </button>
           </div>
 
+          {/* One Telegram button: the server uses Telegram's login, or the bot's when that is what is set up. */}
           <button
             type="button"
             onClick={() => startOAuth('telegram')}
             disabled={loadingProvider !== null}
-            className={cn(providerButtonStyles, 'w-full justify-between')}
+            className={cn(providerButtonStyles, 'w-full justify-center')}
           >
-            <span className="flex items-center gap-2.5">
-              {loadingProvider === 'telegram' ? (
-                <Spinner className="text-muted-foreground" />
-              ) : (
-                <TelegramIcon className="size-4 shrink-0 text-[#24A1DE] transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
-              )}
-              Telegram
-            </span>
+            {loadingProvider === 'telegram' ? (
+              <Spinner className="text-muted-foreground" />
+            ) : (
+              <TelegramIcon className="size-4 shrink-0 text-telegram transition-transform group-hover:scale-110" />
+            )}
+            Telegram
           </button>
-
-          <button
-            type="button"
-            onClick={startBotLogin}
-            disabled={loadingProvider !== null}
-            className={cn(providerButtonStyles, 'w-full justify-between')}
-          >
-            <span className="flex items-center gap-2.5">
-              <TelegramIcon className="size-4 shrink-0 text-[#24A1DE] transition-transform group-hover:rotate-[-4deg] group-hover:scale-110" />
-              Sign in via bot
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-border/80 bg-secondary/80 px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
-              <span className="size-1.5 rounded-full bg-[#24A1DE]" />
-              {t("Management Bot")}
-            </span>
-          </button>
-        </motion.div>
+        </div>
 
         <p className="px-4 text-center text-[11px] leading-relaxed text-muted-foreground">
           By signing in, you agree to our{' '}

@@ -40,13 +40,13 @@ export function CollectibleCard({
   const link = explorerUrl(collectible.nftAddress, network)
 
   return (
-    <div className={cn('flex gap-4 rounded-xl border border-border bg-card p-3', className)}>
+    <div className={cn('flex gap-4 rounded-xl bg-muted/50 p-3', className)}>
       <div className="relative shrink-0">
         <ProductImage
           product={{ imageUrl: collectible.imageUrl, type: collectible.productType ?? undefined, name: collectible.name }}
-          className="size-20 rounded-lg border border-border"
+          className="size-20 rounded-lg"
         />
-        <span className="absolute -bottom-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border-2 border-card bg-[#0098EA] text-white">
+        <span className="absolute -bottom-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border-2 border-card bg-ton text-white">
           <Gem className="size-3" />
         </span>
       </div>
@@ -74,7 +74,7 @@ export function CollectibleCard({
           <p className="text-[11px] text-muted-foreground">
             Owner wallet <span className="font-mono">{shortAddress(collectible.ownerAddress)}</span>
             {link && (
-              <a href={link} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-0.5 text-[#0098EA] hover:underline">
+              <a href={link} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-0.5 text-ton hover:underline">
                 View NFT <ExternalLink className="size-3" />
               </a>
             )}

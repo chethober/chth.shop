@@ -1,6 +1,7 @@
 // The base products ("blanks") the platform prints on. Every listing and every custom
 // design is made from one of these. Prices are in USD.
 
+const env = require('../config/env');
 const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const BASIC_COLORS = ['#FFFFFF', '#121212', '#1D4ED8', '#EFBD48', '#059669', '#DC2626', '#8B5CF6', '#F472B6'];
 
@@ -137,4 +138,13 @@ function isCatalogType(type) {
   return BY_TYPE.has(String(type));
 }
 
-module.exports = { CATALOG, getCatalogItem, isCatalogType };
+/**
+ * The lowest price a store may set: production cost plus the seller's royalty, so every sale
+ * covers both (cost / (1 - royalty)), rounded up to the cent.
+ */
+function minimumPrice(item) {
+  const keep = 1 - env.sellerRoyaltyPercent / 100;
+  return Math.ceil((item.baseCost / keep) * 100) / 100;
+}
+
+module.exports = { CATALOG, getCatalogItem, isCatalogType, minimumPrice };

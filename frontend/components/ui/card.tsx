@@ -16,7 +16,9 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn('flex flex-col gap-3 p-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:p-6 sm:pb-4', className)}
+      // Title on the left, the card's action on the right at its own size; the action drops under
+      // the title only when both can't fit (a long description on a phone).
+      className={cn('flex flex-wrap items-start justify-between gap-3 p-5 pb-4 sm:items-center sm:p-6 sm:pb-4 [&>:first-child]:min-w-0 [&>:first-child]:flex-1 [&>:first-child]:basis-48 [&>:not(:first-child)]:shrink-0', className)}
       {...props}
     />
   )

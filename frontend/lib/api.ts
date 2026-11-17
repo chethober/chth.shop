@@ -109,7 +109,6 @@ export const api = {
     /** Starts a redirect-based OAuth sign-in; the backend sends the browser back to /auth/callback. */
     providerUrl: (provider: 'google' | 'x' | 'telegram') => `${API_URL}/auth/${provider}`,
     /** Opens the CHTH bot, which replies with a one-tap sign-in button back to /auth/callback. */
-    telegramBotUrl: () => `${API_URL}/auth/telegram/bot`,
     /** Telegram Mini App sign-in with `Telegram.WebApp.initData`. */
     telegramWebApp: (initData: string) =>
       request<{ user: User; token: string; startParam: string | null }>(http.post('/auth/telegram/webapp', { initData })),
@@ -222,25 +221,6 @@ export const api = {
     confirmMock: (orderId: string) => request<void>(http.post(`/payments/mock/${orderId}/confirm`)),
   },
 
-  admin: {
-    orders: (status?: OrderStatus) =>
-      request<{ orders: Order[] }>(http.get('/admin/orders', { params: { status } })).then((d) => d.orders),
-    setOrderStatus: (orderId: string, status: OrderStatus) =>
-      request<{ order: Order }>(http.put(`/admin/orders/${orderId}/status`, { status })).then((d) => d.order),
-    payouts: () =>
-      request<{ balances: PayoutBalance[]; payouts: Payout[]; minAmount: number; holdDays: number; automatic: boolean }>(
-        http.get('/admin/payouts')
-      ),
-    runPayouts: () =>
-      request<{ payouts: Payout[]; skipped: { username: string; amount: number; reason: string }[] }>(
-        http.post('/admin/payouts/run', {}, { timeout: 120_000 })
-      ),
-    sendPayout: (id: string) =>
-      request<{ payout: Payout }>(http.post(`/admin/payouts/${id}/send`, {}, { timeout: 120_000 })).then((d) => d.payout),
-    markPayoutSent: (id: string, txHash: string) =>
-      request<{ payout: Payout }>(http.put(`/admin/payouts/${id}/sent`, { txHash })).then((d) => d.payout),
-    cancelPayout: (id: string) => request<void>(http.delete(`/admin/payouts/${id}`)),
-  },
 }
 
 /** A store listing (`productId`) or the buyer's own design on a catalog blank (`type`). */

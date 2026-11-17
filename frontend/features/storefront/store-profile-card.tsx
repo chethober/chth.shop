@@ -36,53 +36,52 @@ export function StoreProfileCard({ store, productCount }: { store: Store; produc
   return (
     <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <Card className="overflow-hidden">
-        <div className="h-24 bg-gradient-to-br from-brand/30 via-brand/10 to-muted" />
-        <div className="-mt-10 flex flex-col gap-6 px-6 pb-6 sm:px-8 sm:pb-8 lg:flex-row lg:items-start">
-          <div className="flex shrink-0 flex-col items-center gap-3 text-center sm:items-start sm:text-left lg:w-56">
-            <div className="flex size-20 items-center justify-center rounded-2xl border-4 border-card bg-muted text-2xl font-bold text-foreground shadow-sm">
-              {initials}
+        <div className="h-20 bg-gradient-to-br from-brand/25 via-muted to-muted sm:h-24" />
+        <div className="space-y-5 px-5 pb-5 sm:px-6 sm:pb-6">
+          {/* The avatar overlaps the cover; under it, identity on the left and actions on the right,
+              the same header as the account page. */}
+          <div className="-mt-8 flex size-16 items-center justify-center rounded-2xl bg-muted text-xl font-bold text-foreground ring-4 ring-card sm:-mt-10 sm:size-20 sm:text-2xl">
+            {initials}
+          </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex min-w-0 items-end gap-4">
+              <div className="min-w-0 space-y-0.5">
+                <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{displayName}</h1>
+                <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  @{username}
+                  <Badge variant="secondary">{STORE_KIND_LABELS[store.kind]}</Badge>
+                </p>
+              </div>
             </div>
-            <div className="space-y-0.5">
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{displayName}</h1>
-              <p className="flex items-center justify-center gap-2 text-xs font-medium text-brand sm:justify-start">
-                @{username}
-                <Badge variant="secondary">{STORE_KIND_LABELS[store.kind]}</Badge>
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
               <FollowButton username={username} initialFollowing={Boolean(store.isFollowing)} initialCount={store.followerCount ?? 0} />
-              <Button variant="outline" size="sm" onClick={() => shareStore(`${displayName} on CHTH`)}>
+              <Button variant="outline" onClick={() => shareStore(`${displayName} on CHTH`)}>
                 <Share2 />
                 Share
               </Button>
             </div>
           </div>
 
-          <div className="flex-1 space-y-5 lg:pt-12">
-            <div className="space-y-1.5">
-              <h2 className="text-sm font-bold text-foreground">About</h2>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                {store.bio ||
-                  (store.kind === 'MERCHANT'
-                    ? 'Official merchandise, printed on demand.'
-                    : 'This artist creates unique custom merchandise and apparel.')}
-              </p>
-            </div>
+          <p className="max-w-2xl whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            {store.bio ||
+              (store.kind === 'MERCHANT'
+                ? 'Official merchandise, printed on demand.'
+                : 'This artist creates unique custom merchandise and apparel.')}
+          </p>
 
-            <SocialLinks socials={store} />
+          <SocialLinks socials={store} />
 
-            <div className="flex flex-wrap gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
-              {store.createdAt && (
-                <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
-                  <Calendar className="size-3.5" />
-                  Joined {formatDate(store.createdAt)}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
-                <Package className="size-3.5" />
-                {productCount} {productCount === 1 ? 'product' : 'products'}
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {store.createdAt && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1">
+                <Calendar className="size-3.5" />
+                Joined {formatDate(store.createdAt)}
               </span>
-            </div>
+            )}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1">
+              <Package className="size-3.5" />
+              {productCount} {productCount === 1 ? 'product' : 'products'}
+            </span>
           </div>
         </div>
       </Card>
@@ -122,7 +121,7 @@ function FollowButton({ username, initialFollowing, initialCount }: { username: 
   }
 
   return (
-    <Button size="sm" variant={following ? 'outline' : 'default'} onClick={toggle} disabled={busy}>
+    <Button variant={following ? 'outline' : 'default'} onClick={toggle} disabled={busy}>
       {following ? <UserCheck /> : <UserPlus />}
       {following ? 'Following' : 'Follow'} · {count}
     </Button>

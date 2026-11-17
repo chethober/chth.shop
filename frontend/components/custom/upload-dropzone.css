@@ -115,7 +115,8 @@
    for the two wordings, and they keep its ink */
 .upl-say > span {
   font-size: var(--chth-text-12);
-  color: color-mix(in srgb, var(--fill-on, #17181a) 45%, var(--fill-slab, #fff));}
+  /* 62% ink: 4.5:1 on the slab */
+  color: color-mix(in srgb, var(--fill-on, #17181a) 62%, var(--fill-slab, #fff));}
 
 /* ── mouse or finger ────────────────────────────────────────
    A screen with no hover has no drag from a desktop to offer,

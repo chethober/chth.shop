@@ -16,7 +16,7 @@ export function EarningsTile() {
 
   return (
     <div className="flex h-full flex-col items-center justify-between gap-4">
-      <p className="self-start text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="self-start text-label text-muted-foreground">
         Your monthly payout
       </p>
       <Wheel
@@ -27,7 +27,7 @@ export function EarningsTile() {
         size={200}
       />
       <p className="flex items-baseline gap-1">
-        <span className="text-4xl font-extrabold tabular-nums tracking-tight text-brand sm:text-5xl">
+        <span className="text-3xl font-extrabold tabular-nums tracking-tight text-foreground">
           ${earnings.toLocaleString()}
         </span>
         <span className="text-xs text-muted-foreground">/mo</span>
@@ -44,7 +44,7 @@ export function SplitTile() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Every sale</p>
+      <p className="text-label text-muted-foreground">Every sale</p>
 
       <div role="tablist" aria-label="Sale split" className="flex h-12 gap-1 rounded-xl bg-muted p-1">
         {(
@@ -68,10 +68,10 @@ export function SplitTile() {
               <motion.span
                 layoutId="split-active"
                 transition={{ type: 'spring', duration: 0.35, bounce: 0.1 }}
-                className={cn('absolute inset-0 rounded-lg', id === 'you' ? 'bg-brand' : 'bg-foreground')}
+                className={cn('absolute inset-0 rounded-lg', id === 'you' ? 'bg-primary' : 'bg-foreground')}
               />
             )}
-            <span className={cn('relative', side === id && (id === 'you' ? 'text-white' : 'text-background'))}>{label}</span>
+            <span className={cn('relative', side === id && (id === 'you' ? 'text-primary-foreground' : 'text-background'))}>{label}</span>
           </button>
         ))}
       </div>
@@ -88,7 +88,7 @@ export function SplitTile() {
             {side === 'you' ? (
               <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Wallet className="size-4 text-brand" />
-                Paid monthly · Bank, Stripe or crypto
+                Paid monthly · USDT on TON
               </p>
             ) : (
               <ul className="flex flex-wrap gap-1.5">
@@ -151,7 +151,7 @@ export function FactTile({ icon: Icon, value, label, detail }: FactTileProps) {
           ) : (
             <>
               <span className="block text-3xl font-extrabold tracking-tight text-foreground">{value}</span>
-              <span className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="block text-label text-muted-foreground">
                 {label}
               </span>
             </>

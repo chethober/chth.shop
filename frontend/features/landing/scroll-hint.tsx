@@ -29,7 +29,7 @@ export function ScrollHint({ visible, onClick }: { visible: boolean; onClick: ()
               className="size-1.5 rounded-full bg-brand"
             />
           </span>
-          <span className="text-[11px] font-semibold uppercase tracking-widest">{t("Scroll")}</span>
+          <span className="text-label">{t("Scroll")}</span>
         </motion.button>
       )}
     </AnimatePresence>

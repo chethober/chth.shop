@@ -60,7 +60,7 @@ export function OrdersPanel({ orders, isLoading, onRefresh, onCancel }: OrdersPa
       <CardContent>
         {orders.length > 0 && (
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {FILTERS.map((f) => (
                 <FilterChip key={f.id} active={filter === f.id} count={orders.filter(f.matches).length} onClick={() => setFilter(f.id)}>
                   {f.label}

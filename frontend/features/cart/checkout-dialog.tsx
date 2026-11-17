@@ -119,7 +119,7 @@ export function CheckoutDialog({ cart, open, onOpenChange, onOrderPlaced }: Chec
               />
             </div>
 
-            <OrderSummary cart={cart} className="rounded-xl border border-border bg-muted/30 p-4" />
+            <OrderSummary cart={cart} className="rounded-xl bg-muted/50 p-4" />
 
             <DialogFooter>
               <Button variant="outline" onClick={close}>

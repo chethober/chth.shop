@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { GARMENTS } from '@/features/design/constants'
 import { getPlaceholderImage } from '@/lib/products'
+import { cn } from '@/lib/utils'
+import { tile } from '@/components/shared/tile'
 
 export function DesignsPanel() {
   return (
@@ -21,7 +23,7 @@ export function DesignsPanel() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 sm:p-8">
+        <div className="rounded-2xl bg-muted/40 p-6 sm:p-8">
           <div className="mx-auto max-w-sm text-center">
             <h3 className="text-base font-semibold text-foreground">Start your first design</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -34,14 +36,14 @@ export function DesignsPanel() {
               <Link
                 key={garment.id}
                 href={`/design?type=${garment.id}`}
-                className="group overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-sm"
+                className={tile.root}
               >
                 <div className="aspect-square overflow-hidden bg-muted">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={getPlaceholderImage(garment.id)}
                     alt={garment.name}
-                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    className={cn('size-full object-cover', tile.media)}
                   />
                 </div>
                 <div className="flex items-center justify-between px-2.5 py-2">

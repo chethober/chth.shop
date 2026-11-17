@@ -30,8 +30,8 @@ cart and orders, OAuth sign-in, and a Telegram bot for managing stock and sales.
 - **Shop flow**: cart, checkout and order history with cancellation, backed by a products API
   with type, artist and search filters.
 - **OAuth-only sign-in**: Google, X (OAuth 2.0 + PKCE) and Telegram Login. The API issues JWTs.
-- **Artist program**: users accept the collab terms and open a store; artists earn royalties
-  per sale.
+- **Artist program**: users accept the collab terms and open a store; sellers earn a 25% royalty on
+  every sale (`SELLER_ROYALTY_PERCENT`).
 - **Telegram bot**: artists manage items, prices and stock from Telegram and get sale and
   low-stock alerts. It runs on Telegram Serverless; see [`telegram-bot/`](telegram-bot/).
 - **One-command deploy**: Docker Compose runs PostgreSQL, the API and Next.js, and CI publishes
@@ -49,7 +49,7 @@ Sign-in is Google, X or Telegram.
   sticker. Models and their licenses: [frontend/public/models/LICENSES.md](frontend/public/models/LICENSES.md).
 - Payments: TON or USDT on TON from the buyer's wallet (TON Connect), or any coin through NOWPayments.
 - Seller payouts: sales earnings (and referral credit) become payable after shipping + a hold period and are
-  paid monthly in USDT, automatically to TON addresses (`npm run payouts`, or Admin → Payouts).
+  paid monthly in USDT, automatically to TON addresses (`npm run payouts`, or the admin API / Telegram bot).
 - Telegram Mini App: the shop runs inside Telegram with automatic sign-in, Telegram's theme and back button,
   and `t.me/<bot>/<app>?startapp=…` deep links; the bot answers `/start`, `/shop`, `/orders`… (setup below).
 - NFT-backed merch: sellers mark listings as NFT-backed and/or limited editions with timed drops. Each unit sold
@@ -58,8 +58,10 @@ Sign-in is Google, X or Telegram.
   order, 5% credit to the referrer), Telegram bot notifications for buyers and sellers.
 - `/design`: 3D studio. Buyers order their own designs; sellers publish them to their store; `?product=<id>`
   personalizes a listing the seller marked customizable.
-- `/collab`: open a store as an artist or merchant. `/account`: products, sales, payout address, orders.
-- `/admin`: fulfillment queue for admins (`npm run make-admin -- <username>` in the backend).
+- `/collab`: open a store as an artist or merchant. `/account`: Home, Store (products, sales, payout address),
+  Orders (with NFT collectibles), Saved (wishlist, following, designs) and Profile (with invites), on the CHTH tab bar.
+- Fulfillment runs through the Telegram admin bot (`TELEGRAM_ADMIN_IDS`) and the `/api/admin/*` endpoints; there is no
+  admin page on the site.
 
 ## Screenshots
 
@@ -205,7 +207,7 @@ no login screen. Share links use `startapp=ref_<CODE>` (referral) and `startapp=
 `npm run payouts -- --dry-run` lists balances; `npm run payouts` (cron, e.g. monthly) creates payouts and sends
 the USDT-on-TON ones from the platform wallet (`TON_WALLET_MNEMONIC`, funded with USDT plus ~0.05 TON per
 payout for fees). Payouts to other networks stay *Scheduled* until an admin sends them and records the
-transaction under Admin → Payouts.
+transaction (`PUT /api/admin/payouts/:id/sent`).
 
 ## CI/CD
 

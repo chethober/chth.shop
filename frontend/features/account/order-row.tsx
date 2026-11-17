@@ -21,7 +21,7 @@ import type { Order } from '@/types'
 function OrderProgress({ status }: { status: Order['status'] }) {
   if (status === 'CANCELLED') {
     return (
-      <p className="flex items-center gap-2 rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2.5 text-xs font-medium text-destructive">
+      <p className="flex items-center gap-2 rounded-xl bg-destructive/10 px-3 py-2.5 text-xs font-medium text-destructive">
         <XCircle className="size-4" />
         This order was cancelled.
       </p>
@@ -79,7 +79,7 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <li className={cn('rounded-xl border transition-colors', open ? 'border-foreground/20 bg-muted/20' : 'border-border hover:border-foreground/15')}>
+    <li className={cn('rounded-xl transition-colors', open ? 'bg-muted/60' : 'bg-muted/40 hover:bg-muted/60')}>
       <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full cursor-pointer items-center gap-3 p-3 text-left">
         <div className="flex shrink-0 -space-x-3">
           {order.items.slice(0, 3).map((item, index) => (
@@ -127,10 +127,10 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
             <div className="space-y-5 px-3 pb-4 pt-1">
               <OrderProgress status={order.status} />
 
-              <div className="divide-y divide-border rounded-xl border border-border bg-card">
+              <div className="divide-y divide-border rounded-xl bg-card">
                 {order.items.map((item) => (
                   <div key={item.id} className="flex items-center gap-3 p-3">
-                    <ProductImage product={item} className="size-12 shrink-0 rounded-lg border border-border" />
+                    <ProductImage product={item} className="size-12 shrink-0 rounded-lg" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
                       {(describeOptions(item.options) || item.store) && (
@@ -158,7 +158,7 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
               </div>
 
               <div className="grid gap-3 text-xs sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-card p-3">
+                <div className="rounded-xl bg-card p-3">
                   <p className="mb-0.5 text-[11px] text-muted-foreground">Order ID</p>
                   <div className="flex items-center justify-between gap-2">
                     <code className="truncate font-mono text-foreground">{order.id}</code>
@@ -178,7 +178,7 @@ export function OrderRow({ order, open, onToggle, onCancel }: OrderRowProps) {
                   )}
                 </div>
                 {order.shippingAddress && (
-                  <div className="rounded-xl border border-border bg-card p-3">
+                  <div className="rounded-xl bg-card p-3">
                     <p className="mb-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
                       <MapPin className="size-3" />
                       Shipping to

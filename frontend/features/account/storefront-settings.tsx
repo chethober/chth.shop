@@ -113,10 +113,10 @@ export function StorefrontSettings({
                   aria-checked={form.kind === option.id}
                   onClick={() => onFormChange({ kind: option.id })}
                   className={cn(
-                    'cursor-pointer rounded-xl border p-3 text-left transition-colors',
+                    'cursor-pointer rounded-xl p-3 text-left transition-colors',
                     form.kind === option.id
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   <span className="block text-xs font-semibold">{option.label}</span>
@@ -252,7 +252,7 @@ export function StorefrontSettings({
       </div>
 
       <div className="lg:sticky lg:top-24 lg:col-span-2">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Live preview</p>
+        <p className="mb-2 text-label text-muted-foreground">Live preview</p>
         <StorefrontPreview username={username} form={form} />
       </div>
     </div>

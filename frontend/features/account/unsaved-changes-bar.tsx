@@ -23,7 +23,7 @@ export function UnsavedChangesBar({ visible, saving, canSave, onSave, onDiscard,
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-          className="pointer-events-none fixed inset-x-4 bottom-4 z-40 flex justify-center pb-[env(safe-area-inset-bottom,0px)]"
+          className="pointer-events-none fixed inset-x-4 bottom-[var(--chth-bottom-room,1rem)] z-50 flex justify-center pb-[env(safe-area-inset-bottom,0px)]"
         >
           <div
             role="status"

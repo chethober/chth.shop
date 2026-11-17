@@ -73,7 +73,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
       </CardHeader>
       <CardContent className="space-y-5">
         {canReview && (
-          <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+          <div className="space-y-2 rounded-xl bg-muted/50 p-3">
             <p className="text-xs font-semibold text-foreground">{mine ? 'Your review' : 'You bought this. How is it?'}</p>
             <div className="flex gap-1" role="radiogroup" aria-label="Rating">
               {[1, 2, 3, 4, 5].map((n) => (
@@ -86,7 +86,7 @@ export function ReviewsSection({ productId }: { productId: string }) {
                   onClick={() => setRating(n)}
                   className="cursor-pointer"
                 >
-                  <Star className={cn('size-5', n <= rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/50')} />
+                  <Star className={cn('size-5', n <= rating ? 'fill-warning text-warning' : 'text-muted-foreground/50')} />
                 </button>
               ))}
             </div>

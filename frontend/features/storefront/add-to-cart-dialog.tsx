@@ -15,6 +15,7 @@ import { colorName, getProductTypeLabel } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import useCartStore from '@/store/cart-store'
 import type { Product } from '@/types'
+import { stepperTrack } from '@/components/shared/segmented'
 
 interface AddToCartDialogProps {
   product: Product | null
@@ -38,8 +39,8 @@ function OptionButton({ selected, onClick, children, className }: { selected: bo
       aria-checked={selected}
       onClick={onClick}
       className={cn(
-        'cursor-pointer rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
-        selected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-muted-foreground hover:text-foreground',
+        'h-9 min-w-11 cursor-pointer rounded-full px-4 text-[13px] font-semibold transition-colors',
+        selected ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground',
         className
       )}
     >
@@ -63,7 +64,7 @@ function AddToCartForm({ product, onClose }: { product: Product; onClose: () => 
       </DialogHeader>
 
       <div className="flex gap-4">
-        <ProductImage product={product} className="size-24 shrink-0 rounded-xl border border-border" />
+        <ProductImage product={product} className="size-24 shrink-0 rounded-xl" />
         <div className="min-w-0 space-y-1">
           <p className="text-lg font-bold tabular-nums text-foreground">{formatPrice(product.price)}</p>
           {(product.description || catalogItem?.description) && (
@@ -163,15 +164,15 @@ export function PurchaseOptions({ product, onAdded }: { product: Product; onAdde
 
       <div className="flex items-center justify-between">
         <Label>Quantity</Label>
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 p-0.5">
-          <Button variant="ghost" size="icon-sm" className="size-7" onClick={() => setQuantity((q) => q - 1)} disabled={quantity <= 1} aria-label="Decrease quantity">
+        <div className={stepperTrack}>
+          <Button variant="ghost" size="icon-sm" className="size-9" onClick={() => setQuantity((q) => q - 1)} disabled={quantity <= 1} aria-label="Decrease quantity">
             <Minus />
           </Button>
           <span className="w-6 text-center text-xs font-bold tabular-nums">{quantity}</span>
           <Button
             variant="ghost"
             size="icon-sm"
-            className="size-7"
+            className="size-9"
             onClick={() => setQuantity((q) => q + 1)}
             disabled={quantity >= Math.min(99, remaining ?? 99)}
             aria-label="Increase quantity"

@@ -36,7 +36,7 @@ export const CREATOR_BENEFITS = [
 ]
 
 /** The artist's share of every sale, in percent. */
-export const ROYALTY_PERCENT = 25
+export { ROYALTY_PERCENT } from '@/lib/config'
 
 /**
  * Callouts pinned to points on the 3D tee, one per section. `anchor` is in the model's own coordinates

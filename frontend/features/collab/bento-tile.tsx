@@ -1,6 +1,5 @@
 'use client'
 
-import { motion, useReducedMotion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 export const EASE_OUT = [0.23, 1, 0.32, 1] as const
@@ -12,18 +11,18 @@ interface BentoTileProps {
   className?: string
 }
 
-/** One cell of the collab bento. Enters with a short stagger, never blocks interaction. */
+/** One cell of the collab bento. Rises in once on load (CSS, so it shows even without scripts). */
 export function BentoTile({ children, index, className }: BentoTileProps) {
-  const reduceMotion = useReducedMotion()
-
   return (
-    <motion.div
-      initial={{ opacity: 0, transform: reduceMotion ? 'none' : 'translateY(8px)' }}
-      animate={{ opacity: 1, transform: 'translateY(0px)' }}
-      transition={{ duration: 0.4, ease: EASE_OUT, delay: index * 0.05 }}
-      className={cn('relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-xs', className)}
+    <div
+      style={{ animationDelay: `${index * 50}ms` }}
+      className={cn(
+        'relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-xs',
+        'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:fill-mode-both motion-safe:duration-500',
+        className
+      )}
     >
       {children}
-    </motion.div>
+    </div>
   )
 }

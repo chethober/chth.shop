@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Gift, Send } from 'lucide-react'
 import { CopyButton } from '@/components/shared/copy-button'
 import { Button } from '@/components/ui/button'
+import { Stat } from '@/components/shared/stat'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import api from '@/lib/api'
@@ -57,7 +58,7 @@ export function InvitePanel() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3">
+          <div className="flex items-center gap-2 rounded-xl bg-muted/50 p-3">
             <code className="min-w-0 flex-1 truncate text-sm text-foreground">{link}</code>
             <CopyButton value={link} label="Copy invite link" />
           </div>
@@ -72,14 +73,11 @@ export function InvitePanel() {
               Code <span className="font-mono font-semibold text-foreground">{info.code}</span>
             </span>
           </div>
-          <dl className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {stats.map((stat) => (
-              <div key={stat.label} className="rounded-xl bg-muted/50 p-3">
-                <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</dt>
-                <dd className="mt-1 text-xl font-extrabold tabular-nums text-foreground">{stat.value}</dd>
-              </div>
+              <Stat key={stat.label} variant="inset" {...stat} />
             ))}
-          </dl>
+          </div>
           <RewardWallet />
           {info.hasWelcomeDiscount && (
             <p className="rounded-xl bg-success/10 p-3 text-xs font-medium text-success">
@@ -126,7 +124,7 @@ function RewardWallet() {
   }
 
   return (
-    <div className="space-y-2 rounded-xl border border-border p-3">
+    <div className="space-y-2 rounded-xl bg-muted/50 p-3">
       <p className="text-xs font-semibold text-foreground">Reward wallet (USDT on TON)</p>
       <p className="text-[11px] text-muted-foreground">
         {destination && destination.address !== address

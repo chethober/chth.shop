@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { PageContainer } from '@/components/layout/page-container'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { Eyebrow } from '@/components/shared/eyebrow'
+import { PageHeader } from '@/components/shared/page-header'
 import {
   API_BASE_PATH,
   AUTH_ERRORS,
@@ -29,7 +31,7 @@ const ENVELOPE = `// 2xx
 
 function CodeBlock({ children }: { children: string }) {
   return (
-    <pre className="overflow-x-auto rounded-lg border border-border/60 bg-muted/40 p-3 font-mono text-[12px] leading-relaxed text-foreground">
+    <pre className="overflow-x-auto rounded-xl bg-muted/50 p-3 font-mono text-[12px] leading-relaxed text-foreground">
       {children}
     </pre>
   )
@@ -56,18 +58,24 @@ function EndpointRow({ endpoint }: { endpoint: Endpoint }) {
 export default function ApiDocsPage() {
   return (
     <PageContainer>
-      <header className="space-y-3 border-b border-border/40 pb-6">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">API Reference</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          The CHTH REST API serves the storefront, artist stores, cart and checkout. All endpoints live under{' '}
-          <code className="font-mono text-foreground">{API_BASE_PATH}</code> on this site and take and return JSON.
-        </p>
-        <nav aria-label="API sections" className="flex flex-wrap gap-1.5 pt-1">
+      <PageHeader
+        className="mb-4 sm:mb-4"
+        eyebrow={<Eyebrow>Developers</Eyebrow>}
+        title="API reference"
+        description={
+          <>
+            The CHTH REST API serves the storefront, artist stores, cart and checkout. All endpoints live under{' '}
+            <code className="font-mono text-foreground">{API_BASE_PATH}</code> on this site and take and return JSON.
+          </>
+        }
+      />
+      <header>
+        <nav aria-label="API sections" className="flex flex-wrap gap-2">
           {ENDPOINT_GROUPS.map((group) => (
             <a
               key={group.id}
               href={`#${group.id}`}
-              className="rounded-full border border-border px-2.5 py-0.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex h-9 items-center rounded-full border border-border px-4 text-[13px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               {group.title}
             </a>
@@ -75,8 +83,8 @@ export default function ApiDocsPage() {
         </nav>
       </header>
 
-      <section className="grid gap-6 border-b border-border/40 py-8 md:grid-cols-2">
-        <div className="space-y-3">
+      <section className="grid gap-6 py-8 md:grid-cols-2">
+        <div className="min-w-0 space-y-3">
           <h2 className="text-base font-semibold">Responses</h2>
           <CodeBlock>{ENVELOPE}</CodeBlock>
           <ul className="space-y-1 text-sm">
@@ -88,7 +96,7 @@ export default function ApiDocsPage() {
             ))}
           </ul>
         </div>
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <h2 className="text-base font-semibold">Authentication</h2>
           <p className="text-sm text-muted-foreground">
             Sign in with Google, X or Telegram to get a JWT that lasts 7 days, then send it on protected routes:
@@ -106,7 +114,7 @@ export default function ApiDocsPage() {
       </section>
 
       {ENDPOINT_GROUPS.map((group) => (
-        <section key={group.id} id={group.id} className="scroll-mt-24 border-b border-border/40 py-8 last:border-b-0">
+        <section key={group.id} id={group.id} className="scroll-mt-24 py-8">
           <h2 className="text-lg font-semibold">{group.title}</h2>
           {group.intro && <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{group.intro}</p>}
           <ul className="mt-2 divide-y divide-border/40">

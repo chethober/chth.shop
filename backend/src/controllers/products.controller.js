@@ -2,7 +2,8 @@ const prisma = require('../lib/prisma');
 const { HttpError, asyncHandler, sendSuccess } = require('../lib/http');
 const { productWithStore } = require('../lib/queries');
 const { serializeProduct } = require('../lib/serializers');
-const { CATALOG, getCatalogItem } = require('../lib/catalog');
+const env = require('../config/env');
+const { CATALOG, getCatalogItem, minimumPrice } = require('../lib/catalog');
 const { normalizeDesign, isAllowedImageUrl } = require('../lib/options');
 
 const DEFAULT_PAGE_SIZE = 24;
@@ -59,8 +60,8 @@ function productFields(body, type) {
   if (body.price !== undefined) {
     const price = Number(body.price);
     if (!Number.isFinite(price)) throw new HttpError(400, 'Price must be a number');
-    if (price < catalogItem.baseCost) {
-      throw new HttpError(400, `Price must be at least the production cost ($${catalogItem.baseCost})`);
+    if (price < minimumPrice(catalogItem)) {
+      throw new HttpError(400, `Price must be at least $${minimumPrice(catalogItem)} (production cost plus your royalty)`);
     }
     data.price = Math.round(price * 100) / 100;
   }
@@ -106,7 +107,12 @@ function productFields(body, type) {
 }
 
 const getCatalog = (req, res) => {
-  sendSuccess(res, { data: { catalog: CATALOG } });
+  sendSuccess(res, {
+    data: {
+      royaltyPercent: env.sellerRoyaltyPercent,
+      catalog: CATALOG.map((item) => ({ ...item, minPrice: minimumPrice(item) })),
+    },
+  });
 };
 
 const listProducts = asyncHandler(async (req, res) => {
@@ -222,9 +228,9 @@ const updateProduct = asyncHandler(async (req, res) => {
   const endsAt = data.dropEndsAt !== undefined ? data.dropEndsAt : product.dropEndsAt;
   if (startsAt && endsAt && endsAt <= startsAt) throw new HttpError(400, 'The drop must end after it starts');
 
-  // Changing the base product must keep the price above its production cost.
-  if (type !== product.type && data.price === undefined && product.price < getCatalogItem(type).baseCost) {
-    throw new HttpError(400, `Price must be at least the production cost ($${getCatalogItem(type).baseCost})`);
+  // Changing the base product must keep the price above its new minimum.
+  if (type !== product.type && data.price === undefined && product.price < minimumPrice(getCatalogItem(type))) {
+    throw new HttpError(400, `Price must be at least $${minimumPrice(getCatalogItem(type))} (production cost plus your royalty)`);
   }
   // Sizes chosen for the old base product may not exist on the new one.
   if (type !== product.type && data.sizes === undefined) data.sizes = [];

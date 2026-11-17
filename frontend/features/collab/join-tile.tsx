@@ -9,9 +9,9 @@ import { SlideConfirm } from '@/components/custom/slide-to-confirm'
 import { Button } from '@/components/ui/button'
 import { useHydrated } from '@/hooks/use-hydrated'
 import api from '@/lib/api'
-import { cn } from '@/lib/utils'
 import useAuthStore from '@/store/auth-store'
 import type { StoreKind } from '@/types'
+import { segmented } from '@/components/shared/segmented'
 
 export function JoinTile() {
   const router = useRouter()
@@ -41,7 +41,7 @@ export function JoinTile() {
         </p>
         <Link
           href="/terms"
-          className="group inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="group inline-flex min-h-11 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           {isSeller ? 'Terms' : 'By joining you accept the terms'}
           <ArrowRight className="size-3 transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
@@ -63,7 +63,7 @@ export function JoinTile() {
         </div>
       ) : isSignedIn ? (
         <div className="flex flex-col items-center gap-2 self-center sm:items-end sm:self-auto">
-          <div role="radiogroup" aria-label="I am joining as" className="inline-flex rounded-lg border border-border bg-background p-0.5">
+          <div role="radiogroup" aria-label="I am joining as" className={segmented.root}>
             {(['ARTIST', 'MERCHANT'] as const).map((option) => (
               <button
                 key={option}
@@ -71,10 +71,7 @@ export function JoinTile() {
                 role="radio"
                 aria-checked={kind === option}
                 onClick={() => setKind(option)}
-                className={cn(
-                  'cursor-pointer rounded-md px-3 py-1 text-[11px] font-semibold transition-colors',
-                  kind === option ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
-                )}
+                className={segmented.item(kind === option)}
               >
                 {option === 'ARTIST' ? 'Artist' : 'Merchant'}
               </button>

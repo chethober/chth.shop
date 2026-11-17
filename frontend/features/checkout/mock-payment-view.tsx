@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { FlaskConical } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { StatusCard } from '@/components/shared/status-card'
 import { Spinner } from '@/components/ui/spinner'
 import { useRequireAuth } from '@/hooks/use-require-auth'
 import api from '@/lib/api'
@@ -34,15 +34,11 @@ export function MockPaymentView() {
   if (!isSignedIn) return null
 
   return (
-    <Card className="mx-auto max-w-md space-y-5 p-6 text-center sm:p-8">
-      <FlaskConical className="mx-auto size-10 text-brand" />
-      <div className="space-y-1.5">
-        <h1 className="text-xl font-bold text-foreground">Test crypto checkout</h1>
-        <p className="text-sm text-muted-foreground">
-          The server is using the development payment provider. In production, buyers land on the NOWPayments checkout
-          here and pay in USDT, BTC, ETH, TON and more.
-        </p>
-      </div>
+    <StatusCard
+      icon={FlaskConical}
+      title="Test crypto checkout"
+      description="The server is using the development payment provider. In production, buyers land on the NOWPayments checkout here and pay in USDT, BTC, ETH, TON and more."
+    >
       <div className="flex flex-col justify-center gap-2 sm:flex-row">
         <Button onClick={simulate} disabled={isPaying || !orderId}>
           {isPaying && <Spinner />}
@@ -52,6 +48,6 @@ export function MockPaymentView() {
           Cancel
         </Button>
       </div>
-    </Card>
+    </StatusCard>
   )
 }

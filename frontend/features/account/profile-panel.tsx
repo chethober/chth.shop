@@ -31,7 +31,7 @@ function validateUsername(value: string) {
 
 function DetailTile({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl border border-border bg-muted/30 px-3 py-2.5">
+    <div className="min-w-0 rounded-xl bg-muted/50 px-3 py-2.5">
       <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <Icon className="size-3.5" />
         {label}
@@ -204,7 +204,7 @@ export function ProfilePanel({ onDeleteAccount }: { onDeleteAccount: () => Promi
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/25 p-5 sm:p-6">
+      <Card className="p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
@@ -217,7 +217,7 @@ export function ProfilePanel({ onDeleteAccount }: { onDeleteAccount: () => Promi
               </p>
             </div>
           </div>
-          <InlineConfirm corner={12} label="Delete Account" onConfirm={onDeleteAccount} />
+          <InlineConfirm corner={12} label="Delete account" onConfirm={onDeleteAccount} />
         </div>
       </Card>
     </div>

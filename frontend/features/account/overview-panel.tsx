@@ -18,6 +18,7 @@ import {
 import { EmptyState } from '@/components/shared/empty-state'
 import { OrderStatusBadge, isActiveOrder } from '@/components/shared/order-status-badge'
 import { ProductImage } from '@/components/shared/product-image'
+import { Stat } from '@/components/shared/stat'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatPrice, formatRelativeTime } from '@/lib/format'
@@ -63,46 +64,6 @@ function ProgressRing({ value, children }: { value: number; children: React.Reac
   )
 }
 
-function StatTile({
-  label,
-  value,
-  caption,
-  icon: Icon,
-  accent,
-  index,
-  onClick,
-}: {
-  label: string
-  value: string
-  caption: string
-  icon: LucideIcon
-  accent: string
-  index: number
-  onClick: () => void
-}) {
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ y: -2 }}
-      className="group cursor-pointer rounded-2xl border border-border bg-card p-4 text-left shadow-xs transition-[border-color,box-shadow] hover:border-foreground/20 hover:shadow-sm"
-    >
-      <div className="flex items-center justify-between">
-        <span className={cn('flex size-9 items-center justify-center rounded-xl', accent)}>
-          <Icon className="size-4" />
-        </span>
-        <ArrowRight className="size-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
-      </div>
-      <p className="mt-3 text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
-      <p className="text-xs font-semibold text-foreground">{label}</p>
-      <p className="text-[11px] text-muted-foreground">{caption}</p>
-    </motion.button>
-  )
-}
-
 function QuickAction({
   href,
   icon: Icon,
@@ -121,10 +82,10 @@ function QuickAction({
       href={href}
       target={external ? '_blank' : undefined}
       className={cn(
-        'flex flex-col gap-2 rounded-xl border p-3 transition-all hover:-translate-y-0.5',
+        'flex flex-col gap-2 rounded-xl p-3 transition-all hover:-translate-y-0.5',
         primary
-          ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90'
-          : 'border-border bg-background text-foreground hover:border-foreground/20'
+          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+          : 'bg-muted/50 text-foreground hover:bg-muted'
       )}
     >
       <Icon className="size-4" />
@@ -155,34 +116,31 @@ export function OverviewPanel({ username, store, products, orders, isLoadingOrde
     {
       label: 'Products',
       value: String(products.length),
-      caption: store ? 'In your store' : 'Store not active',
+      hint: store ? 'In your store' : 'Store not active',
       icon: Store,
       tab: 'store' as const,
-      accent: 'bg-brand/10 text-brand',
     },
     {
       label: 'Active orders',
       value: isLoadingOrders ? '—' : String(activeOrders.length),
-      caption: `${orders.length} total`,
+      hint: `${orders.length} total`,
       icon: Truck,
       tab: 'orders' as const,
-      accent: 'bg-info/10 text-info',
     },
     {
       label: 'Total spent',
       value: isLoadingOrders ? '—' : formatPrice(totalSpent),
-      caption: 'Excluding cancelled',
+      hint: 'Excluding cancelled',
       icon: CircleDollarSign,
       tab: 'orders' as const,
-      accent: 'bg-success/10 text-success',
     },
   ]
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {stats.map(({ tab, ...stat }, index) => (
-          <StatTile key={stat.label} {...stat} index={index} onClick={() => onNavigate(tab)} />
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+        {stats.map(({ tab, ...stat }) => (
+          <Stat key={stat.label} {...stat} onClick={() => onNavigate(tab)} />
         ))}
       </div>
 
@@ -214,7 +172,7 @@ export function OverviewPanel({ username, store, products, orders, isLoadingOrde
                       className={cn(
                         'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
                         item.done ? 'cursor-default' : 'cursor-pointer hover:bg-muted/60',
-                        item === nextStep && 'bg-muted/40 ring-1 ring-border'
+                        item === nextStep && 'bg-muted/50'
                       )}
                     >
                       <span
@@ -322,7 +280,7 @@ export function OverviewPanel({ username, store, products, orders, isLoadingOrde
                       onClick={() => onNavigate('orders')}
                       className="-mx-2 flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-muted/30"
                     >
-                      <ProductImage product={firstProduct} alt="" className="size-10 shrink-0 rounded-lg border border-border" />
+                      <ProductImage product={firstProduct} alt="" className="size-10 shrink-0 rounded-lg" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">
                           {firstProduct?.name || 'Order'}
@@ -330,10 +288,10 @@ export function OverviewPanel({ username, store, products, orders, isLoadingOrde
                             <span className="font-normal text-muted-foreground"> +{order.items.length - 1} more</span>
                           )}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">{formatRelativeTime(order.createdAt)}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{formatRelativeTime(order.createdAt)}</p>
                       </div>
                       <OrderStatusBadge status={order.status} />
-                      <span className="w-20 text-right text-sm font-semibold tabular-nums text-foreground">
+                      <span className="shrink-0 text-right text-sm font-semibold tabular-nums text-foreground sm:w-20">
                         {formatPrice(order.total)}
                       </span>
                     </button>

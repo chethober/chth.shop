@@ -218,4 +218,7 @@ charts/*.tgz
 
 # Local configuration
 config/local.*
-config/dev.* 
+config/dev.*
+
+# Taste skill checker output (crops, reports, Chrome profiles)
+.taste-skill/

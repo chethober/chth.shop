@@ -52,7 +52,7 @@ export function ReleaseSettings({ values, onChange }: { values: ReleaseValues; o
   const set = (changes: Partial<ReleaseValues>) => onChange({ ...values, ...changes })
 
   return (
-    <fieldset className="space-y-3 rounded-xl border border-border p-3">
+    <fieldset className="space-y-3 rounded-xl bg-muted/50 p-3">
       <legend className="px-1 text-xs font-semibold text-foreground">Release</legend>
 
       <label className="flex cursor-pointer items-start gap-2.5 text-xs">

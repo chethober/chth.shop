@@ -11,10 +11,9 @@ const { notifyOrderPlacedInBackground } = require('../services/telegram-notify.s
 const { track } = require('../services/hub.service');
 const { summary } = require('./internal.controller');
 
-/** What the seller keeps from one line: the margin over production cost, minus the platform fee. */
-function sellerEarning(price, baseCost, quantity) {
-  const margin = Math.max(price - baseCost, 0) * quantity;
-  return roundCurrency(margin * (1 - env.platformFeePercent / 100));
+/** What the seller earns from one line: their royalty on the sale price. */
+function sellerEarning(price, quantity) {
+  return roundCurrency(price * quantity * (env.sellerRoyaltyPercent / 100));
 }
 
 /** Turns the user's cart into priced order lines, snapshotting names and costs. */
@@ -46,7 +45,7 @@ async function cartToOrderLines(userId) {
       price,
       baseCost,
       // The platform keeps the whole margin on buyers' own designs (no seller involved).
-      sellerEarning: storeId ? sellerEarning(price, baseCost, item.quantity) : 0,
+      sellerEarning: storeId ? sellerEarning(price, item.quantity) : 0,
     };
   });
   return { lines, cartId: cart.id };

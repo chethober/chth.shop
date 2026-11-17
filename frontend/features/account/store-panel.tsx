@@ -11,6 +11,7 @@ import { SalesPanel } from './sales-panel'
 import { StoreProducts } from './store-products'
 import type { StoreForm } from './store-form'
 import { StorefrontSettings } from './storefront-settings'
+import { segmented } from '@/components/shared/segmented'
 
 type StoreView = 'products' | 'sales' | 'storefront'
 
@@ -35,21 +36,18 @@ export function StorePanel(props: StorePanelProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-        <div className="inline-flex self-start rounded-xl border border-border bg-muted/70 p-1">
+        <div className={cn(segmented.root, 'self-start')}>
           {(isStoreActive ? (['products', 'sales', 'storefront'] as const) : (['products', 'storefront'] as const)).map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setView(option)}
-              className={cn(
-                'relative cursor-pointer rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors',
-                view === option ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-              )}
+              className={cn(segmented.item(false), view === option && 'text-foreground')}
             >
               {view === option && (
                 <motion.span
                   layoutId="store-view-pill"
-                  className="absolute inset-0 rounded-lg border border-border bg-card shadow-xs"
+                  className="absolute inset-0 rounded-full bg-card shadow-xs"
                   transition={{ type: 'spring', stiffness: 500, damping: 38 }}
                 />
               )}

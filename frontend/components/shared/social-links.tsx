@@ -34,7 +34,7 @@ export function SocialLinks({ socials, className }: { socials: SocialHandles; cl
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.25, delay: index * 0.03 }}
-          className="group flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:bg-muted"
+          className="group flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:bg-muted"
         >
           <span style={{ color: link.brandColor }}>{getSocialIcon(link.id, { size: 15 })}</span>
           <span className="text-muted-foreground transition-colors group-hover:text-foreground">{link.display}</span>
