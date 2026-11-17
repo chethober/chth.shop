@@ -57,8 +57,8 @@ export function CartView() {
           }
         />
       ) : (
-        <div className="grid items-start gap-6 lg:grid-cols-12">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-8">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="min-w-0 lg:col-span-8">
             <Card>
               <CardHeader>
                 <CardTitle>Items ({cart.totalItems})</CardTitle>
@@ -88,7 +88,7 @@ export function CartView() {
             </Card>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} className="lg:sticky lg:top-24 lg:col-span-4">
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="min-w-0 lg:sticky lg:top-24 lg:col-span-4">
             <Card>
               <CardHeader>
                 <CardTitle>{t("Order summary")}</CardTitle>

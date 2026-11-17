@@ -75,7 +75,7 @@ function ProductTile({
         <ProductImage product={product} className={cn('size-full', tile.media)} />
       </button>
 
-      <span className="absolute left-2 top-2 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
+      <span className="absolute left-2 top-2 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm">
         {getProductTypeLabel(product.type)}
       </span>
       {!product.isActive && (

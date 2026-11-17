@@ -14,7 +14,7 @@ export function Eyebrow({ children, icon: Icon, pulse, className }: EyebrowProps
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-label text-muted-foreground backdrop-blur-md',
+        'inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-label text-muted-foreground',
         className
       )}
     >

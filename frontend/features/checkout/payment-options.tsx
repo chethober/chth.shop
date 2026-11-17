@@ -67,7 +67,7 @@ export function PaymentOptions({ orderId, className }: { orderId: string; classN
           type="button"
           disabled={busy}
           onClick={() => start(id)}
-          className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-border bg-background p-3 text-left transition-colors hover:border-foreground/30 hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-muted/50 p-3 text-left transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span
             className={cn(

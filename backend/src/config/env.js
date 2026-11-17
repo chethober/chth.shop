@@ -68,8 +68,8 @@ const env = {
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
   },
 
-  /** Share of each sale's margin (price minus production cost) the platform keeps. */
-  platformFeePercent: Number(process.env.PLATFORM_FEE_PERCENT ?? 25),
+  /** The seller's royalty: this share of every sale's price goes to the store. */
+  sellerRoyaltyPercent: Number(process.env.SELLER_ROYALTY_PERCENT ?? 25),
 
   payments: {
     /** `nowpayments` in production; `mock` lets you mark orders paid by hand in development. */

@@ -69,7 +69,7 @@ export function PayoutsCard({ onEditSettings }: { onEditSettings?: () => void })
         </div>
 
         {summary.payouts.length > 0 && (
-          <ul className="divide-y divide-border rounded-xl border border-border">
+          <ul className="divide-y divide-border rounded-xl bg-muted/50">
             {summary.payouts.map((payout) => (
               <li key={payout.id} className="flex items-center gap-3 p-3 text-xs">
                 <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />

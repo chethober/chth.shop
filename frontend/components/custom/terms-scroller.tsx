@@ -43,14 +43,17 @@ const TermSection = ({
 };
 
 export interface TermsScrollerProps {
-  title?: string;
   terms: TermItem[];
   className?: string;
 }
 
-/** Long-form sections with a sticky table of contents that tracks the section in view. */
+/**
+ * Long-form sections with a sticky table of contents that tracks the section in view, a reading
+ * progress bar under the navbar, and sections that settle in as they scroll up (CSS scroll
+ * timelines in app/globals.css: no script, and still where a browser lacks them). The page
+ * gives the title (PageHeader).
+ */
 export const TermsScroller = ({
-  title = "Terms & Conditions",
   terms,
   className,
 }: TermsScrollerProps) => {
@@ -65,13 +68,12 @@ export const TermsScroller = ({
   };
 
   return (
-    <div className={cn("min-h-screen p-4 lg:p-12", className)}>
-      <h1 className="pt-[40px] text-3xl font-extrabold tracking-tight text-foreground md:text-5xl lg:pt-0">
-        {title}
-      </h1>
+    <div className={cn("min-h-screen", className)}>
+      {/* Reading progress, a hairline across the top of the window. */}
+      <div aria-hidden className="read-progress fixed inset-x-0 top-0 z-[60] h-0.5 bg-foreground" />
 
-      {/* Mobile Active Section Pill (Visible below md) */}
-      <div className="sticky top-20 z-20 mt-4 flex items-center justify-between rounded-xl border border-border/80 bg-background/90 px-4 py-2.5 backdrop-blur-md md:hidden">
+      {/* Phones: the section in view, on the kit's glass, under the navbar. */}
+      <div className="chth-glass sticky top-20 z-20 flex items-center justify-between rounded-full px-4 py-2.5 md:hidden">
         <div className="flex items-center gap-2 overflow-hidden">
           <span className="h-2 w-2 rounded-full bg-foreground shrink-0 animate-pulse" />
           <span className="text-xs font-medium text-muted-foreground truncate">
@@ -83,9 +85,9 @@ export const TermsScroller = ({
         </span>
       </div>
 
-      <div className="relative mb-[50vh] flex gap-12 py-[40px] md:py-[80px]">
-        {/* Sticky Sidebar Navigation (Visible on md and above) */}
-        <ul className="border-border sticky top-24 hidden h-fit w-full max-w-[280px] space-y-4 border-l md:block shrink-0">
+      <div className="relative mb-[30vh] flex gap-12 py-8 md:py-10">
+        {/* Sticky table of contents (md and up): a hairline track with a marker on the section in view. */}
+        <ul className="sticky top-24 hidden h-fit w-full max-w-[240px] shrink-0 space-y-3 border-l border-border md:block">
           {terms.map((term, index) => {
             const isActive = activeTerm === index;
             return (
@@ -127,7 +129,7 @@ export const TermsScroller = ({
         </ul>
 
         {/* Content Sections */}
-        <div className="flex flex-1 flex-col gap-[40px] md:gap-[60px] min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col gap-12 md:gap-14">
           {terms.map((term, index) => (
             <TermSection
               key={term.id}
@@ -135,11 +137,13 @@ export const TermsScroller = ({
               index={index}
               setActiveTerm={setActiveTerm}
             >
-              <h2 className="text-xl font-bold tracking-tight text-foreground lg:text-3xl">
-                {term.title}
-              </h2>
-              <div className="text-muted-foreground leading-relaxed space-y-4 text-sm sm:text-base">
-                {term.content}
+              <div className="settle-in space-y-4">
+                <h2 className="text-xl font-bold tracking-tight text-foreground lg:text-2xl">
+                  {term.title}
+                </h2>
+                <div className="space-y-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                  {term.content}
+                </div>
               </div>
             </TermSection>
           ))}

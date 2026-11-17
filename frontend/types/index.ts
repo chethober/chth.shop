@@ -37,6 +37,8 @@ export interface CatalogItem {
   name: string
   description: string
   baseCost: number
+  /** Lowest price a store may set: production cost plus the seller's royalty. */
+  minPrice: number
   retailPrice: number
   sizes: string[]
   colors: string[]

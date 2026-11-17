@@ -204,7 +204,7 @@ export function ProfilePanel({ onDeleteAccount }: { onDeleteAccount: () => Promi
         </CardContent>
       </Card>
 
-      <Card className="border-destructive/25 p-5 sm:p-6">
+      <Card className="p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">

@@ -92,7 +92,7 @@ export function CollectiblesPanel() {
         ) : (
           <>
             {!walletAddress && collectibles.some((c) => c.status === 'UNCLAIMED' || c.status === 'FAILED') && (
-              <div className="flex flex-col gap-2 rounded-xl border border-dashed border-border p-3 sm:flex-row sm:items-center">
+              <div className="flex flex-col gap-2 rounded-xl bg-muted/50 p-3 sm:flex-row sm:items-center">
                 <p className="text-xs text-muted-foreground sm:flex-1">Connect a wallet above, or paste a TON address to claim to:</p>
                 <Input
                   value={manualAddress}

@@ -210,7 +210,9 @@ module.exports = {
   googleCallback,
   startX: xFlow.start,
   xCallback: xFlow.callback,
-  startTelegram: telegramFlow.start,
+  // One Telegram button on the site: Telegram's own login when it is set up, else the bot's.
+  startTelegram: (req, res, next) =>
+    !env.telegram.isConfigured && env.telegram.isBotLoginConfigured ? startTelegramBot(req, res, next) : telegramFlow.start(req, res, next),
   telegramCallback: telegramFlow.callback,
   startTelegramBot,
   telegramBotCallback,

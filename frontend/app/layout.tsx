@@ -6,7 +6,7 @@ import { CookieNotice, SiteBanner } from '@/components/layout/site-notices'
 import { ReferralCapture } from '@/components/providers/referral-capture'
 import { TelegramMiniApp } from '@/components/providers/telegram-mini-app'
 import { TonProvider } from '@/components/providers/ton-provider'
-import { Suspense } from 'react'
+import { Suspense, ViewTransition } from 'react'
 import { themeInitScript } from '@/lib/theme'
 import './globals.css'
 import { dirOf } from '@/chth-kit/locales.js'
@@ -51,7 +51,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <TonProvider>
             <SiteBanner />
             <SiteHeader />
-            <main className="flex flex-1 flex-col">{children}</main>
+            {/* Page changes slide and fade (app/globals.css, ::view-transition-*(page)). */}
+            <ViewTransition name="page">
+              <main className="flex flex-1 flex-col">{children}</main>
+            </ViewTransition>
             <SiteFooter />
             <CookieNotice />
             <Suspense>

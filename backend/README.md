@@ -9,7 +9,7 @@ cp .env.example .env        # DATABASE_URL, JWT_SECRET, SESSION_SECRET, OAuth ke
 npx prisma db push          # create / sync the schema
 npm run db:seed             # optional demo artists, merchants and products (wipes users!)
 npm run dev                 # http://localhost:5000/api
-npm run make-admin -- <username>   # let a user manage fulfillment at /admin
+npm run make-admin -- <username>   # let a user call the /api/admin endpoints (fulfillment, payouts)
 ```
 
 Upgrading a database from before the marketplace (artists table, X login)? Run
@@ -77,7 +77,8 @@ Reviews (only buyers with a paid order), wishlist, store follows with a `?follow
 messages through the login bot when an order is paid (buyer and each seller) or shipped / delivered.
 
 A paid order becomes `CONFIRMED`; admins then mark it shipped / delivered. Each order line snapshots the catalog
-production cost and the seller's earning: `(price − production cost) × quantity × (1 − PLATFORM_FEE_PERCENT/100)`.
+production cost and the seller's earning, their royalty on the sale: `price × quantity × SELLER_ROYALTY_PERCENT/100`
+(25% by default). A store's price must be at least `production cost / (1 − royalty)`, so every sale covers both.
 
 ### Catalog and customization
 

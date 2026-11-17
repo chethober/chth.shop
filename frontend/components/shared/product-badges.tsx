@@ -10,7 +10,7 @@ import useWishlistStore from '@/store/wishlist-store'
 import type { Product } from '@/types'
 
 const pill =
-  'inline-flex items-center gap-1 rounded-full border border-border bg-background/85 px-2 py-0.5 text-[10px] font-semibold text-foreground backdrop-blur-sm'
+  'inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-foreground'
 
 /** "2d 4h", "3h 12m", "45s" */
 export function formatCountdown(ms: number) {

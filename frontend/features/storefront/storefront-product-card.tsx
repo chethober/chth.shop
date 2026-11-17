@@ -11,6 +11,8 @@ import { getProductTypeLabel, STORE_KIND_LABELS } from '@/lib/products'
 import type { Product } from '@/types'
 import { cn } from '@/lib/utils'
 import { tile } from '@/components/shared/tile'
+import { ViewTransition } from 'react'
+import { productCache } from '@/lib/product-cache'
 
 interface StorefrontProductCardProps {
   product: Product
@@ -29,8 +31,10 @@ export function StorefrontProductCard({ product, index, showStore = false, onSel
       className={cn(tile.root, 'flex flex-col')}
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <Link href={`/p/${product.id}`} aria-label={product.name} className="block size-full">
-          <ProductImage product={product} className={cn('size-full', tile.media)} />
+        <Link href={`/p/${product.id}`} onClick={() => productCache.remember(product)} aria-label={product.name} className="block size-full">
+          <ViewTransition name={`product-${product.id}`} share="product-morph">
+            <ProductImage product={product} className={cn('size-full', tile.media)} />
+          </ViewTransition>
         </Link>
         <WishlistButton productId={product.id} className="absolute right-2 top-2" />
       </div>
@@ -39,7 +43,7 @@ export function StorefrontProductCard({ product, index, showStore = false, onSel
         {/* Badges sit with the text, never over the photograph. */}
         <ProductBadges product={product} className="mb-1 min-h-5" />
         <h3 className="truncate text-base font-semibold text-foreground" title={product.name}>
-          <Link href={`/p/${product.id}`} className="block py-0.5 hover:underline">
+          <Link href={`/p/${product.id}`} onClick={() => productCache.remember(product)} className="block py-0.5 hover:underline">
             {product.name}
           </Link>
         </h3>

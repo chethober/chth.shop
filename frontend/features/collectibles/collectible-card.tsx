@@ -40,11 +40,11 @@ export function CollectibleCard({
   const link = explorerUrl(collectible.nftAddress, network)
 
   return (
-    <div className={cn('flex gap-4 rounded-xl border border-border bg-card p-3', className)}>
+    <div className={cn('flex gap-4 rounded-xl bg-muted/50 p-3', className)}>
       <div className="relative shrink-0">
         <ProductImage
           product={{ imageUrl: collectible.imageUrl, type: collectible.productType ?? undefined, name: collectible.name }}
-          className="size-20 rounded-lg border border-border"
+          className="size-20 rounded-lg"
         />
         <span className="absolute -bottom-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full border-2 border-card bg-ton text-white">
           <Gem className="size-3" />

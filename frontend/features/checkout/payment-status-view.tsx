@@ -73,7 +73,7 @@ export function PaymentStatusView() {
               : 'This page updates automatically once the network confirms your transaction.'
       }
     >
-      <div className="flex items-center justify-between rounded-xl border border-border p-3 text-sm">
+      <div className="flex items-center justify-between rounded-xl bg-muted/50 p-3 text-sm">
         <span className="font-mono text-xs text-muted-foreground">#{order.id.slice(0, 8).toUpperCase()}</span>
         <PaymentStatusBadge status={order.paymentStatus} />
         <span className="font-semibold tabular-nums">{formatPrice(order.total)}</span>

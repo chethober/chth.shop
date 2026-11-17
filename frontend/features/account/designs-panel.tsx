@@ -23,7 +23,7 @@ export function DesignsPanel() {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 sm:p-8">
+        <div className="rounded-2xl bg-muted/40 p-6 sm:p-8">
           <div className="mx-auto max-w-sm text-center">
             <h3 className="text-base font-semibold text-foreground">Start your first design</h3>
             <p className="mt-1 text-xs text-muted-foreground">

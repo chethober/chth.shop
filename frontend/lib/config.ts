@@ -9,3 +9,6 @@ export const API_ORIGIN = /^https?:\/\//.test(API_URL) ? new URL(API_URL).origin
 
 /** The Mini App's t.me link (https://t.me/<bot>/<app>), used for TON Connect returns and share links. */
 export const TELEGRAM_MINI_APP_LINK = (process.env.NEXT_PUBLIC_TELEGRAM_MINI_APP_LINK || '').replace(/\/+$/, '')
+
+/** The seller's royalty: this share of every sale goes to the store (backend SELLER_ROYALTY_PERCENT). */
+export const ROYALTY_PERCENT = 25

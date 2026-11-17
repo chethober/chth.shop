@@ -82,10 +82,10 @@ function QuickAction({
       href={href}
       target={external ? '_blank' : undefined}
       className={cn(
-        'flex flex-col gap-2 rounded-xl border p-3 transition-all hover:-translate-y-0.5',
+        'flex flex-col gap-2 rounded-xl p-3 transition-all hover:-translate-y-0.5',
         primary
-          ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90'
-          : 'border-border bg-background text-foreground hover:border-foreground/20'
+          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+          : 'bg-muted/50 text-foreground hover:bg-muted'
       )}
     >
       <Icon className="size-4" />
@@ -172,7 +172,7 @@ export function OverviewPanel({ username, store, products, orders, isLoadingOrde
                       className={cn(
                         'group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors',
                         item.done ? 'cursor-default' : 'cursor-pointer hover:bg-muted/60',
-                        item === nextStep && 'bg-muted/40 ring-1 ring-border'
+                        item === nextStep && 'bg-muted/50'
                       )}
                     >
                       <span
@@ -280,7 +280,7 @@ export function OverviewPanel({ username, store, products, orders, isLoadingOrde
                       onClick={() => onNavigate('orders')}
                       className="-mx-2 flex w-full cursor-pointer items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors hover:bg-muted/30"
                     >
-                      <ProductImage product={firstProduct} alt="" className="size-10 shrink-0 rounded-lg border border-border" />
+                      <ProductImage product={firstProduct} alt="" className="size-10 shrink-0 rounded-lg" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-foreground">
                           {firstProduct?.name || 'Order'}

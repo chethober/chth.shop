@@ -124,7 +124,7 @@ function RewardWallet() {
   }
 
   return (
-    <div className="space-y-2 rounded-xl border border-border p-3">
+    <div className="space-y-2 rounded-xl bg-muted/50 p-3">
       <p className="text-xs font-semibold text-foreground">Reward wallet (USDT on TON)</p>
       <p className="text-[11px] text-muted-foreground">
         {destination && destination.address !== address

@@ -21,6 +21,7 @@ import { PRODUCT_TYPES, PRODUCT_TYPE_LABELS } from '@/lib/products'
 import { cn } from '@/lib/utils'
 import type { Product, ProductInput, ProductType } from '@/types'
 import { ReleaseSettings, releaseFromProduct, releaseToPayload } from '@/components/shared/release-settings'
+import { ROYALTY_PERCENT } from '@/lib/config'
 
 export type ProductChanges = ProductInput
 
@@ -52,14 +53,15 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
   const releaseResult = releaseToPayload(release, product.editionsSold)
   const { get: getCatalogItem } = useCatalog()
   const baseCost = getCatalogItem(type)?.baseCost ?? 0
+  const minPrice = getCatalogItem(type)?.minPrice ?? baseCost
 
   const priceValue = Number(price)
   const nameError = name.trim() ? '' : 'Name is required'
   const priceError =
     price === '' || !Number.isFinite(priceValue) || priceValue < 0
       ? 'Enter a valid price'
-      : priceValue < baseCost
-        ? `Must be at least the production cost (${formatPrice(baseCost)})`
+      : priceValue < minPrice
+        ? `Must be at least ${formatPrice(minPrice)} (production cost plus your royalty)`
         : ''
 
   const submit = async (event: React.FormEvent) => {
@@ -84,7 +86,7 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
       </DialogHeader>
 
       <div className="flex gap-4">
-        <ProductImage product={{ ...product, name, type }} alt="" className="size-20 shrink-0 rounded-xl border border-border" />
+        <ProductImage product={{ ...product, name, type }} alt="" className="size-20 shrink-0 rounded-xl" />
         <div className="flex-1 space-y-1.5">
           <Label htmlFor="product-name">Name</Label>
           <Input id="product-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} aria-invalid={Boolean(nameError)} />
@@ -103,10 +105,10 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
               aria-checked={type === option}
               onClick={() => setType(option)}
               className={cn(
-                'cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition-colors',
+                'h-9 cursor-pointer rounded-full px-4 text-[13px] font-semibold transition-colors',
                 type === option
-                  ? 'border-primary bg-primary text-primary-foreground'
-                  : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
               {PRODUCT_TYPE_LABELS[option]}
@@ -136,9 +138,9 @@ function ProductEditForm({ product, saving, onClose, onSave }: ProductEditDialog
         ) : (
           baseCost > 0 && (
             <p className="text-[11px] text-muted-foreground">
-              Production cost {formatPrice(baseCost)} · you earn about{' '}
-              <span className="font-semibold text-foreground">{formatPrice(Math.max(priceValue - baseCost, 0) * 0.75)}</span>{' '}
-              per sale
+              Production cost {formatPrice(baseCost)} · you earn{' '}
+              <span className="font-semibold text-foreground">{formatPrice((priceValue * ROYALTY_PERCENT) / 100)}</span>{' '}
+              per sale ({ROYALTY_PERCENT}%)
             </p>
           )
         )}

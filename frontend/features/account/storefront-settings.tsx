@@ -113,10 +113,10 @@ export function StorefrontSettings({
                   aria-checked={form.kind === option.id}
                   onClick={() => onFormChange({ kind: option.id })}
                   className={cn(
-                    'cursor-pointer rounded-xl border p-3 text-left transition-colors',
+                    'cursor-pointer rounded-xl p-3 text-left transition-colors',
                     form.kind === option.id
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   <span className="block text-xs font-semibold">{option.label}</span>

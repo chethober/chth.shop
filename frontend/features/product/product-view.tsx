@@ -10,7 +10,6 @@ import { ProductBadges, Stars, WishlistButton } from '@/components/shared/produc
 import { ProductImage } from '@/components/shared/product-image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { PurchaseOptions } from '@/features/storefront/add-to-cart-dialog'
 import { useCatalog } from '@/hooks/use-catalog'
 import api from '@/lib/api'
@@ -19,6 +18,8 @@ import { getProductTypeLabel, STORE_KIND_LABELS } from '@/lib/products'
 import useAuthStore from '@/store/auth-store'
 import type { Product } from '@/types'
 import { ReviewsSection } from './reviews-section'
+import { ViewTransition } from 'react'
+import { productCache } from '@/lib/product-cache'
 
 /** Shares the product; with a Mini App configured, the link opens it inside Telegram. */
 function telegramShareUrl(product: Product) {
@@ -35,14 +36,18 @@ type LoadState = { status: 'loading' } | { status: 'error' } | { status: 'ready'
 export function ProductView({ id }: { id: string }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { get: getCatalogItem } = useCatalog()
-  const [state, setState] = useState<LoadState>({ status: 'loading' })
+  // A product opened from a grid shows at once; the request below refreshes it.
+  const [state, setState] = useState<LoadState>(() => {
+    const cached = productCache.get(id)
+    return cached ? { status: 'ready', product: cached } : { status: 'loading' }
+  })
 
   useEffect(() => {
     let cancelled = false
     api.products
       .get(id)
       .then((product) => !cancelled && setState({ status: 'ready', product }))
-      .catch(() => !cancelled && setState({ status: 'error' }))
+      .catch(() => !cancelled && setState((current) => (current.status === 'ready' ? current : { status: 'error' })))
     return () => {
       cancelled = true
     }
@@ -70,8 +75,10 @@ export function ProductView({ id }: { id: string }) {
   return (
     <div className="space-y-10">
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-muted">
-          <ProductImage product={product} className="aspect-square w-full" />
+        <div className="relative overflow-hidden rounded-2xl bg-muted">
+          <ViewTransition name={`product-${product.id}`} share="product-morph">
+            <ProductImage product={product} className="aspect-square w-full" />
+          </ViewTransition>
           <WishlistButton productId={product.id} className="absolute right-3 top-3 size-10" />
         </div>
 
@@ -108,18 +115,17 @@ export function ProductView({ id }: { id: string }) {
             </p>
           )}
 
-          <Card className="p-4">
-            {isAuthenticated ? (
-              <PurchaseOptions product={product} />
-            ) : (
-              <Button asChild className="w-full">
-                <Link href={`/auth?redirect=/p/${product.id}`}>Sign in to buy</Link>
-              </Button>
-            )}
-          </Card>
+          {/* The buy controls sit on the page, not in a box of their own. */}
+          {isAuthenticated ? (
+            <PurchaseOptions product={product} />
+          ) : (
+            <Button asChild size="lg" className="w-full">
+              <Link href={`/auth?redirect=/p/${product.id}`}>Sign in to buy</Link>
+            </Button>
+          )}
 
           {product.nftBacked && (
-            <div className="flex gap-3 rounded-xl border border-ton/30 bg-ton/5 p-4 text-xs">
+            <div className="flex gap-3 rounded-xl bg-ton/10 p-4 text-xs">
               <Gem className="size-5 shrink-0 text-ton" />
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">Comes with an NFT certificate</p>

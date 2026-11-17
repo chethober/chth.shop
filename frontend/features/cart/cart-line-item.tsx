@@ -27,11 +27,11 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
-      className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
+      className="flex flex-wrap items-center gap-x-4 gap-y-3 py-4 first:pt-0 last:pb-0"
     >
-      <ProductImage product={image} className="size-18 shrink-0 rounded-xl border border-border" />
+      <ProductImage product={image} className="size-18 shrink-0 rounded-xl" />
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-40">
         <h3 className="truncate text-sm font-semibold text-foreground">{item.name}</h3>
         <p className="text-xs text-muted-foreground">
           {[
@@ -45,43 +45,46 @@ export function CartLineItem({ item, index, onQuantityChange, onRemove }: CartLi
         <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{formatPrice(price)}</p>
       </div>
 
-      <div className={stepperTrack}>
+      {/* Quantity, line total and remove: beside the item, or on their own row on narrow screens. */}
+      <div className="ml-auto flex items-center gap-2">
+        <div className={stepperTrack}>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-9"
+            onClick={() => onQuantityChange(item.quantity - 1)}
+            disabled={item.quantity <= 1}
+            aria-label={t("Decrease quantity")}
+          >
+            <Minus />
+          </Button>
+          <span className="w-6 text-center text-xs font-bold tabular-nums">{item.quantity}</span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="size-9"
+            onClick={() => onQuantityChange(item.quantity + 1)}
+            disabled={item.quantity >= 99}
+            aria-label={t("Increase quantity")}
+          >
+            <Plus />
+          </Button>
+        </div>
+
+        <p className="hidden w-20 text-right text-sm font-semibold tabular-nums text-foreground sm:block">
+          {formatPrice(price * item.quantity)}
+        </p>
+
         <Button
           variant="ghost"
           size="icon-sm"
-          className="size-7"
-          onClick={() => onQuantityChange(item.quantity - 1)}
-          disabled={item.quantity <= 1}
-          aria-label={t("Decrease quantity")}
+          onClick={onRemove}
+          aria-label={t("Remove item")}
+          className="hover:bg-destructive/10 hover:text-destructive"
         >
-          <Minus />
-        </Button>
-        <span className="w-6 text-center text-xs font-bold tabular-nums">{item.quantity}</span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          onClick={() => onQuantityChange(item.quantity + 1)}
-          disabled={item.quantity >= 99}
-          aria-label={t("Increase quantity")}
-        >
-          <Plus />
+          <Trash2 />
         </Button>
       </div>
-
-      <p className="hidden w-20 text-right text-sm font-semibold tabular-nums text-foreground sm:block">
-        {formatPrice(price * item.quantity)}
-      </p>
-
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        onClick={onRemove}
-        aria-label={t("Remove item")}
-        className="hover:bg-destructive/10 hover:text-destructive"
-      >
-        <Trash2 />
-      </Button>
     </motion.li>
   )
 }

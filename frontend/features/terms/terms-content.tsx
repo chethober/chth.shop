@@ -58,7 +58,7 @@ export const TERMS: TermItem[] = [
           Our 3D customizer allows you to upload artwork, position graphics, tweak colors, and visualize
           garments on virtual 3D models in real time before placing an order.
         </p>
-        <div className="p-4 rounded-xl bg-card border border-border text-xs sm:text-sm space-y-1.5">
+        <div className="p-4 rounded-xl bg-muted/50 text-xs sm:text-sm space-y-1.5">
           <span className="font-semibold text-foreground flex items-center gap-1.5">
             <Sparkles className="w-4 h-4 text-brand" />
             3D Simulation vs. Physical Apparel
@@ -134,7 +134,7 @@ export const TERMS: TermItem[] = [
         <p>
           Due to the personalized, made-to-order nature of custom merchandise, we do not accept general returns or buyer&apos;s remorse size exchanges. However, we proudly stand behind our craftsmanship:
         </p>
-        <div className="p-4 rounded-xl bg-success/10 border border-success/20 text-xs sm:text-sm space-y-2">
+        <div className="p-4 rounded-xl bg-success/10 text-xs sm:text-sm space-y-2">
           <div className="flex items-center gap-2 font-semibold text-success">
             <CheckCircle2 className="w-4 h-4" />
             <span>CHTH Quality Guarantee</span>
@@ -226,7 +226,7 @@ export const TERMS: TermItem[] = [
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
           <a
             href="mailto:legal@chth.wtf"
-            className="p-3.5 rounded-xl border border-border bg-card hover:bg-secondary/40 transition-colors flex items-center gap-3 group"
+            className="p-3.5 rounded-xl bg-muted/50 hover:bg-muted transition-colors flex items-center gap-3 group"
           >
             <Mail className="w-4 h-4 text-brand group-hover:scale-110 transition-transform" />
             <div>
@@ -239,7 +239,7 @@ export const TERMS: TermItem[] = [
             href="https://chth.wtf"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-3.5 rounded-xl border border-border bg-card hover:bg-secondary/40 transition-colors flex items-center justify-between group"
+            className="p-3.5 rounded-xl bg-muted/50 hover:bg-muted transition-colors flex items-center justify-between group"
           >
             <div className="flex items-center gap-3">
               <ExternalLink className="w-4 h-4 text-brand group-hover:scale-110 transition-transform" />

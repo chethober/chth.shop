@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ExternalLink, Plus, Sparkles } from 'lucide-react'
+import { ExternalLink, LogOut, Plus, Sparkles } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,9 +13,9 @@ import api, { ApiError } from '@/lib/api'
 import useAuthStore from '@/store/auth-store'
 import { STORE_KIND_LABELS } from '@/lib/products'
 import type { Order, Product, Store } from '@/types'
-import { AccountNav } from './account-nav'
 import { AccountSkeleton } from './account-skeleton'
-import { ACCOUNT_TABS, isAccountTab, type AccountTab } from './account-tabs'
+import { AccountTabBar } from './account-tab-bar'
+import { ACCOUNT_TABS, accountTabFrom, type AccountTab } from './account-tabs'
 import { CollectiblesPanel } from './collectibles-panel'
 import { DesignsPanel } from './designs-panel'
 import { InvitePanel } from './invite-panel'
@@ -42,8 +42,7 @@ function greeting() {
 
 function initialTab(): AccountTab {
   if (typeof window === 'undefined') return 'overview'
-  const tab = new URLSearchParams(window.location.search).get('tab')
-  return isAccountTab(tab) ? tab : 'overview'
+  return accountTabFrom(new URLSearchParams(window.location.search).get('tab')) ?? 'overview'
 }
 
 export function AccountView() {
@@ -76,7 +75,7 @@ export function AccountView() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
-  // Number keys 1–8 switch sections (ignored while typing or in dialogs).
+  // Number keys 1–5 switch sections (ignored while typing or in dialogs).
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
@@ -249,25 +248,25 @@ export function AccountView() {
   const openOrderCount = orders.filter((order) => order.status !== 'CANCELLED' && order.status !== 'DELIVERED').length
 
   return (
-    <div className="w-full space-y-6 pb-20">
-      <header className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+    // Room at the foot for the tab bar docked over the page.
+    <div className="w-full space-y-6 pb-28">
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="flex min-w-0 items-center gap-4">
           <div className="relative shrink-0">
-            <div className="flex size-14 select-none items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-brand/25 via-muted to-muted text-lg font-bold text-foreground sm:size-16 sm:text-xl">
+            <div className="flex size-14 select-none items-center justify-center rounded-2xl bg-muted text-lg font-bold text-foreground sm:size-16 sm:text-xl">
               {username.slice(0, 2).toUpperCase() || 'U'}
             </div>
             {store && (
-              <span title={STORE_KIND_LABELS[store.kind]} className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full border-2 border-background bg-brand">
-                <Sparkles className="size-2.5 text-white" />
+              <span title={STORE_KIND_LABELS[store.kind]} className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+                <Sparkles className="size-2.5 text-background" />
               </span>
             )}
           </div>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">{greeting()},</p>
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-label text-muted-foreground">{greeting()},</p>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{username}</h1>
               <Badge variant={store ? 'brand' : 'secondary'}>{store ? STORE_KIND_LABELS[store.kind] : 'Member'}</Badge>
-              {user?.role === 'ADMIN' && <Badge variant="secondary">Admin</Badge>}
             </div>
             {store?.storeName && (
               <p className="truncate text-xs text-muted-foreground">
@@ -277,26 +276,21 @@ export function AccountView() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {user?.role === 'ADMIN' && (
-            <Button asChild variant="outline" size="sm">
-              <Link href="/admin">Fulfillment</Link>
-            </Button>
-          )}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
           {store ? (
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline">
               <Link href={`/${username}`} target="_blank">
                 View store
                 <ExternalLink />
               </Link>
             </Button>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => changeTab('store')}>
-              <Sparkles className="text-brand" />
+            <Button variant="outline" onClick={() => changeTab('store')}>
+              <Sparkles />
               Open a store
             </Button>
           )}
-          <Button asChild size="sm">
+          <Button asChild>
             <Link href="/design">
               <Plus />
               Create design
@@ -305,59 +299,65 @@ export function AccountView() {
         </div>
       </header>
 
-      <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
-        <AccountNav
-          activeTab={activeTab}
-          onChange={changeTab}
-          counts={{ store: products.length, orders: openOrderCount }}
-          onSignOut={handleSignOut}
-        />
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          className="space-y-6"
+        >
+          {activeTab === 'overview' && (
+            <OverviewPanel
+              username={username}
+              store={store}
+              products={products}
+              orders={orders}
+              isLoadingOrders={isLoadingOrders}
+              onNavigate={changeTab}
+            />
+          )}
+          {activeTab === 'store' && (
+            <StorePanel
+              username={username}
+              isStoreActive={Boolean(store)}
+              products={products}
+              form={form}
+              onFormChange={updateForm}
+              saving={savingStore}
+              onActivate={saveStore}
+              onDeleteStore={deleteStore}
+              onEditProduct={setEditingProduct}
+              onDeleteProduct={deleteProduct}
+            />
+          )}
+          {activeTab === 'orders' && (
+            <>
+              <OrdersPanel orders={orders} isLoading={isLoadingOrders} onRefresh={refreshOrders} onCancel={cancelOrder} />
+              <CollectiblesPanel />
+            </>
+          )}
+          {activeTab === 'saved' && (
+            <>
+              <SavedPanel />
+              <DesignsPanel />
+            </>
+          )}
+          {activeTab === 'profile' && (
+            <>
+              <ProfilePanel onDeleteAccount={deleteAccount} />
+              <InvitePanel />
+              <Button variant="outline" onClick={handleSignOut} className="w-full sm:w-auto">
+                <LogOut />
+                Sign out
+              </Button>
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
-        <main className="w-full min-w-0 flex-1">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-            >
-              {activeTab === 'overview' && (
-                <OverviewPanel
-                  username={username}
-                  store={store}
-                  products={products}
-                  orders={orders}
-                  isLoadingOrders={isLoadingOrders}
-                  onNavigate={changeTab}
-                />
-              )}
-              {activeTab === 'store' && (
-                <StorePanel
-                  username={username}
-                  isStoreActive={Boolean(store)}
-                  products={products}
-                  form={form}
-                  onFormChange={updateForm}
-                  saving={savingStore}
-                  onActivate={saveStore}
-                  onDeleteStore={deleteStore}
-                  onEditProduct={setEditingProduct}
-                  onDeleteProduct={deleteProduct}
-                />
-              )}
-              {activeTab === 'orders' && (
-                <OrdersPanel orders={orders} isLoading={isLoadingOrders} onRefresh={refreshOrders} onCancel={cancelOrder} />
-              )}
-              {activeTab === 'collectibles' && <CollectiblesPanel />}
-              {activeTab === 'saved' && <SavedPanel />}
-              {activeTab === 'invite' && <InvitePanel />}
-              {activeTab === 'designs' && <DesignsPanel />}
-              {activeTab === 'profile' && <ProfilePanel onDeleteAccount={deleteAccount} />}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+      <AccountTabBar activeTab={activeTab} onChange={changeTab} counts={{ orders: openOrderCount }} />
 
       <UnsavedChangesBar
         visible={isStoreDirty}
